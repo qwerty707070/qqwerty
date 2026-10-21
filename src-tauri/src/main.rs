@@ -8,18 +8,25 @@ use auth::{
     complete_minecraft_oauth, delete_encrypted_mc_token, request_microsoft_device_code,
     AuthenticatedMinecraftProfile, DeviceCodeSession,
 };
-use launcher::{ensure_clean_dir, expand_tilde, prepare_and_launch_minecraft, LaunchRequest};
+use launcher::{
+    ensure_clean_dir, expand_tilde, prepare_and_launch_minecraft, resolve_java_executable,
+    LaunchRequest,
+};
 use serde::Serialize;
 use std::process::Command;
+use std::sync::{Mutex, OnceLock};
 use sysinfo::System;
 use tauri::AppHandle;
 
-#[derive(Serialize)]
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct JavaInfo {
-    installed: bool,
-    path: String,
-    version: String,
+pub struct JavaInfo {
+    pub installed: bool,
+    pub path: String,
+    pub version: String,
 }
 
 #[derive(Serialize)]
@@ -46,55 +53,73 @@ pub struct HostTelemetryResponse {
     online_players: u32,
 }
 
-fn probe_java() -> JavaInfo {
-    if let Ok(output) = Command::new("java").arg("-version").output() {
-        let combined = format!(
-            "{}\n{}",
-            String::from_utf8_lossy(&output.stderr),
-            String::from_utf8_lossy(&output.stdout)
-        );
-        let first_line = combined
-            .lines()
-            .find(|l| !l.trim().is_empty())
-            .unwrap_or("OpenJDK 21 LTS")
-            .trim()
-            .to_string();
-        return JavaInfo {
-            installed: true,
-            path: "java".to_string(),
-            version: first_line,
-        };
+fn silent_command(program: &str) -> Command {
+    let mut cmd = Command::new(program);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NO_WINDOW);
     }
+    cmd
+}
 
-    JavaInfo {
-        installed: false,
-        path: if cfg!(windows) {
-            "C:\\Program Files\\Eclipse Adoptium\\jdk-21\\bin\\javaw.exe".to_string()
-        } else {
-            "java".to_string()
-        },
-        version: "Java 21 LTS required".to_string(),
-    }
+static JAVA_INFO_CACHE: OnceLock<JavaInfo> = OnceLock::new();
+static HOST_SYS: OnceLock<Mutex<System>> = OnceLock::new();
+
+pub fn probe_java_cached() -> JavaInfo {
+    JAVA_INFO_CACHE
+        .get_or_init(|| {
+            let candidate = resolve_java_executable("java");
+            if let Ok(output) = silent_command(&candidate).arg("-version").output() {
+                let combined = format!(
+                    "{}\n{}",
+                    String::from_utf8_lossy(&output.stderr),
+                    String::from_utf8_lossy(&output.stdout)
+                );
+                let first_line = combined
+                    .lines()
+                    .find(|l| !l.trim().is_empty())
+                    .unwrap_or("Java 21 Runtime")
+                    .trim()
+                    .to_string();
+                return JavaInfo {
+                    installed: true,
+                    path: candidate,
+                    version: first_line,
+                };
+            }
+
+            JavaInfo {
+                installed: false,
+                path: candidate,
+                version: "Java 21 LTS required".to_string(),
+            }
+        })
+        .clone()
 }
 
 #[tauri::command]
 fn get_host_telemetry() -> HostTelemetryResponse {
-    let mut sys = System::new_all();
-    sys.refresh_memory();
-
-    let total_mb = (sys.total_memory() / (1024 * 1024)).max(4096);
-    let cpu_cores = sys.cpus().len().max(1);
-    let os_label = format!("{} {}", std::env::consts::OS, std::env::consts::ARCH);
+    let sys_mutex = HOST_SYS.get_or_init(|| Mutex::new(System::new_all()));
+    let (total_mb, cpu_cores) = if let Ok(mut sys) = sys_mutex.lock() {
+        sys.refresh_memory();
+        (
+            (sys.total_memory() / (1024 * 1024)).max(4096),
+            sys.cpus().len().max(1),
+        )
+    } else {
+        (16384, 8)
+    };
 
     HostTelemetryResponse {
         operational: true,
         launcher_version: env!("CARGO_PKG_VERSION").to_string(),
         uptime_seconds: System::uptime(),
-        platform: os_label,
+        platform: format!("{} {}", std::env::consts::OS, std::env::consts::ARCH),
         cpu_cores,
         host_total_memory_mb: total_mb,
         latency_ms: 9,
-        java: probe_java(),
+        java: probe_java_cached(),
         services: ServiceHealth {
             manifest_api: "operational".to_string(),
             asset_cdn: "operational".to_string(),
@@ -107,11 +132,11 @@ fn get_host_telemetry() -> HostTelemetryResponse {
 
 #[tauri::command]
 fn detect_java_runtime() -> Result<String, String> {
-    let info = probe_java();
+    let info = probe_java_cached();
     if info.installed {
         Ok(info.path)
     } else {
-        Err("Java 21 runtime not detected in system PATH".to_string())
+        Err("Java 21 runtime not detected on system".to_string())
     }
 }
 
@@ -150,11 +175,11 @@ fn open_game_folder(game_directory: String) -> Result<(), String> {
     std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
 
     #[cfg(target_os = "windows")]
-    let status = Command::new("explorer").arg(&target).spawn();
+    let status = silent_command("explorer").arg(&target).spawn();
     #[cfg(target_os = "macos")]
-    let status = Command::new("open").arg(&target).spawn();
+    let status = silent_command("open").arg(&target).spawn();
     #[cfg(target_os = "linux")]
-    let status = Command::new("xdg-open").arg(&target).spawn();
+    let status = silent_command("xdg-open").arg(&target).spawn();
 
     status.map(|_| ()).map_err(|e| e.to_string())
 }

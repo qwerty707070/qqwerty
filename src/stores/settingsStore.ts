@@ -83,7 +83,7 @@ const DEFAULT_SETTINGS = {
   closeAfterLaunch: false,
 
   ramAllocationMb: 6144,
-  javaPath: '/usr/lib/jvm/temurin-21-jdk/bin/java',
+  javaPath: 'java',
   gameDirectory: '~/.minecraft/winvisual',
   jvmArguments:
     '-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50',

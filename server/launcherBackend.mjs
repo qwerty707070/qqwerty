@@ -52,7 +52,7 @@ export function getArtifactPayload(versionId, filename, sizeBytes) {
 export const CLIENT_VERSIONS = [
   {
     id: 'winvisual-1.21.4',
-    name: 'WinVisual 2.4.0',
+    name: 'WinVisual 2.4.1',
     minecraftVersion: '1.21.4',
     channel: 'stable',
     recommended: true,
@@ -298,7 +298,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.4.0',
+        launcherVersion: '2.4.1',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: os.cpus().length,
@@ -387,7 +387,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.4.0-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.4.1-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);

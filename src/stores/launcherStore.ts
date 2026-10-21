@@ -72,7 +72,7 @@ let activeAbortController: AbortController | null = null;
 const INITIAL_PROGRESS: DownloadProgressState = {
   active: false,
   versionId: 'winvisual-1.21.4',
-  versionName: 'WinVisual 2.4.0',
+  versionName: 'WinVisual 2.4.1',
   currentFile: '',
   stageLabel: '',
   downloadedBytes: 0,
@@ -112,7 +112,7 @@ export const useLauncherStore = create<LauncherState>()(
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.4.0 initialized`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.4.1 initialized`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 

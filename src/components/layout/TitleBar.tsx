@@ -1,8 +1,6 @@
 import React from 'react';
 import {
   Download,
-  FileTerminal,
-  FolderArchive,
   Laptop,
   Maximize2,
   Minimize2,
@@ -15,9 +13,9 @@ import { Tooltip } from '../ui/Tooltip';
 import { useLauncherStore } from '../../stores/launcherStore';
 import { useVisualClientStore } from '../../stores/visualClientStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { GITHUB_RELEASE_URL } from '../../data/catalogData';
-import { tauriMinimizeWindow, tauriStartDragging } from '../../services/tauriBridge';
+import { GITHUB_RELEASE_URL, isTauriDesktop } from '../../services/tauriBridge';
 import { cn } from '../../utils/cn';
+import { tauriMinimizeWindow, tauriStartDragging } from '../../services/tauriBridge';
 
 interface TitleBarProps {
   isMaximized: boolean;
@@ -34,7 +32,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   const launchPhase = useLauncherStore((s) => s.launchPhase);
   const downloadProgress = useLauncherStore((s) => s.downloadProgress);
   const setDownloadDrawerOpen = useLauncherStore((s) => s.setDownloadDrawerOpen);
-  const setLogsModalOpen = useLauncherStore((s) => s.setLogsModalOpen);
   const setWindowMinimized = useLauncherStore((s) => s.setWindowMinimized);
   const setLiveSessionModalOpen = useVisualClientStore((s) => s.setLiveSessionModalOpen);
   const { language, updateSetting } = useSettingsStore();
@@ -65,7 +62,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             Win<span className="text-[var(--accent-secondary)] font-semibold">Visual</span>
           </span>
           <span className="px-2 py-0.5 text-[10.5px] font-mono font-medium rounded-full bg-white/[0.045] border border-white/[0.07] text-[var(--text-secondary)]">
-            v{telemetry?.launcherVersion ?? '2.4.0'}
+            v{telemetry?.launcherVersion ?? '2.4.1'}
           </span>
         </div>
       </div>
@@ -97,44 +94,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           </div>
         )}
 
-        {/* Native Desktop Installer Download Button (.exe / .dmg / .deb) */}
-        <Tooltip
-          content={
-            language === 'ru'
-              ? 'Скачать установщик WinVisual для Windows (.exe / .msi), macOS (.dmg), Linux (.deb)'
-              : 'Download WinVisual Desktop Installer (.exe / .msi / .dmg / .deb)'
-          }
-          side="bottom"
-        >
-          <a
-            href={GITHUB_RELEASE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Download desktop installer"
-            className="h-7 px-2 inline-flex items-center gap-1.5 rounded-[8px] text-[11px] font-medium text-[var(--accent-secondary)] bg-[var(--accent-subtle)] hover:brightness-110 border border-[var(--accent-primary)]/30 transition-all cursor-pointer"
+        {/* Only show web installer button when inside browser preview, NOT inside installed .exe! */}
+        {!isTauriDesktop() && (
+          <Tooltip
+            content={
+              language === 'ru'
+                ? 'Скачать установщик WinVisual для Windows (.exe / .msi), macOS (.dmg), Linux (.deb)'
+                : 'Download WinVisual Desktop Installer (.exe / .msi / .dmg / .deb)'
+            }
+            side="bottom"
           >
-            <Laptop size={13.5} strokeWidth={1.75} />
-            <span className="hidden md:inline">.exe / .dmg</span>
-          </a>
-        </Tooltip>
-
-        {/* Download Desktop Source Archive */}
-        <Tooltip
-          content={
-            language === 'ru'
-              ? 'Скачать полный исходный архив WinVisual (.tar.gz)'
-              : 'Download complete WinVisual source archive (.tar.gz)'
-          }
-          side="bottom"
-        >
-          <a
-            href="/api/export-project"
-            aria-label="Download desktop source package"
-            className="h-7 w-7 inline-flex items-center justify-center rounded-[8px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors cursor-pointer"
-          >
-            <FolderArchive size={15} strokeWidth={1.75} />
-          </a>
-        </Tooltip>
+            <a
+              href={GITHUB_RELEASE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Download desktop installer"
+              className="h-7 px-2 inline-flex items-center gap-1.5 rounded-[8px] text-[11px] font-medium text-[var(--accent-secondary)] bg-[var(--accent-subtle)] hover:brightness-110 border border-[var(--accent-primary)]/30 transition-all cursor-pointer"
+            >
+              <Laptop size={13.5} strokeWidth={1.75} />
+              <span className="hidden md:inline">.exe / .dmg</span>
+            </a>
+          </Tooltip>
+        )}
 
         {/* Quick Language Switcher */}
         <Tooltip
@@ -149,18 +130,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             className="h-7 px-2.5 rounded-[8px] text-[11px] font-semibold tracking-wider uppercase text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] border border-transparent hover:border-white/[0.08] transition-colors cursor-pointer"
           >
             {language.toUpperCase()}
-          </button>
-        </Tooltip>
-
-        {/* Logs Quick Button */}
-        <Tooltip content={language === 'ru' ? 'Журнал диагностики' : 'Diagnostic Logs'} side="bottom">
-          <button
-            type="button"
-            onClick={() => setLogsModalOpen(true)}
-            aria-label="Open logs"
-            className="h-7 w-7 inline-flex items-center justify-center rounded-[8px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] transition-colors cursor-pointer"
-          >
-            <FileTerminal size={15} strokeWidth={1.75} />
           </button>
         </Tooltip>
 

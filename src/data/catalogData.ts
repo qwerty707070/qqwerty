@@ -1,12 +1,12 @@
 import type { ClientVersion, NewsArticle } from '../types/launcher';
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.4.0';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.4.1';
 
 export const CANONICAL_VERSIONS: ClientVersion[] = [
   {
     id: 'winvisual-1.21.4',
-    name: 'WinVisual 2.4.0',
+    name: 'WinVisual 2.4.1',
     minecraftVersion: '1.21.4',
     channel: 'stable',
     recommended: true,

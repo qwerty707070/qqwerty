@@ -9,6 +9,9 @@ use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchRequest {
@@ -32,6 +35,82 @@ pub fn expand_tilde(path_str: &str) -> PathBuf {
     PathBuf::from(path_str)
 }
 
+/// Automatically discovers a windowless `javaw.exe` / JDK 21 runtime on Windows
+/// (including official Minecraft Launcher bundled runtimes, JAVA_HOME, Adoptium, Microsoft, and Oracle)
+/// so no black console window is ever spawned.
+pub fn resolve_java_executable(requested: &str) -> String {
+    let trimmed = requested.trim();
+    if !trimmed.is_empty() && trimmed != "java" && Path::new(trimmed).exists() {
+        #[cfg(target_os = "windows")]
+        if trimmed.ends_with("java.exe") {
+            let javaw = trimmed.trim_end_matches("java.exe").to_string() + "javaw.exe";
+            if Path::new(&javaw).exists() {
+                return javaw;
+            }
+        }
+        return trimmed.to_string();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let mut candidates: Vec<PathBuf> = Vec::new();
+        if let Ok(java_home) = std::env::var("JAVA_HOME") {
+            candidates.push(PathBuf::from(&java_home).join("bin").join("javaw.exe"));
+            candidates.push(PathBuf::from(&java_home).join("bin").join("java.exe"));
+        }
+        if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+            let runtime_base = PathBuf::from(local_app)
+                .join("Packages")
+                .join("Microsoft.4297127D64EC6_8wekyb3d8bbwe")
+                .join("LocalCache")
+                .join("Local")
+                .join("runtime");
+            for slot in ["java-runtime-delta", "java-runtime-gamma", "jre-legacy"] {
+                candidates.push(
+                    runtime_base
+                        .join(slot)
+                        .join("windows-x64")
+                        .join(slot)
+                        .join("bin")
+                        .join("javaw.exe"),
+                );
+            }
+        }
+        if let Ok(appdata) = std::env::var("APPDATA") {
+            let runtime_base = PathBuf::from(appdata).join(".minecraft").join("runtime");
+            for slot in ["java-runtime-delta", "java-runtime-gamma"] {
+                candidates.push(
+                    runtime_base
+                        .join(slot)
+                        .join("windows-x64")
+                        .join(slot)
+                        .join("bin")
+                        .join("javaw.exe"),
+                );
+            }
+        }
+        for vendor in ["Eclipse Adoptium", "Java", "Microsoft", "BellSoft"] {
+            let dir = PathBuf::from("C:\\Program Files").join(vendor);
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    candidates.push(entry.path().join("bin").join("javaw.exe"));
+                }
+            }
+        }
+        for c in candidates {
+            if c.exists() {
+                return c.to_string_lossy().to_string();
+            }
+        }
+        return "javaw".to_string();
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        "java".to_string()
+    }
+}
+
 fn current_mojang_os() -> &'static str {
     if cfg!(target_os = "windows") {
         "windows"
@@ -50,7 +129,11 @@ fn library_allowed_for_host(lib: &serde_json::Value) -> bool {
     let mut allowed = false;
     for rule in rules {
         let action_allow = rule.get("action").and_then(|a| a.as_str()) == Some("allow");
-        let os_matches = match rule.get("os").and_then(|o| o.get("name")).and_then(|n| n.as_str()) {
+        let os_matches = match rule
+            .get("os")
+            .and_then(|o| o.get("name"))
+            .and_then(|n| n.as_str())
+        {
             Some(target_os) => target_os == host_os,
             None => true,
         };
@@ -82,7 +165,6 @@ pub async fn prepare_and_launch_minecraft(
         ),
     );
 
-    // 1. Fetch official Mojang version manifest v2
     let manifest_index: serde_json::Value = http
         .get("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
         .send()
@@ -118,7 +200,6 @@ pub async fn prepare_and_launch_minecraft(
         .await
         .map_err(|e| e.to_string())?;
 
-    // 2. Fetch official Fabric Loader profile from meta.fabricmc.net
     let fabric_url = format!(
         "https://meta.fabricmc.net/v2/versions/loader/{}/{}/profile/json",
         req.minecraft_version, req.fabric_loader_version
@@ -132,7 +213,6 @@ pub async fn prepare_and_launch_minecraft(
         .await
         .map_err(|e| e.to_string())?;
 
-    // 3. Collect required JARs & Asset Index for current host OS
     struct PendingArtifact {
         url: String,
         dest: PathBuf,
@@ -257,7 +337,6 @@ pub async fn prepare_and_launch_minecraft(
         .await?;
     }
 
-    // 4. Construct JVM Launch Command
     let sep = if cfg!(windows) { ";" } else { ":" };
     let cp_joined = classpath_entries
         .iter()
@@ -275,7 +354,14 @@ pub async fn prepare_and_launch_minecraft(
         .as_str()
         .unwrap_or(&req.minecraft_version);
 
-    let mut cmd = Command::new(&req.java_path);
+    let java_bin = resolve_java_executable(&req.java_path);
+    let mut cmd = Command::new(&java_bin);
+
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
     cmd.current_dir(&game_dir)
         .arg("-Xms512M")
         .arg(format!("-Xmx{}M", req.ram_mb))
@@ -313,7 +399,7 @@ pub async fn prepare_and_launch_minecraft(
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| format!("Unable to spawn Java process ({}): {e}", req.java_path))?;
+        .map_err(|e| format!("Unable to spawn Java runtime ({java_bin}): {e}"))?;
 
     let pid = child.id().unwrap_or(0);
     let _ = app.emit(

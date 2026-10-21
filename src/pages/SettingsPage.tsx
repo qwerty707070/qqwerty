@@ -19,6 +19,7 @@ import { useLauncherStore } from '../stores/launcherStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { GITHUB_RELEASE_URL } from '../data/catalogData';
 import {
+  isTauriDesktop,
   tauriClearClientCache,
   tauriDetectJava,
   tauriOpenGameFolder,
@@ -99,39 +100,41 @@ export const SettingsPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Native Desktop Installers & Source Package Card */}
-      <Card className="p-6 space-y-4 border-[var(--accent-primary)]/25">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h2 className="text-[16px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
-              <Laptop size={17} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
-              {isRu
-                ? 'Нативный десктопный лаунчер (Tauri v2 Desktop)'
-                : 'Native Desktop Installers (Tauri v2)'}
-            </h2>
-            <p className="text-[12.5px] text-[var(--text-secondary)]">
-              {isRu
-                ? 'Установщики для Windows (.exe / .msi), macOS (.dmg) и Linux (.deb / .AppImage), а также полный исходный архив проекта.'
-                : 'Compiled native binaries for Windows (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage), plus full source archive.'}
-            </p>
+      {/* Native Desktop Installers & Source Package Card (shown in web preview) */}
+      {!isTauriDesktop() && (
+        <Card className="p-6 space-y-4 border-[var(--accent-primary)]/25">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-[16px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
+                <Laptop size={17} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
+                {isRu
+                  ? 'Нативный десктопный лаунчер (WinVisual Desktop)'
+                  : 'Native Desktop Installers (WinVisual)'}
+              </h2>
+              <p className="text-[12.5px] text-[var(--text-secondary)]">
+                {isRu
+                  ? 'Установщики для Windows (.exe / .msi), macOS (.dmg) и Linux (.deb / .AppImage), а также исходный архив.'
+                  : 'Compiled native binaries for Windows (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage).'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+              <a href={GITHUB_RELEASE_URL} target="_blank" rel="noopener noreferrer">
+                <Button variant="primary" size="sm" type="button">
+                  <Download size={14} strokeWidth={2} />
+                  {isRu ? 'Установщики (.exe / .dmg / .deb)' : 'Installers (.exe / .dmg / .deb)'}
+                  <ExternalLink size={13} strokeWidth={1.75} />
+                </Button>
+              </a>
+              <a href="/api/export-project">
+                <Button variant="secondary" size="sm" type="button">
+                  <FolderArchive size={14} strokeWidth={1.75} />
+                  {isRu ? 'Исходный код (.tar.gz)' : 'Source Archive (.tar.gz)'}
+                </Button>
+              </a>
+            </div>
           </div>
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <a href={GITHUB_RELEASE_URL} target="_blank" rel="noopener noreferrer">
-              <Button variant="primary" size="sm" type="button">
-                <Download size={14} strokeWidth={2} />
-                {isRu ? 'Установщики (.exe / .dmg / .deb)' : 'Installers (.exe / .dmg / .deb)'}
-                <ExternalLink size={13} strokeWidth={1.75} />
-              </Button>
-            </a>
-            <a href="/api/export-project">
-              <Button variant="secondary" size="sm" type="button">
-                <FolderArchive size={14} strokeWidth={1.75} />
-                {isRu ? 'Исходный код (.tar.gz)' : 'Source Archive (.tar.gz)'}
-              </Button>
-            </a>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* 1. GENERAL */}
       <Card className="p-6 space-y-4">

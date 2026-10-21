@@ -9,6 +9,9 @@ declare global {
   }
 }
 
+export const GITHUB_RELEASE_URL =
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.4.1';
+
 export function isTauriDesktop(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
 }
