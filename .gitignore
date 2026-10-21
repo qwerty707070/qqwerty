@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.verify-ssr/
+src-tauri/target/
+*.tsbuildinfo
+.DS_Store

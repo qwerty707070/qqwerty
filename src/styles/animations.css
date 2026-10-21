@@ -1,0 +1,58 @@
+@keyframes ambientMove {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: scale(1.035) translate3d(-0.4%, -0.3%, 0);
+  }
+  100% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes subtlePulseGlow {
+  0%, 100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes statusPing {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  70% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+}
+
+.ambient-hero-media {
+  will-change: transform;
+  animation: ambientMove 34s ease-in-out infinite;
+}
+
+.status-radar-ring {
+  animation: statusPing 2.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+[data-reduced-motion="true"] .ambient-hero-media,
+[data-reduced-motion="true"] .status-radar-ring {
+  animation: none !important;
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-hero-media,
+  .status-radar-ring {
+    animation: none !important;
+    transform: none !important;
+  }
+}

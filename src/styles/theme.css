@@ -1,0 +1,48 @@
+:root {
+  /* Core Backgrounds */
+  --background-primary: #08090D;
+  --background-secondary: #101116;
+  --background-tertiary: #17191F;
+
+  /* Surfaces */
+  --surface-primary: rgba(255, 255, 255, 0.035);
+  --surface-secondary: rgba(255, 255, 255, 0.055);
+  --surface-hover: rgba(255, 255, 255, 0.085);
+
+  /* Accent Tokens (Dynamically updatable from Appearance Settings) */
+  --accent-primary: #8B7CFF;
+  --accent-secondary: #A69BFF;
+  --accent-rgb: 139, 124, 255;
+  --accent-glow: rgba(139, 124, 255, 0.35);
+  --accent-subtle: rgba(139, 124, 255, 0.12);
+
+  /* Typography Colors */
+  --text-primary: #F5F5F7;
+  --text-secondary: #A1A1AA;
+  --text-muted: #62636D;
+
+  /* Precision Borders */
+  --border-primary: rgba(255, 255, 255, 0.07);
+  --border-hover: rgba(255, 255, 255, 0.14);
+
+  /* Radii Scale */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-hero: 24px;
+}
+
+/* Theme Variant: Deep Obsidian Contrast */
+[data-surface-theme="obsidian"] {
+  --background-primary: #050609;
+  --background-secondary: #0B0C10;
+  --background-tertiary: #12141A;
+}
+
+/* Theme Variant: Midnight Slate */
+[data-surface-theme="midnight"] {
+  --background-primary: #090B12;
+  --background-secondary: #111420;
+  --background-tertiary: #181C2B;
+}
