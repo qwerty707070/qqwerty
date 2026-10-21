@@ -157,7 +157,7 @@ export const Sidebar: React.FC = () => {
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono">
-            <span>Launcher v{telemetry?.launcherVersion ?? '2.4.1'}</span>
+            <span>Launcher v{telemetry?.launcherVersion ?? '2.4.2'}</span>
             <span>
               {telemetry ? `${telemetry.onlinePlayers.toLocaleString()} online` : 'Syncing...'}
             </span>

@@ -16,7 +16,7 @@ export const NotificationViewport: React.FC = () => {
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 w-[340px] max-w-[calc(100vw-32px)] pointer-events-none"
+      className="fixed bottom-5 right-5 z-[9990] flex flex-col gap-2.5 w-[340px] max-w-[calc(100vw-32px)] pointer-events-none"
     >
       <AnimatePresence mode="popLayout">
         {toasts.map((item) => {
@@ -29,7 +29,7 @@ export const NotificationViewport: React.FC = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="pointer-events-auto glass-panel rounded-[14px] px-4 py-3 flex items-start gap-3"
+              className="pointer-events-auto popover-panel rounded-[14px] px-4 py-3 flex items-start gap-3"
             >
               <Icon size={18} strokeWidth={1.75} className={`${colorClass} shrink-0 mt-0.5`} />
               <div className="flex-1 min-w-0">

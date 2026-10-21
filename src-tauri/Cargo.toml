@@ -1,6 +1,6 @@
 [package]
 name = "winvisual-launcher"
-version = "2.4.1"
+version = "2.4.2"
 description = "WinVisual — Premium Minecraft Visual Client Launcher"
 authors = ["WinVisual Team"]
 edition = "2021"
@@ -23,4 +23,5 @@ sha2 = "0.10"
 hex = "0.4"
 dirs = "5.0"
 sysinfo = "0.32"
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
 keyring = { version = "3.6", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }

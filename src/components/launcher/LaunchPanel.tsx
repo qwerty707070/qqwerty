@@ -32,7 +32,7 @@ export const LaunchPanel: React.FC = () => {
     <section
       aria-label="Launch control panel"
       className={cn(
-        'w-full rounded-[20px] p-3 glass-panel',
+        'relative z-30 w-full rounded-[20px] p-3 glass-panel',
         'flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3'
       )}
     >

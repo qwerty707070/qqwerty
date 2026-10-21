@@ -2,49 +2,19 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { PlayerAccount } from '../types/launcher';
 
-interface AccountState {
-  accounts: PlayerAccount[];
-  activeAccountId: string;
-  setActiveAccount: (id: string) => void;
-  addOfflineProfile: (username: string, skinPreset: PlayerAccount['skinPreset']) => PlayerAccount;
-  upsertMicrosoftAccount: (username: string, uuid: string) => PlayerAccount;
-  removeAccount: (id: string) => void;
+export function generateRandomUserNick(): string {
+  let num = 10000;
+  if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.getRandomValues === 'function') {
+    const arr = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(arr);
+    num = 10000 + (arr[0] % 90000);
+  } else {
+    num = 10000 + Math.floor(Math.random() * 90000);
+  }
+  return `user${num}`;
 }
 
-const INITIAL_ACCOUNTS: PlayerAccount[] = [
-  {
-    id: 'acc-winvisual',
-    username: 'WinVisual',
-    uuid: '8f4e2a91-4d3b-49c2-9b1e-77a910c3e804',
-    authType: 'local',
-    skinPreset: 'winvisual',
-    capeName: 'WinVisual Crown Shader',
-    online: true,
-    lastUsed: 'Active session',
-  },
-  {
-    id: 'acc-notch-preview',
-    username: 'Notch',
-    uuid: '069a79f4-44e9-4726-a5be-fca90e38aaf5',
-    authType: 'microsoft-demo',
-    skinPreset: 'obsidian',
-    capeName: 'Founder Obsidian Cloak',
-    online: true,
-    lastUsed: 'Demo Preview Profile',
-  },
-  {
-    id: 'acc-valkyrie',
-    username: 'Valkyrie',
-    uuid: '3c19b7d0-91fa-42e8-b03a-18f2049e51d2',
-    authType: 'local',
-    skinPreset: 'slim',
-    capeName: 'Aurora Silk Cape',
-    online: false,
-    lastUsed: '2 days ago',
-  },
-];
-
-function generateDeterministicUuid(name: string): string {
+export function generateDeterministicUuid(name: string): string {
   let h = 2166136261;
   for (let i = 0; i < name.length; i++) {
     h ^= name.charCodeAt(i);
@@ -54,18 +24,66 @@ function generateDeterministicUuid(name: string): string {
   return `${hex}-3a9b-4e12-8c4f-${hex}a91b`;
 }
 
+function createDefaultUserAccount(): PlayerAccount {
+  const nick = generateRandomUserNick();
+  return {
+    id: 'acc-local-user',
+    username: nick,
+    uuid: generateDeterministicUuid(nick),
+    authType: 'local',
+    skinPreset: 'winvisual',
+    capeName: 'WinVisual Crown Shader',
+    online: true,
+    lastUsed: 'Active session',
+  };
+}
+
+interface AccountState {
+  accounts: PlayerAccount[];
+  activeAccountId: string;
+  setActiveAccount: (id: string) => void;
+  renameActiveAccount: (username: string) => PlayerAccount;
+  randomizeActiveAccount: () => PlayerAccount;
+  addOfflineProfile: (username: string, skinPreset: PlayerAccount['skinPreset']) => PlayerAccount;
+  upsertMicrosoftAccount: (username: string, uuid: string) => PlayerAccount;
+  removeAccount: (id: string) => void;
+}
+
+const DEFAULT_ACCOUNT = createDefaultUserAccount();
+
 export const useAccountStore = create<AccountState>()(
   persist(
     (set, get) => ({
-      accounts: INITIAL_ACCOUNTS,
-      activeAccountId: INITIAL_ACCOUNTS[0].id,
+      accounts: [DEFAULT_ACCOUNT],
+      activeAccountId: DEFAULT_ACCOUNT.id,
       setActiveAccount: (id) => {
         if (get().accounts.some((a) => a.id === id)) {
           set({ activeAccountId: id });
         }
       },
+      renameActiveAccount: (username) => {
+        const clean = username.trim().slice(0, 16) || generateRandomUserNick();
+        const currentId = get().activeAccountId;
+        let updatedAccount: PlayerAccount = createDefaultUserAccount();
+        set((state) => {
+          const next = state.accounts.map((acc) => {
+            if (acc.id !== currentId) return acc;
+            updatedAccount = {
+              ...acc,
+              username: clean,
+              uuid: acc.authType === 'microsoft' ? acc.uuid : generateDeterministicUuid(clean),
+            };
+            return updatedAccount;
+          });
+          return { accounts: next };
+        });
+        return updatedAccount;
+      },
+      randomizeActiveAccount: () => {
+        return get().renameActiveAccount(generateRandomUserNick());
+      },
       addOfflineProfile: (username, skinPreset) => {
-        const clean = username.trim().slice(0, 16) || 'Player';
+        const clean = username.trim().slice(0, 16) || generateRandomUserNick();
         const created: PlayerAccount = {
           id: `acc-${Date.now().toString(36)}`,
           username: clean,
@@ -112,7 +130,32 @@ export const useAccountStore = create<AccountState>()(
         }),
     }),
     {
-      name: 'winvisual-accounts-v3',
+      name: 'winvisual-accounts-v4',
+      merge: (persistedState, currentState) => {
+        const raw = persistedState as Partial<AccountState> | undefined;
+        if (!raw || !Array.isArray(raw.accounts) || raw.accounts.length === 0) {
+          return currentState;
+        }
+        const sanitized = raw.accounts.map((acc) => {
+          if (!acc.username || /^(winvisual|aethervisual)$/i.test(acc.username.trim())) {
+            const replacement = generateRandomUserNick();
+            return {
+              ...acc,
+              username: replacement,
+              uuid: generateDeterministicUuid(replacement),
+            };
+          }
+          return acc;
+        });
+        const validActive = sanitized.some((a) => a.id === raw.activeAccountId)
+          ? (raw.activeAccountId as string)
+          : sanitized[0].id;
+        return {
+          ...currentState,
+          accounts: sanitized,
+          activeAccountId: validActive,
+        };
+      },
     }
   )
 );

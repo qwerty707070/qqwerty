@@ -71,8 +71,8 @@ let activeAbortController: AbortController | null = null;
 
 const INITIAL_PROGRESS: DownloadProgressState = {
   active: false,
-  versionId: 'winvisual-1.21.4',
-  versionName: 'WinVisual 2.4.1',
+  versionId: 'winvisual-1.21.11',
+  versionName: 'Fabric 1.21.11',
   currentFile: '',
   stageLabel: '',
   downloadedBytes: 0,
@@ -95,7 +95,7 @@ export const useLauncherStore = create<LauncherState>()(
       setWindowMinimized: (minimized) => set({ windowMinimized: minimized }),
 
       versions: [],
-      selectedVersionId: 'winvisual-1.21.4',
+      selectedVersionId: 'winvisual-1.21.11',
       versionChannelFilter: 'all',
       versionsLoading: true,
       versionsError: null,
@@ -112,7 +112,7 @@ export const useLauncherStore = create<LauncherState>()(
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.4.1 initialized`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.4.2 initialized`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 
@@ -142,7 +142,7 @@ export const useLauncherStore = create<LauncherState>()(
           const currentSelected = get().selectedVersionId;
           const validSelected = list.some((v) => v.id === currentSelected)
             ? currentSelected
-            : list[0]?.id ?? 'winvisual-1.21.4';
+            : list[0]?.id ?? 'winvisual-1.21.11';
           set({
             versions: list,
             selectedVersionId: validSelected,
@@ -267,10 +267,9 @@ export const useLauncherStore = create<LauncherState>()(
 
         try {
           if (isTauriDesktop()) {
-            const fabricVer = selected.loader.split(' ')[1] ?? '0.16.10';
             const pid = await tauriLaunchMinecraft({
               minecraftVersion: selected.minecraftVersion,
-              fabricLoaderVersion: fabricVer,
+              fabricLoaderVersion: 'latest',
               username: activeAccount.username,
               uuid: activeAccount.uuid,
               ramMb: settings.ramAllocationMb,
@@ -399,7 +398,7 @@ export const useLauncherStore = create<LauncherState>()(
       },
     }),
     {
-      name: 'winvisual-launcher-state-v3',
+      name: 'winvisual-launcher-state-v4',
       partialize: (state) => ({
         selectedVersionId: state.selectedVersionId,
       }),

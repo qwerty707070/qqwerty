@@ -94,7 +94,7 @@ export const HomePage: React.FC = () => {
       className="h-full min-h-[630px] p-6 flex flex-col gap-4"
     >
       {/* Atmospheric Hero Stage */}
-      <section className="relative flex-1 min-h-[356px] rounded-[24px] overflow-hidden border border-white/[0.085] shadow-[0_26px_70px_-18px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.1)] flex flex-col justify-between p-8">
+      <section className="relative isolate z-0 flex-1 min-h-[356px] rounded-[24px] overflow-hidden border border-white/[0.085] shadow-[0_26px_70px_-18px_rgba(0,0,0,0.88),inset_0_1px_0_rgba(255,255,255,0.1)] flex flex-col justify-between p-8">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-12 top-0 h-[1px] z-20 bg-gradient-to-r from-transparent via-white/25 to-transparent"
@@ -209,7 +209,7 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Interactive Visual Client Telemetry & Loadout Strip */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card interactive onClick={cycleVisualProfile} className="px-4 py-3 cursor-pointer">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">

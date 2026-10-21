@@ -23,6 +23,13 @@ body,
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Remove raw browser default mouse-focus outline while preserving keyboard focus rings */
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[role='button']:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Custom Ultra-Clean Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -42,15 +49,25 @@ body,
   background: rgba(255, 255, 255, 0.18);
 }
 
-/* Controlled Premium Glass Panel */
+/* Controlled Premium Surface Panel */
 .glass-panel {
-  background: rgba(16, 17, 22, 0.78);
+  background: rgba(16, 17, 22, 0.88);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-primary);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
-    0 20px 50px -20px rgba(0, 0, 0, 0.7);
+    0 20px 50px -20px rgba(0, 0, 0, 0.75);
+}
+
+/* 100% Opaque High-Elevation Popover & Modal Surface — Zero Bleed-Through */
+.popover-panel {
+  background-color: #0e1016;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+    0 28px 72px -12px rgba(0, 0, 0, 0.96),
+    0 0 0 1px rgba(0, 0, 0, 0.65);
 }
 
 /* Subtle Film Grain SVG Data Texture */

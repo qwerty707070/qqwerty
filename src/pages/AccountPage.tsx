@@ -3,16 +3,18 @@ import { motion } from 'framer-motion';
 import {
   Check,
   Copy,
+  Dices,
   ExternalLink,
   KeyRound,
   LogOut,
+  Pencil,
   Plus,
   RefreshCw,
   ShieldCheck,
   Sparkles,
   UserCheck,
 } from 'lucide-react';
-import { useAccountStore } from '../stores/accountStore';
+import { generateRandomUserNick, useAccountStore } from '../stores/accountStore';
 import { useVisualClientStore, type ShaderCapeId } from '../stores/visualClientStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useNotificationStore } from '../stores/notificationStore';
@@ -42,6 +44,8 @@ export const AccountPage: React.FC = () => {
     accounts,
     activeAccountId,
     setActiveAccount,
+    renameActiveAccount,
+    randomizeActiveAccount,
     addOfflineProfile,
     upsertMicrosoftAccount,
     removeAccount,
@@ -51,6 +55,7 @@ export const AccountPage: React.FC = () => {
   const pushToast = useNotificationStore((s) => s.pushToast);
 
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [oauthModalOpen, setOauthModalOpen] = useState(false);
   const [clientIdInput, setClientIdInput] = useState(DEFAULT_AZURE_CLIENT_ID);
   const [checkingOAuth, setCheckingOAuth] = useState(false);
@@ -60,6 +65,7 @@ export const AccountPage: React.FC = () => {
     verificationUri: string;
   } | null>(null);
   const [newName, setNewName] = useState('');
+  const [renameInput, setRenameInput] = useState('');
   const [newSkin, setNewSkin] = useState<PlayerAccount['skinPreset']>('winvisual');
 
   const isRu = language === 'ru';
@@ -135,10 +141,27 @@ export const AccountPage: React.FC = () => {
     });
   };
 
+  const handleRandomizeNick = () => {
+    const updated = randomizeActiveAccount();
+    pushToast({
+      type: 'info',
+      title: isRu ? `Новый никнейм: ${updated.username}` : `Random nickname: ${updated.username}`,
+    });
+  };
+
+  const handleRenameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated = renameActiveAccount(renameInput);
+    setRenameModalOpen(false);
+    pushToast({
+      type: 'success',
+      title: isRu ? `Ник изменён на ${updated.username}` : `Nickname updated to ${updated.username}`,
+    });
+  };
+
   const handleCreateProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim()) return;
-    const created = addOfflineProfile(newName, newSkin);
+    const created = addOfflineProfile(newName || generateRandomUserNick(), newSkin);
     setNewName('');
     setAddModalOpen(false);
     pushToast({
@@ -183,16 +206,31 @@ export const AccountPage: React.FC = () => {
                 <h1 className="text-[26px] font-bold tracking-tight text-[var(--text-primary)] leading-none">
                   {active.username}
                 </h1>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRenameInput(active.username);
+                    setRenameModalOpen(true);
+                  }}
+                  title={isRu ? 'Изменить ник' : 'Edit nickname'}
+                  className="p-1.5 rounded-[8px] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  <Pencil size={13.5} strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRandomizeNick}
+                  title={isRu ? 'Сгенерировать случайный user-ник' : 'Generate random user nick'}
+                  className="p-1.5 rounded-[8px] bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                >
+                  <Dices size={14} strokeWidth={1.75} />
+                </button>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[var(--accent-subtle)] text-[var(--accent-secondary)] border border-[var(--accent-primary)]/30">
                   {active.authType === 'microsoft'
                     ? 'Microsoft Verified'
-                    : active.authType === 'microsoft-demo'
-                      ? isRu
-                        ? 'Демо-профиль Microsoft'
-                        : 'Microsoft Demo Profile'
-                      : isRu
-                        ? 'Локальный профиль'
-                        : 'Local Profile'}
+                    : isRu
+                      ? 'Локальный профиль'
+                      : 'Local Profile'}
                 </span>
               </div>
 
@@ -307,13 +345,9 @@ export const AccountPage: React.FC = () => {
                           ? isRu
                             ? 'Лицензия Microsoft (токен в связочнике ОС)'
                             : 'Microsoft Verified (OS Keyring)'
-                          : acc.authType === 'microsoft-demo'
-                            ? isRu
-                              ? 'Демонстрационный профиль (без токена)'
-                              : 'Demo Preview Profile (no live token)'
-                            : isRu
-                              ? 'Локальная сессия (готова к запуску)'
-                              : 'Local Session (ready to launch)'}
+                          : isRu
+                            ? 'Локальная сессия (готова к запуску)'
+                            : 'Local Session (ready to launch)'}
                       </p>
                     </div>
                   </div>
@@ -344,6 +378,55 @@ export const AccountPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Rename Active Profile Modal */}
+      <Modal
+        open={renameModalOpen}
+        onOpenChange={setRenameModalOpen}
+        title={isRu ? 'Изменить игровой никнейм' : 'Change Player Nickname'}
+        description={
+          isRu
+            ? 'Укажите собственный никнейм (3–16 символов) или сгенерируйте случайный вида userXXXXX.'
+            : 'Enter a custom Minecraft username (3–16 characters) or generate a random userXXXXX nick.'
+        }
+      >
+        <form onSubmit={handleRenameSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[12.5px] font-medium text-[var(--text-secondary)]">
+              {isRu ? 'Никнейм' : 'Username'}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                minLength={3}
+                maxLength={16}
+                placeholder="user48291"
+                value={renameInput}
+                onChange={(e) => setRenameInput(e.target.value)}
+                className="flex-1 h-10 px-3.5 rounded-[10px] bg-[var(--background-secondary)] border border-[var(--border-primary)] focus:border-[var(--accent-primary)] text-[13.5px] text-[var(--text-primary)] outline-none"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setRenameInput(generateRandomUserNick())}
+              >
+                <Dices size={15} strokeWidth={1.75} />
+                {isRu ? 'Случайный' : 'Random'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2.5 pt-2">
+            <Button type="button" variant="secondary" onClick={() => setRenameModalOpen(false)}>
+              {isRu ? 'Отмена' : 'Cancel'}
+            </Button>
+            <Button type="submit" variant="primary">
+              <UserCheck size={15} strokeWidth={1.75} />
+              {isRu ? 'Сохранить' : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Add Local Profile Modal */}
       <Modal
         open={addModalOpen}
@@ -352,24 +435,31 @@ export const AccountPage: React.FC = () => {
         description={
           isRu
             ? 'Локальный профиль работает сразу для одиночной игры и серверов в offline-режиме.'
-            : 'Local profiles allow immediate launching into singleplayer and offline-mode test worlds.'
+            : 'Local profiles allow immediate launching into singleplayer and offline-mode worlds.'
         }
       >
         <form onSubmit={handleCreateProfile} className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-[12.5px] font-medium text-[var(--text-secondary)]">
-              {isRu ? 'Игровой никнейм (3–16 символов)' : 'Minecraft Username (3–16 chars)'}
+              {isRu ? 'Игровой никнейм (пусто = случайный userXXXXX)' : 'Minecraft Username (blank = random userXXXXX)'}
             </label>
-            <input
-              type="text"
-              required
-              minLength={3}
-              maxLength={16}
-              placeholder="WinPlayer"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="w-full h-10 px-3.5 rounded-[10px] bg-[var(--background-secondary)] border border-[var(--border-primary)] focus:border-[var(--accent-primary)] text-[13.5px] text-[var(--text-primary)] outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                maxLength={16}
+                placeholder="user48291"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                className="flex-1 h-10 px-3.5 rounded-[10px] bg-[var(--background-secondary)] border border-[var(--border-primary)] focus:border-[var(--accent-primary)] text-[13.5px] text-[var(--text-primary)] outline-none"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setNewName(generateRandomUserNick())}
+              >
+                <Dices size={15} strokeWidth={1.75} />
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">

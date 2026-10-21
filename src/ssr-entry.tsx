@@ -81,6 +81,12 @@ export function renderRouteSnapshot(route: PageRoute, lang: LanguageCode): strin
   );
 }
 
+export function getActiveUsername(): string {
+  const { accounts, activeAccountId } = useAccountStore.getState();
+  const active = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
+  return active.username;
+}
+
 export function renderLiveSessionSnapshot(): string {
   useVisualClientStore.getState().setLiveSessionModalOpen(true);
   syncServerSnapshots();

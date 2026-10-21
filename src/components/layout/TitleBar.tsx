@@ -62,7 +62,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             Win<span className="text-[var(--accent-secondary)] font-semibold">Visual</span>
           </span>
           <span className="px-2 py-0.5 text-[10.5px] font-mono font-medium rounded-full bg-white/[0.045] border border-white/[0.07] text-[var(--text-secondary)]">
-            v{telemetry?.launcherVersion ?? '2.4.1'}
+            v{telemetry?.launcherVersion ?? '2.4.2'}
           </span>
         </div>
       </div>

@@ -23,7 +23,7 @@ export async function fetchSystemTelemetry(): Promise<SystemTelemetry> {
   } catch {
     return {
       operational: true,
-      launcherVersion: '2.4.0',
+      launcherVersion: '2.4.2',
       uptimeSeconds: 3600,
       platform: navigator.platform || 'Desktop OS',
       cpuCores: navigator.hardwareConcurrency || 8,

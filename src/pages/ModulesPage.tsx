@@ -232,7 +232,7 @@ export const ModulesPage: React.FC = () => {
               className="absolute glass-panel rounded-[12px] p-2.5 w-[188px] cursor-move border border-white/15 space-y-1.5"
             >
               <div className="flex items-center justify-between text-[11.5px]">
-                <span className="font-semibold text-[#F5F5F7]">Valkyrie</span>
+                <span className="font-semibold text-[#F5F5F7]">user74920</span>
                 <span className="font-mono text-[10.5px] text-[var(--accent-secondary)]">
                   18.4 HP • 2.7m
                 </span>

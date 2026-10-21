@@ -44,7 +44,7 @@ export const Modal: React.FC<ModalProps> = ({
                   exit={{ opacity: 0, scale: 0.97, y: 6 }}
                   transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                   className={cn(
-                    'pointer-events-auto relative w-full rounded-[20px] glass-panel p-6 outline-none',
+                    'pointer-events-auto relative w-full rounded-[20px] popover-panel p-6 outline-none',
                     maxWidthClass
                   )}
                 >

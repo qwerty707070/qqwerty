@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, Calendar, Check, Cpu, Layers, Play, RefreshCw } from 'lucide-react';
-import type { VersionChannel } from '../types/launcher';
 import { useLauncherStore } from '../stores/launcherStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { Card } from '../components/ui/Card';
@@ -9,24 +8,33 @@ import { Button } from '../components/ui/Button';
 import { SegmentedControl } from '../components/ui/SegmentedControl';
 import { Skeleton } from '../components/ui/Skeleton';
 
+type McVersionFilter = 'all' | '1.21.11' | '1.21.4' | '1.16.5';
+
 export const VersionsPage: React.FC = () => {
+  const [mcFilter, setMcFilter] = useState<McVersionFilter>('all');
+
   const versions = useLauncherStore((s) => s.versions);
   const selectedVersionId = useLauncherStore((s) => s.selectedVersionId);
-  const versionChannelFilter = useLauncherStore((s) => s.versionChannelFilter);
   const versionsLoading = useLauncherStore((s) => s.versionsLoading);
   const versionsError = useLauncherStore((s) => s.versionsError);
-  const setVersionFilter = useLauncherStore((s) => s.setVersionFilter);
+  const loadInitialData = useLauncherStore((s) => s.loadInitialData);
   const selectVersion = useLauncherStore((s) => s.selectVersion);
   const startLaunchSequence = useLauncherStore((s) => s.startLaunchSequence);
   const language = useSettingsStore((s) => s.language);
 
   const isRu = language === 'ru';
 
-  const filterOptions: { value: VersionChannel; label: string }[] = [
-    { value: 'all', label: isRu ? 'Все версии' : 'All Versions' },
-    { value: 'stable', label: 'Stable' },
-    { value: 'beta', label: 'Beta' },
+  const filterOptions: { value: McVersionFilter; label: string }[] = [
+    { value: 'all', label: isRu ? 'Все Fabric' : 'All Fabric' },
+    { value: '1.21.11', label: '1.21.11' },
+    { value: '1.21.4', label: '1.21.4' },
+    { value: '1.16.5', label: '1.16.5' },
   ];
+
+  const displayedVersions =
+    mcFilter === 'all'
+      ? versions
+      : versions.filter((v) => v.minecraftVersion === mcFilter);
 
   return (
     <motion.div
@@ -37,23 +45,23 @@ export const VersionsPage: React.FC = () => {
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       className="p-7 space-y-6 max-w-[1040px]"
     >
-      {/* Header & Channel Filter */}
+      {/* Header & Version Filter */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-            {isRu ? 'Версии клиента' : 'Client Versions'}
+            {isRu ? 'Версии клиента Fabric' : 'Fabric Client Versions'}
           </h1>
           <p className="mt-1 text-[13.5px] text-[var(--text-secondary)]">
             {isRu
-              ? 'Выберите оптимизированную сборку WinVisual с подписанными библиотеками Fabric.'
-              : 'Select an optimized WinVisual build with signed Fabric runtime dependencies.'}
+              ? 'Официальные сборки WinVisual для Minecraft 1.21.11, 1.21.4 и 1.16.5 на базе Fabric.'
+              : 'Official WinVisual builds for Minecraft 1.21.11, 1.21.4, and 1.16.5 powered by Fabric.'}
           </p>
         </div>
 
         <SegmentedControl
           options={filterOptions}
-          value={versionChannelFilter}
-          onChange={(ch) => setVersionFilter(ch)}
+          value={mcFilter}
+          onChange={(val) => setMcFilter(val)}
           layoutGroupId="versions-channel-pill"
         />
       </div>
@@ -76,23 +84,23 @@ export const VersionsPage: React.FC = () => {
           </h2>
           <p className="text-[13px] text-[var(--text-secondary)]">{versionsError}</p>
           <div className="pt-1">
-            <Button variant="secondary" onClick={() => setVersionFilter(versionChannelFilter)}>
+            <Button variant="secondary" onClick={() => loadInitialData()}>
               <RefreshCw size={15} strokeWidth={1.75} />
               {isRu ? 'Повторить запрос' : 'Retry'}
             </Button>
           </div>
         </Card>
-      ) : versions.length === 0 ? (
+      ) : displayedVersions.length === 0 ? (
         /* Empty State */
         <Card className="p-8 text-center space-y-2">
           <p className="text-[15px] font-medium text-[var(--text-primary)]">
-            {isRu ? 'В выбранном канале пока нет сборок' : 'No builds available in this channel'}
+            {isRu ? 'Сборок не найдено' : 'No builds available'}
           </p>
         </Card>
       ) : (
         /* Version Cards */
         <div className="grid grid-cols-1 gap-4">
-          {versions.map((ver) => {
+          {displayedVersions.map((ver) => {
             const isSelected = ver.id === selectedVersionId;
             const highlights = isRu ? ver.highlightsRu : ver.highlightsEn;
             return (
@@ -114,20 +122,12 @@ export const VersionsPage: React.FC = () => {
                         Minecraft {ver.minecraftVersion}
                       </span>
 
-                      <span
-                        className={
-                          ver.channel === 'stable'
-                            ? 'px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25'
-                            : 'px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25'
-                        }
-                      >
+                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
                         {ver.recommended
                           ? isRu
-                            ? 'Рекомендуемый релиз'
-                            : 'Latest Release'
-                          : ver.channel === 'stable'
-                            ? 'Stable'
-                            : 'Beta Preview'}
+                            ? 'Рекомендуемая Fabric'
+                            : 'Recommended Fabric'
+                          : 'Fabric Release'}
                       </span>
 
                       <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[var(--text-muted)]">
