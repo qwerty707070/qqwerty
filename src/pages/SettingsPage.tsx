@@ -190,8 +190,8 @@ export const SettingsPage: React.FC = () => {
             title={isRu ? 'Запускать вместе с системой' : 'Start with System'}
             description={
               isRu
-                ? 'Автоматически открывать Aether Visual в фоновом режиме при входе в ОС.'
-                : 'Launch Aether Visual minimized in background upon OS login.'
+                ? 'Автоматически открывать WinVisual в фоновом режиме при входе в ОС.'
+                : 'Launch WinVisual minimized in background upon OS login.'
             }
             control={
               <Toggle

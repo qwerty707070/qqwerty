@@ -10,7 +10,7 @@ interface Character3DViewerProps {
 }
 
 const CAPE_PALETTES: Record<ShaderCapeId, [string, string, string]> = {
-  nebula: ['#8B7CFF', '#5B21B6', '#C4B5FD'],
+  nebula: ['#9D5CFF', '#4C1D95', '#E9D5FF'],
   pulse: ['#F43F5E', '#881337', '#FDA4AF'],
   aurora: ['#38BDF8', '#1E3A8A', '#A7F3D0'],
   obsidian: ['#F59E0B', '#27272A', '#FDE68A'],
@@ -20,7 +20,7 @@ const SKIN_BODY_COLORS: Record<
   PlayerAccount['skinPreset'],
   { torso: string; limb: string; head: string; accent: string }
 > = {
-  aether: { torso: '#1E2235', limb: '#151826', head: '#252A40', accent: '#8B7CFF' },
+  winvisual: { torso: '#1A142D', limb: '#120E20', head: '#231B3C', accent: '#A855F7' },
   obsidian: { torso: '#29221E', limb: '#1D1815', head: '#D8B094', accent: '#A855F7' },
   classic: { torso: '#29789B', limb: '#3B357A', head: '#C68F6E', accent: '#60A5FA' },
   slim: { torso: '#2A2540', limb: '#1C192B', head: '#F0D0BA', accent: '#C4B5FD' },
@@ -33,7 +33,7 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dragging, setDragging] = useState(false);
-  const yawRef = useRef(2.45); // Default angled rear-three-quarter view showcasing cape + character!
+  const yawRef = useRef(2.45);
   const lastXRef = useRef(0);
   const reducedMotion = useSettingsStore((s) => s.reducedMotion);
 
@@ -81,11 +81,11 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
       });
 
       const faces: [number[], number][] = [
-        [[4, 5, 6, 7], 1.0], // front
-        [[1, 0, 3, 2], 0.68], // back
-        [[5, 1, 2, 6], 0.84], // right
-        [[0, 4, 7, 3], 0.78], // left
-        [[0, 1, 5, 4], 1.14], // top
+        [[4, 5, 6, 7], 1.0],
+        [[1, 0, 3, 2], 0.68],
+        [[5, 1, 2, 6], 0.84],
+        [[0, 4, 7, 3], 0.78],
+        [[0, 1, 5, 4], 1.14],
       ];
 
       const sorted = faces
@@ -135,7 +135,6 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
       ctx.clearRect(0, 0, width, height);
       ctx.translate(width / 2, height / 2 + 12);
 
-      // Floor glow ring
       const [cPrimary, cDark, cBright] = CAPE_PALETTES[cape];
       const grad = ctx.createRadialGradient(0, 82, 4, 0, 82, 76);
       grad.addColorStop(0, `${cPrimary}44`);
@@ -146,7 +145,7 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
       ctx.fill();
 
       const yaw = yawRef.current + (reducedMotion ? 0 : Math.sin(tSec * 0.7) * 0.08);
-      const colors = SKIN_BODY_COLORS[skinPreset];
+      const colors = SKIN_BODY_COLORS[skinPreset] ?? SKIN_BODY_COLORS.winvisual;
       const backVisible = Math.cos(yaw) < 0.25;
 
       const drawCape = () => {
@@ -193,21 +192,16 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
 
       if (!backVisible) drawCape();
 
-      // Legs
       projectBox(-9, 52, 0, 15, 44, 15, yaw, colors.limb);
       projectBox(9, 52, 0, 15, 44, 15, yaw, colors.limb);
-      // Arms
       const armSwing = Math.sin(tSec * 1.6) * 2;
       projectBox(-25, 8 + armSwing, 0, 13, 44, 15, yaw, colors.limb);
       projectBox(25, 8 - armSwing, 0, 13, 44, 15, yaw, colors.limb);
-      // Torso
       projectBox(0, 8, 0, 34, 44, 17, yaw, colors.torso);
-      // Head
       projectBox(0, -34, 0, 32, 32, 32, yaw, colors.head);
 
       if (backVisible) drawCape();
 
-      // Optional Halo Aura above head
       if (showHalo) {
         ctx.strokeStyle = cBright;
         ctx.lineWidth = 2.2;

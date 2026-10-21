@@ -10,8 +10,8 @@ import type {
 export const ACCENT_PRESETS: AccentPreset[] = [
   {
     id: 'violet',
-    labelRu: 'Aether Violet',
-    labelEn: 'Aether Violet',
+    labelRu: 'WinVisual Violet',
+    labelEn: 'WinVisual Violet',
     primary: '#8B7CFF',
     secondary: '#A69BFF',
     rgb: '139, 124, 255',
@@ -84,7 +84,7 @@ const DEFAULT_SETTINGS = {
 
   ramAllocationMb: 6144,
   javaPath: '/usr/lib/jvm/temurin-21-jdk/bin/java',
-  gameDirectory: '~/.minecraft/aether-visual',
+  gameDirectory: '~/.minecraft/winvisual',
   jvmArguments:
     '-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50',
 
@@ -132,7 +132,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
     }),
     {
-      name: 'aether-visual-settings-v2',
+      name: 'winvisual-settings-v3',
       onRehydrateStorage: () => (state) => {
         if (state) {
           syncAppearanceTokensToDom(state);

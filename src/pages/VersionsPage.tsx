@@ -45,8 +45,8 @@ export const VersionsPage: React.FC = () => {
           </h1>
           <p className="mt-1 text-[13.5px] text-[var(--text-secondary)]">
             {isRu
-              ? 'Выберите оптимизированную сборку Aether Visual с подписанными библиотеками Fabric.'
-              : 'Select an optimized Aether Visual build with signed Fabric runtime dependencies.'}
+              ? 'Выберите оптимизированную сборку WinVisual с подписанными библиотеками Fabric.'
+              : 'Select an optimized WinVisual build with signed Fabric runtime dependencies.'}
           </p>
         </div>
 

@@ -1,8 +1,8 @@
 [package]
-name = "aether-visual-launcher"
+name = "winvisual-launcher"
 version = "2.4.0"
-description = "Aether Visual — Premium Minecraft Visual Client Launcher"
-authors = ["Aether Visual Team"]
+description = "WinVisual — Premium Minecraft Visual Client Launcher"
+authors = ["WinVisual Team"]
 edition = "2021"
 
 [build-dependencies]

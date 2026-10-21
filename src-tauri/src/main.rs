@@ -175,5 +175,5 @@ fn main() {
             open_game_folder,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running Aether Visual Tauri application");
+        .expect("error while running WinVisual Tauri application");
 }

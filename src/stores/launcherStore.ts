@@ -71,8 +71,8 @@ let activeAbortController: AbortController | null = null;
 
 const INITIAL_PROGRESS: DownloadProgressState = {
   active: false,
-  versionId: 'aether-1.21.4',
-  versionName: 'Aether Visual 2.4.0',
+  versionId: 'winvisual-1.21.4',
+  versionName: 'WinVisual 2.4.0',
   currentFile: '',
   stageLabel: '',
   downloadedBytes: 0,
@@ -95,7 +95,7 @@ export const useLauncherStore = create<LauncherState>()(
       setWindowMinimized: (minimized) => set({ windowMinimized: minimized }),
 
       versions: [],
-      selectedVersionId: 'aether-1.21.4',
+      selectedVersionId: 'winvisual-1.21.4',
       versionChannelFilter: 'all',
       versionsLoading: true,
       versionsError: null,
@@ -112,7 +112,7 @@ export const useLauncherStore = create<LauncherState>()(
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] Aether Visual Shell v2.4.0 initialized`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.4.0 initialized`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 
@@ -142,7 +142,7 @@ export const useLauncherStore = create<LauncherState>()(
           const currentSelected = get().selectedVersionId;
           const validSelected = list.some((v) => v.id === currentSelected)
             ? currentSelected
-            : list[0]?.id ?? 'aether-1.21.4';
+            : list[0]?.id ?? 'winvisual-1.21.4';
           set({
             versions: list,
             selectedVersionId: validSelected,
@@ -399,7 +399,7 @@ export const useLauncherStore = create<LauncherState>()(
       },
     }),
     {
-      name: 'aether-visual-launcher-state-v2',
+      name: 'winvisual-launcher-state-v3',
       partialize: (state) => ({
         selectedVersionId: state.selectedVersionId,
       }),

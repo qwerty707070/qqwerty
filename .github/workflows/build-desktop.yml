@@ -61,7 +61,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: v2.4.0
-          releaseName: "Aether Visual Launcher v2.4.0"
+          releaseName: "WinVisual Launcher v2.4.0"
           releaseBody: "Native Tauri v2 Desktop Installers for Windows x64 (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage)."
           releaseDraft: false
           prerelease: false

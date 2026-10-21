@@ -60,7 +60,7 @@ export const AccountPage: React.FC = () => {
     verificationUri: string;
   } | null>(null);
   const [newName, setNewName] = useState('');
-  const [newSkin, setNewSkin] = useState<PlayerAccount['skinPreset']>('aether');
+  const [newSkin, setNewSkin] = useState<PlayerAccount['skinPreset']>('winvisual');
 
   const isRu = language === 'ru';
   const active = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
@@ -365,7 +365,7 @@ export const AccountPage: React.FC = () => {
               required
               minLength={3}
               maxLength={16}
-              placeholder="AetherPlayer"
+              placeholder="WinPlayer"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="w-full h-10 px-3.5 rounded-[10px] bg-[var(--background-secondary)] border border-[var(--border-primary)] focus:border-[var(--accent-primary)] text-[13.5px] text-[var(--text-primary)] outline-none"
@@ -377,7 +377,7 @@ export const AccountPage: React.FC = () => {
               {isRu ? 'Пресет скина' : 'Skin Preset'}
             </label>
             <div className="grid grid-cols-4 gap-2.5">
-              {(['aether', 'slim', 'classic', 'obsidian'] as const).map((preset) => (
+              {(['winvisual', 'slim', 'classic', 'obsidian'] as const).map((preset) => (
                 <button
                   key={preset}
                   type="button"

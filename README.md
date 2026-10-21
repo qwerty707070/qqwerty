@@ -1,4 +1,4 @@
-# Aether Visual — Minecraft Visual Client Launcher
+# WinVisual — Minecraft Visual Client Launcher
 
 Премиальный лаунчер визуального клиента Minecraft (**Tauri v2 + React 18 + TypeScript + Tailwind CSS + Framer Motion + Radix UI + Zustand**).
 

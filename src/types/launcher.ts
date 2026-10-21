@@ -91,7 +91,7 @@ export interface PlayerAccount {
   username: string;
   uuid: string;
   authType: AccountAuthType;
-  skinPreset: 'aether' | 'obsidian' | 'classic' | 'slim';
+  skinPreset: 'winvisual' | 'obsidian' | 'classic' | 'slim';
   capeName: string;
   online: boolean;
   lastUsed: string;

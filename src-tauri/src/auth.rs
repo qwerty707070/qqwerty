@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-const KEYRING_SERVICE: &str = "com.aethervisual.launcher.oauth";
+const KEYRING_SERVICE: &str = "com.winvisual.launcher.oauth";
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

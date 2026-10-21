@@ -66,7 +66,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           </div>
           <Button variant="primary" size="md" onClick={() => setWindowClosedState(false)}>
             <RotateCcw size={15} strokeWidth={2} />
-            {language === 'ru' ? 'Запустить Aether Visual' : 'Relaunch Aether Visual'}
+            {language === 'ru' ? 'Запустить WinVisual' : 'Relaunch WinVisual'}
           </Button>
         </motion.div>
       ) : windowMinimized ? (
@@ -79,7 +79,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
         >
           <BrandMark size={26} />
           <span className="text-[13px] font-medium text-[var(--text-primary)]">
-            Aether Visual Launcher — {language === 'ru' ? 'Нажмите, чтобы развернуть' : 'Click to restore'}
+            WinVisual Launcher — {language === 'ru' ? 'Нажмите, чтобы развернуть' : 'Click to restore'}
           </span>
         </motion.button>
       ) : (

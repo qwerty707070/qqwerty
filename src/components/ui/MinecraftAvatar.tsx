@@ -10,38 +10,16 @@ interface MinecraftAvatarProps {
   className?: string;
 }
 
-const SKIN_GRIDS: Record<PlayerAccount['skinPreset'], { palette: Record<string, string>; rows: string[] }> = {
-  // Dark hooded visual-client knight with glowing violet eyes
-  aether: {
-    palette: {
-      d: '#13141C',
-      m: '#1D2030',
-      h: '#2A2F47',
-      s: '#D8B49C',
-      u: '#B9927B',
-      e: '#A69BFF',
-      w: '#FFFFFF',
-    },
-    rows: [
-      'dddddddd',
-      'dmmmmhhd',
-      'dmhhhhmd',
-      'dmuuuumd',
-      'dweuuewd',
-      'dssuussd',
-      'dsuuuusd',
-      'ddssssdd',
-    ],
-  },
-  // Classic Notch bearded skin
+const SKIN_GRIDS: Record<
+  Exclude<PlayerAccount['skinPreset'], 'winvisual'>,
+  { palette: Record<string, string>; rows: string[] }
+> = {
   obsidian: {
     palette: {
-      h: '#3B281CC',
       d: '#2A1B12',
       s: '#E6B89C',
       u: '#CA9678',
       b: '#231710',
-      e: '#1A1A22',
       w: '#F5F5F7',
     },
     rows: [
@@ -49,13 +27,12 @@ const SKIN_GRIDS: Record<PlayerAccount['skinPreset'], { palette: Record<string, 
       'dssssssd',
       'ssssssss',
       'ssssssss',
-      'sweuusws',
+      'swduudws',
       'ssbbbbss',
       'sbbbbbbb',
       'bbbbbbbb',
     ],
   },
-  // Classic Steve
   classic: {
     palette: {
       h: '#2F1F15',
@@ -77,7 +54,6 @@ const SKIN_GRIDS: Record<PlayerAccount['skinPreset'], { palette: Record<string, 
       'ssuuuuus',
     ],
   },
-  // Sleek slim valkyrie crown skin
   slim: {
     palette: {
       c: '#8B7CFF',
@@ -109,36 +85,46 @@ export const MinecraftAvatar: React.FC<MinecraftAvatarProps> = ({
   showStatusDot = false,
   className,
 }) => {
-  const skin = SKIN_GRIDS[preset] ?? SKIN_GRIDS.aether;
+  const isEmblemAvatar = preset === 'winvisual' || !(preset in SKIN_GRIDS);
+  const skin = !isEmblemAvatar
+    ? SKIN_GRIDS[preset as Exclude<PlayerAccount['skinPreset'], 'winvisual'>]
+    : null;
 
   return (
     <div
       className={cn('relative inline-flex shrink-0 select-none', className)}
       style={{ width: size, height: size }}
     >
-      <div
-        className="w-full h-full overflow-hidden rounded-[10px] border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_12px_rgba(0,0,0,0.45)] bg-[#14161F]"
-      >
-        <svg
-          viewBox="0 0 8 8"
-          width={size}
-          height={size}
-          shapeRendering="crispEdges"
-          aria-hidden="true"
-        >
-          {skin.rows.map((row, y) =>
-            row.split('').map((ch, x) => (
-              <rect
-                key={`${x}-${y}`}
-                x={x}
-                y={y}
-                width={1}
-                height={1}
-                fill={(skin.palette[ch] ?? '#1E202B').slice(0, 7)}
-              />
-            ))
-          )}
-        </svg>
+      <div className="w-full h-full overflow-hidden rounded-[10px] border border-purple-400/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_14px_rgba(0,0,0,0.55)] bg-[#0B0914]">
+        {isEmblemAvatar ? (
+          <img
+            src="/images/winvisual-logo.png"
+            alt="WinVisual Avatar"
+            className="w-full h-full object-cover pointer-events-none"
+            draggable={false}
+          />
+        ) : (
+          <svg
+            viewBox="0 0 8 8"
+            width={size}
+            height={size}
+            shapeRendering="crispEdges"
+            aria-hidden="true"
+          >
+            {skin!.rows.map((row, y) =>
+              row.split('').map((ch, x) => (
+                <rect
+                  key={`${x}-${y}`}
+                  x={x}
+                  y={y}
+                  width={1}
+                  height={1}
+                  fill={(skin!.palette[ch] ?? '#1E202B').slice(0, 7)}
+                />
+              ))
+            )}
+          </svg>
+        )}
       </div>
       {showStatusDot && (
         <span

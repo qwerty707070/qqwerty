@@ -52,5 +52,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Aether Visual Production Server running at http://0.0.0.0:${PORT}`);
+  console.log(`WinVisual Production Server running at http://0.0.0.0:${PORT}`);
 });

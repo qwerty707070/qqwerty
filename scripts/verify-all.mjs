@@ -66,7 +66,7 @@ for (const n of newsData.items) {
 }
 
 // Check all 4 binary artifacts for flagship 29.3 MB build
-const manifest = await fetch(`${base}/api/download/aether-1.21.4/manifest`).then((r) => r.json());
+const manifest = await fetch(`${base}/api/download/winvisual-1.21.4/manifest`).then((r) => r.json());
 if (manifest.artifacts.length !== 4) throw new Error('Expected 4 signed artifacts');
 for (const art of manifest.artifacts) {
   const res = await fetch(`${base}${art.url}?speed_mbps=200`);
@@ -88,8 +88,10 @@ if (tarRes.status !== 200 || tarBuf[0] !== 0x1f || tarBuf[1] !== 0x8b || tarBuf.
   throw new Error('Invalid .tar.gz desktop archive stream');
 }
 
-// Check Tauri icons exist and non-empty
+// Check Tauri & Web brand icons exist and non-empty
 for (const icon of [
+  'public/favicon.png',
+  'public/images/winvisual-logo.png',
   'src-tauri/icons/32x32.png',
   'src-tauri/icons/128x128.png',
   'src-tauri/icons/128x128@2x.png',
@@ -111,7 +113,7 @@ ssrEntry.seedLiveState({
 
 // Verify Preset Share Code export -> import roundtrip
 const exportedCode = ssrEntry.roundtripPresetTest();
-if (!exportedCode.startsWith('AETHER-')) {
+if (!exportedCode.startsWith('WINVISUAL-')) {
   throw new Error('Preset code export failed');
 }
 

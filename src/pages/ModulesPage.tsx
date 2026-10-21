@@ -92,7 +92,7 @@ export const ModulesPage: React.FC = () => {
     } else {
       pushToast({
         type: 'error',
-        title: isRu ? 'Неверный формат кода AETHER-...' : 'Invalid AETHER-... preset code',
+        title: isRu ? 'Неверный формат кода WINVISUAL-...' : 'Invalid WINVISUAL-... preset code',
       });
     }
   };
@@ -163,7 +163,7 @@ export const ModulesPage: React.FC = () => {
               className="absolute glass-panel rounded-[10px] px-3 py-1.5 flex items-center gap-2 text-[11.5px] font-mono cursor-move border border-white/15"
             >
               <GripHorizontal size={12} className="text-[var(--text-muted)]" />
-              <span className="font-semibold text-[var(--accent-secondary)]">AETHER 2.4</span>
+              <span className="font-semibold text-[var(--accent-secondary)]">WINVISUAL 2.4</span>
               <span className="text-white/30">|</span>
               <span className="text-[#F5F5F7]">412 FPS</span>
               <span className="text-white/30">|</span>
@@ -432,15 +432,15 @@ export const ModulesPage: React.FC = () => {
         title={isRu ? 'Импорт пресета HUD и прицела' : 'Import HUD & Crosshair Preset'}
         description={
           isRu
-            ? 'Вставьте код конфигурации формата AETHER-... для мгновенного восстановления раскладки.'
-            : 'Paste an AETHER-... configuration code to restore widget coordinates, crosshair, and modules.'
+            ? 'Вставьте код конфигурации формата WINVISUAL-... для мгновенного восстановления раскладки.'
+            : 'Paste an WINVISUAL-... configuration code to restore widget coordinates, crosshair, and modules.'
         }
       >
         <form onSubmit={handleApplyImport} className="space-y-4">
           <textarea
             rows={3}
             required
-            placeholder="AETHER-eyJ2IjoyLC..."
+            placeholder="WINVISUAL-eyJ2IjoyLC..."
             value={importInput}
             onChange={(e) => setImportInput(e.target.value)}
             className="w-full p-3 rounded-[10px] bg-[var(--background-secondary)] border border-[var(--border-primary)] focus:border-[var(--accent-primary)] font-mono text-[12px] text-[var(--text-primary)] outline-none resize-none"

@@ -13,12 +13,12 @@ interface AccountState {
 
 const INITIAL_ACCOUNTS: PlayerAccount[] = [
   {
-    id: 'acc-kairo',
-    username: 'Kairo',
+    id: 'acc-winvisual',
+    username: 'WinVisual',
     uuid: '8f4e2a91-4d3b-49c2-9b1e-77a910c3e804',
     authType: 'local',
-    skinPreset: 'aether',
-    capeName: 'Nebula Starlight Shader',
+    skinPreset: 'winvisual',
+    capeName: 'WinVisual Crown Shader',
     online: true,
     lastUsed: 'Active session',
   },
@@ -72,7 +72,7 @@ export const useAccountStore = create<AccountState>()(
           uuid: generateDeterministicUuid(clean),
           authType: 'local',
           skinPreset,
-          capeName: 'Aether Default Cloak',
+          capeName: 'WinVisual Default Cloak',
           online: true,
           lastUsed: 'Just created',
         };
@@ -88,8 +88,8 @@ export const useAccountStore = create<AccountState>()(
           username,
           uuid,
           authType: 'microsoft',
-          skinPreset: 'aether',
-          capeName: 'Nebula Starlight Shader',
+          skinPreset: 'winvisual',
+          capeName: 'WinVisual Crown Shader',
           online: true,
           lastUsed: 'Microsoft Verified',
         };
@@ -112,7 +112,7 @@ export const useAccountStore = create<AccountState>()(
         }),
     }),
     {
-      name: 'aether-visual-accounts-v2',
+      name: 'winvisual-accounts-v3',
     }
   )
 );

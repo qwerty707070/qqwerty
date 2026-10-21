@@ -9,7 +9,7 @@ const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
 function launcherApiPlugin(): Plugin {
   return {
-    name: 'aether-launcher-api',
+    name: 'winvisual-launcher-api',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (!handleApiRequest(req, res, ROOT_DIR)) {

@@ -41,11 +41,11 @@ export const Sidebar: React.FC = () => {
   ];
 
   const handleDiscordClick = () => {
-    navigator.clipboard?.writeText('https://discord.gg/aether-visual').catch(() => {});
+    navigator.clipboard?.writeText('https://discord.gg/winvisual').catch(() => {});
     pushToast({
       type: 'info',
       title: language === 'ru' ? 'Приглашение Discord скопировано' : 'Discord invite copied',
-      description: 'discord.gg/aether-visual • 14,820 online',
+      description: 'discord.gg/winvisual • 14,820 online',
     });
   };
 

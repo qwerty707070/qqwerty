@@ -127,7 +127,7 @@ export const LiveClientSessionModal: React.FC = () => {
                 <div className="glass-panel rounded-[12px] px-3.5 py-2 flex items-center gap-2.5 text-[12px] font-mono">
                   <Sparkles size={14} className="text-[var(--accent-secondary)]" />
                   <span className="font-semibold text-[var(--text-primary)]">
-                    {activeVer?.name ?? 'Aether Visual 2.4.0'}
+                    {activeVer?.name ?? 'WinVisual 2.4.0'}
                   </span>
                   <span className="text-white/25">|</span>
                   <span className="text-emerald-300">438 FPS</span>
@@ -304,7 +304,7 @@ export const LiveClientSessionModal: React.FC = () => {
                     <div className="flex items-center justify-between border-b border-[var(--border-primary)] pb-3">
                       <div>
                         <h3 className="text-[16px] font-semibold text-white">
-                          Aether Visual — In-Game ClickGUI
+                          WinVisual — In-Game ClickGUI
                         </h3>
                         <p className="text-[12px] text-[var(--text-secondary)]">
                           {isRu

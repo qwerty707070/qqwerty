@@ -45,7 +45,7 @@ export const VersionSelector: React.FC = () => {
           </p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[13.5px] font-semibold text-[var(--text-primary)] truncate">
-              {activeVersion ? activeVersion.name : 'Aether Visual 2.4.0'}
+              {activeVersion ? activeVersion.name : 'WinVisual 2.4.0'}
             </span>
             {activeVersion && (
               <span className="px-1.5 py-0.5 text-[10.5px] font-mono rounded-[6px] bg-white/[0.06] text-[var(--text-secondary)] shrink-0">

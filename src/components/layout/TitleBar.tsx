@@ -59,10 +59,10 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     >
       {/* Left Brand Cluster */}
       <div className="flex items-center gap-3">
-        <BrandMark size={26} />
+        <BrandMark size={28} />
         <div className="flex items-center gap-2">
-          <span className="text-[13.5px] font-semibold tracking-[0.04em] text-[var(--text-primary)]">
-            AETHER <span className="text-[var(--accent-secondary)] font-normal">VISUAL</span>
+          <span className="text-[14px] font-bold tracking-[0.02em] text-[var(--text-primary)]">
+            Win<span className="text-[var(--accent-secondary)] font-semibold">Visual</span>
           </span>
           <span className="px-2 py-0.5 text-[10.5px] font-mono font-medium rounded-full bg-white/[0.045] border border-white/[0.07] text-[var(--text-secondary)]">
             v{telemetry?.launcherVersion ?? '2.4.0'}
@@ -101,8 +101,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <Tooltip
           content={
             language === 'ru'
-              ? 'Скачать установщик для Windows (.exe / .msi), macOS (.dmg), Linux (.deb)'
-              : 'Download Desktop Installer (.exe / .msi / .dmg / .deb)'
+              ? 'Скачать установщик WinVisual для Windows (.exe / .msi), macOS (.dmg), Linux (.deb)'
+              : 'Download WinVisual Desktop Installer (.exe / .msi / .dmg / .deb)'
           }
           side="bottom"
         >
@@ -122,8 +122,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <Tooltip
           content={
             language === 'ru'
-              ? 'Скачать полный исходный архив проекта (.tar.gz)'
-              : 'Download complete source project archive (.tar.gz)'
+              ? 'Скачать полный исходный архив WinVisual (.tar.gz)'
+              : 'Download complete WinVisual source archive (.tar.gz)'
           }
           side="bottom"
         >

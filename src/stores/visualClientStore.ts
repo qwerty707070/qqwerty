@@ -216,13 +216,13 @@ export const useVisualClientStore = create<VisualClientState>()(
           pos: s.hudPositions,
           on: s.modules.filter((m) => m.enabled).map((m) => m.id),
         };
-        return `AETHER-${btoa(JSON.stringify(payload))}`;
+        return `WINVISUAL-${btoa(JSON.stringify(payload))}`;
       },
 
       importPresetCode: (raw) => {
         try {
           const trimmed = raw.trim();
-          const body = trimmed.startsWith('AETHER-') ? trimmed.slice(7) : trimmed;
+          const body = trimmed.startsWith('WINVISUAL-') ? trimmed.slice(10) : trimmed;
           const parsed = JSON.parse(atob(body)) as {
             cape?: ShaderCapeId;
             ch?: CrosshairSettings;
@@ -248,7 +248,7 @@ export const useVisualClientStore = create<VisualClientState>()(
       setLiveSessionModalOpen: (open) => set({ liveSessionModalOpen: open }),
     }),
     {
-      name: 'aether-visual-modules-v2',
+      name: 'winvisual-modules-v3',
       partialize: (s) => ({
         modules: s.modules,
         equippedCape: s.equippedCape,
