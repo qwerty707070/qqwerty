@@ -1,95 +1,92 @@
 import React from 'react';
-import { Cpu } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { VersionSelector } from './VersionSelector';
 import { LaunchButton } from './LaunchButton';
-import { MinecraftAvatar } from '../ui/MinecraftAvatar';
+import { TelemetrySparkline } from '../ui/TelemetrySparkline';
 import { useLauncherStore } from '../../stores/launcherStore';
-import { useAccountStore } from '../../stores/accountStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { t } from '../../utils/i18n';
 import { cn } from '../../utils/cn';
 
 export const LaunchPanel: React.FC = () => {
   const launchPhase = useLauncherStore((s) => s.launchPhase);
-  const setCurrentPage = useLauncherStore((s) => s.setCurrentPage);
+  const downloadProgress = useLauncherStore((s) => s.downloadProgress);
   const setDownloadDrawerOpen = useLauncherStore((s) => s.setDownloadDrawerOpen);
-  const { accounts, activeAccountId } = useAccountStore();
-  const { language, ramAllocationMb } = useSettingsStore();
+  const { language, downloadSpeedLimitMbps } = useSettingsStore();
 
-  const copy = t(language);
-  const activeAccount = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
+  const isRu = language === 'ru';
+  const isTransferring =
+    downloadProgress.active ||
+    launchPhase === 'preparing' ||
+    launchPhase === 'downloading' ||
+    launchPhase === 'verifying';
 
-  const statusColor =
-    launchPhase === 'error'
-      ? 'bg-rose-400'
-      : launchPhase === 'running'
-        ? 'bg-emerald-400'
-        : launchPhase === 'idle'
-          ? 'bg-emerald-400'
-          : 'bg-[var(--accent-secondary)]';
+  const pct =
+    downloadProgress.totalBytes > 0
+      ? Math.min(100, Math.round((downloadProgress.downloadedBytes / downloadProgress.totalBytes) * 100))
+      : 0;
+
+  const displayedRate =
+    downloadProgress.speedMbps > 0
+      ? `${downloadProgress.speedMbps.toFixed(1)} MB/s`
+      : downloadSpeedLimitMbps > 0
+        ? `${downloadSpeedLimitMbps.toFixed(1)} MB/s`
+        : '42.8 MB/s';
 
   return (
     <section
-      aria-label="Launch control panel"
+      aria-label="Launch control dock"
       className={cn(
-        'relative z-30 w-full rounded-[20px] p-3 glass-panel',
-        'flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3'
+        'relative z-30 w-full rounded-[18px] px-4 py-2.5 bg-[#0A0B12]/95 border border-white/[0.085]',
+        'shadow-[0_-12px_36px_-18px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.06)]',
+        'flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3'
       )}
     >
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2 items-center">
-        {/* Column 1: Version Selector */}
-        <VersionSelector />
-
-        {/* Column 2: Active Account */}
-        <button
-          type="button"
-          onClick={() => setCurrentPage('account')}
-          className="flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] hover:bg-white/[0.04] transition-colors text-left cursor-pointer md:border-l md:border-[var(--border-primary)] md:rounded-l-none"
-        >
-          <MinecraftAvatar
-            preset={activeAccount.skinPreset}
-            size={36}
-            online={activeAccount.online}
-            showStatusDot
+      {/* Seamless Inline Progress Hairline Along Top of Dock */}
+      {isTransferring && (
+        <div className="pointer-events-none absolute inset-x-4 top-0 h-[2px] rounded-full bg-white/[0.06] overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-[var(--accent-primary)] via-[var(--accent-secondary)] to-white transition-all duration-150 shadow-[0_0_10px_var(--accent-primary)]"
+            style={{ width: `${Math.max(8, pct)}%` }}
           />
-          <div className="min-w-0">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {copy.launchPanel.accountLabel}
-            </p>
-            <p className="text-[13.5px] font-semibold text-[var(--text-primary)] truncate mt-0.5">
-              {activeAccount.username}
-            </p>
-          </div>
-        </button>
+        </div>
+      )}
 
-        {/* Column 3: Engine Readiness Status */}
-        <button
-          type="button"
-          onClick={() => setDownloadDrawerOpen(true)}
-          className="flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] hover:bg-white/[0.04] transition-colors text-left cursor-pointer md:border-l md:border-[var(--border-primary)] md:rounded-l-none"
-        >
-          <div className="h-9 w-9 rounded-[10px] bg-white/[0.04] border border-white/[0.06] flex items-center justify-center shrink-0 text-[var(--text-secondary)]">
-            <Cpu size={17} strokeWidth={1.75} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              {copy.launchPanel.statusLabel}
-            </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className={cn('w-2 h-2 rounded-full shrink-0', statusColor)} />
-              <span className="text-[13px] font-medium text-[var(--text-primary)] truncate">
-                {copy.phases[launchPhase]}
-              </span>
-              <span className="hidden sm:inline text-[11px] font-mono text-[var(--text-muted)]">
-                • {(ramAllocationMb / 1024).toFixed(1)}G
-              </span>
-            </div>
-          </div>
-        </button>
+      {/* Left Column: Selected Fabric Build Selector */}
+      <div className="w-full lg:w-[270px] shrink-0">
+        <VersionSelector />
       </div>
 
-      {/* Primary Launch Button */}
-      <div className="flex justify-end xl:pl-2">
+      <div className="hidden lg:block h-9 w-[1px] bg-white/[0.075] shrink-0" />
+
+      {/* Center Column: Live Download / Network Traffic Sparkline */}
+      <button
+        type="button"
+        onClick={() => setDownloadDrawerOpen(true)}
+        className="flex-1 flex items-center justify-between gap-4 px-3 py-1.5 rounded-[12px] hover:bg-white/[0.03] transition-colors text-left cursor-pointer min-w-0"
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="h-9 w-9 rounded-[10px] bg-white/[0.035] border border-white/[0.07] flex items-center justify-center text-[#A8AAba] shrink-0">
+            <Download size={17} strokeWidth={1.8} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium text-[#7C7E8C] truncate">
+              {isTransferring && downloadProgress.stageLabel
+                ? downloadProgress.stageLabel
+                : isRu
+                  ? 'Скачивание / Игровой трафик'
+                  : 'Download / Network Throughput'}
+            </p>
+            <p className="text-[15px] font-bold font-mono tracking-tight text-[#FFFFFF] mt-0.5">
+              {displayedRate}
+            </p>
+          </div>
+        </div>
+
+        <TelemetrySparkline variant="dock" active={isTransferring} className="shrink-0" />
+      </button>
+
+      {/* Right Column: Vibrant Neon Launch Button */}
+      <div className="flex justify-end lg:pl-2">
         <LaunchButton />
       </div>
     </section>

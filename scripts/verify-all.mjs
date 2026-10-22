@@ -42,7 +42,7 @@ const [status, verAll, verStable, newsData, oauth] = await Promise.all([
   fetch(`${base}/api/auth/device-session`).then((r) => r.json()),
 ]);
 
-if (!status.operational || status.launcherVersion !== '2.4.2' || typeof status.hostTotalMemoryMb !== 'number' || !status.java?.path) {
+if (!status.operational || status.launcherVersion !== '2.5.0' || typeof status.hostTotalMemoryMb !== 'number' || !status.java?.path) {
   throw new Error('Invalid /api/status telemetry schema: ' + JSON.stringify(status));
 }
 

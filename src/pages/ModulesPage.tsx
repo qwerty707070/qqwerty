@@ -149,9 +149,9 @@ export const ModulesPage: React.FC = () => {
         >
           <div
             className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/images/news-hud.jpg')" }}
+            style={{ backgroundImage: "url('/images/hero-castle-violet.jpg')" }}
           />
-          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-black/25" />
 
           {isEnabled('watermark') && (
             <div
@@ -163,7 +163,7 @@ export const ModulesPage: React.FC = () => {
               className="absolute glass-panel rounded-[10px] px-3 py-1.5 flex items-center gap-2 text-[11.5px] font-mono cursor-move border border-white/15"
             >
               <GripHorizontal size={12} className="text-[var(--text-muted)]" />
-              <span className="font-semibold text-[var(--accent-secondary)]">WINVISUAL 2.4</span>
+              <span className="font-semibold text-[var(--accent-secondary)]">WINVISUAL 2.5</span>
               <span className="text-white/30">|</span>
               <span className="text-[#F5F5F7]">412 FPS</span>
               <span className="text-white/30">|</span>

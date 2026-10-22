@@ -3,10 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Power, RotateCcw } from 'lucide-react';
 import { TitleBar } from './TitleBar';
 import { Sidebar } from './Sidebar';
+import { LaunchPanel } from '../launcher/LaunchPanel';
 import { BackgroundEffects } from '../effects/BackgroundEffects';
 import { NotificationViewport } from '../ui/NotificationViewport';
 import { DownloadProgressModal, LogsViewerModal } from '../launcher/DownloadProgress';
 import { LiveClientSessionModal } from '../launcher/LiveClientSessionModal';
+import { SplashIntro } from '../ui/SplashIntro';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { BrandMark } from '../ui/BrandMark';
@@ -42,14 +44,15 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden flex items-center justify-center bg-[#040508] p-0 lg:p-4">
+    <div className="relative h-screen w-screen overflow-hidden flex items-center justify-center bg-[#040509] p-0 lg:p-4">
+      <SplashIntro />
       <BackgroundEffects />
 
       {windowClosedState ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="relative z-10 glass-panel rounded-[20px] p-7 text-center space-y-4 max-w-sm"
+          className="relative z-10 popover-panel rounded-[20px] p-7 text-center space-y-4 max-w-sm"
         >
           <div className="flex justify-center">
             <BrandMark size={44} />
@@ -75,7 +78,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           initial={{ opacity: 0, y: 24, scale: 0.94 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           onClick={() => setWindowMinimized(false)}
-          className="relative z-10 glass-panel rounded-full px-5 py-3 flex items-center gap-3 hover:border-[var(--border-hover)] cursor-pointer shadow-2xl"
+          className="relative z-10 popover-panel rounded-full px-5 py-3 flex items-center gap-3 hover:border-[var(--border-hover)] cursor-pointer shadow-2xl"
         >
           <BrandMark size={26} />
           <span className="text-[13px] font-medium text-[var(--text-primary)]">
@@ -87,11 +90,12 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           layout
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
-            'relative z-10 flex flex-col overflow-hidden bg-[var(--background-primary)]',
-            'border border-white/[0.085] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.06)]',
+            'relative z-10 flex flex-col overflow-hidden bg-[#07080E]',
+            'border border-[rgba(var(--accent-rgb),0.26)]',
+            'shadow-[0_0_0_1px_rgba(var(--accent-rgb),0.12),0_40px_120px_-16px_rgba(0,0,0,0.96),0_0_90px_-30px_var(--accent-glow)]',
             isMaximized
               ? 'w-full h-full rounded-none'
-              : 'w-full h-full lg:w-[1240px] lg:max-w-[calc(100vw-32px)] lg:h-[780px] lg:max-h-[calc(100vh-32px)] lg:rounded-[20px]'
+              : 'w-full h-full lg:w-[1260px] lg:max-w-[calc(100vw-28px)] lg:h-[790px] lg:max-h-[calc(100vh-28px)] lg:rounded-[22px]'
           )}
         >
           <TitleBar
@@ -102,9 +106,17 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
 
           <div className="flex-1 min-h-0 flex overflow-hidden">
             <Sidebar />
-            <main className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden relative bg-[var(--background-primary)]">
-              <AnimatePresence mode="wait">{children}</AnimatePresence>
-            </main>
+
+            {/* Right Workspace Column: Page Content + Persistent Cinematic Bottom Launch Dock */}
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-[#07080E]">
+              <main className="flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden relative">
+                <AnimatePresence mode="wait">{children}</AnimatePresence>
+              </main>
+
+              <div className="shrink-0 px-5 pb-4 pt-2 bg-gradient-to-t from-[#07080E] via-[#07080E] to-transparent">
+                <LaunchPanel />
+              </div>
+            </div>
           </div>
         </motion.div>
       )}

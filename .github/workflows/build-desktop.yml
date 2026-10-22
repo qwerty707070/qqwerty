@@ -60,8 +60,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v2.4.2
-          releaseName: "WinVisual Launcher v2.4.2"
+          tagName: v2.5.0
+          releaseName: "WinVisual Launcher v2.5.0"
           releaseBody: "Native Tauri v2 Desktop Installers for Windows x64 (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage)."
           releaseDraft: false
           prerelease: false

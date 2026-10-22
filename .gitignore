@@ -2,5 +2,7 @@ node_modules/
 dist/
 .verify-ssr/
 src-tauri/target/
+previews/
+Unselected files/
 *.tsbuildinfo
 .DS_Store

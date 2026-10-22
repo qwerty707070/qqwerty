@@ -114,7 +114,7 @@ export const LiveClientSessionModal: React.FC = () => {
             {/* Atmospheric Minecraft Shader World View */}
             <div
               className="ambient-hero-media absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: "url('/images/hero-bg.jpg')" }}
+              style={{ backgroundImage: "url('/images/hero-castle-violet.jpg')" }}
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/65" />
 

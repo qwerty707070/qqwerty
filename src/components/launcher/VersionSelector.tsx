@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronDown, Layers } from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
+import { MinecraftBlockIcon } from '../ui/MinecraftBlockIcon';
 import { useLauncherStore } from '../../stores/launcherStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { t } from '../../utils/i18n';
 import { cn } from '../../utils/cn';
 
 interface MenuPosition {
@@ -25,7 +25,7 @@ export const VersionSelector: React.FC = () => {
   const setCurrentPage = useLauncherStore((s) => s.setCurrentPage);
   const language = useSettingsStore((s) => s.language);
 
-  const copy = t(language);
+  const isRu = language === 'ru';
   const activeVersion = versions.find((v) => v.id === selectedVersionId) ?? versions[0];
 
   const syncPosition = useCallback(() => {
@@ -97,8 +97,8 @@ export const VersionSelector: React.FC = () => {
           }}
           className="rounded-[16px] popover-panel p-2 space-y-1 select-none"
         >
-          <div className="px-3 py-2 flex items-center justify-between text-[11px] text-[var(--text-muted)] font-medium border-b border-white/[0.06] mb-1">
-            <span>{language === 'ru' ? 'Доступные сборки Fabric' : 'Fabric Builds'}</span>
+          <div className="px-3 py-2 flex items-center justify-between text-[11px] text-[var(--text-muted)] font-medium border-b border-white/[0.07] mb-1">
+            <span>{isRu ? 'Доступные сборки Fabric' : 'Fabric Builds'}</span>
             <button
               type="button"
               onClick={() => {
@@ -107,7 +107,7 @@ export const VersionSelector: React.FC = () => {
               }}
               className="text-[var(--accent-secondary)] hover:underline cursor-pointer"
             >
-              {language === 'ru' ? 'Все версии →' : 'All builds →'}
+              {isRu ? 'Все версии →' : 'All builds →'}
             </button>
           </div>
 
@@ -124,22 +124,25 @@ export const VersionSelector: React.FC = () => {
                 className={cn(
                   'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[12px] text-left transition-colors cursor-pointer border',
                   selected
-                    ? 'bg-[#1D1B33] border-[var(--accent-primary)]/45 text-[var(--text-primary)]'
-                    : 'bg-transparent border-transparent hover:bg-white/[0.055] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    ? 'bg-[#1D1B35] border-[var(--accent-primary)]/55 text-[#FFFFFF]'
+                    : 'bg-transparent border-transparent hover:bg-white/[0.06] text-[#B4B6C4] hover:text-white'
                 )}
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13.5px] font-semibold text-[var(--text-primary)]">
-                      {ver.name}
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono bg-white/[0.07] text-[var(--text-secondary)]">
-                      {ver.minecraftVersion}
-                    </span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <MinecraftBlockIcon size={30} className="shrink-0" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13.5px] font-semibold text-[#F5F5F7]">
+                        {ver.name}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono bg-white/[0.07] text-[var(--text-secondary)]">
+                        {ver.minecraftVersion === '1.16.5' ? 'Java 8' : 'Java 21'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[var(--text-muted)] font-mono truncate mt-0.5">
+                      {ver.loader} • {ver.fpsBoost}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-[var(--text-muted)] font-mono truncate mt-0.5">
-                    {ver.loader} • {ver.fpsBoost}
-                  </p>
                 </div>
                 {selected && (
                   <Check size={15} strokeWidth={2.2} className="text-[var(--accent-secondary)] shrink-0" />
@@ -157,31 +160,27 @@ export const VersionSelector: React.FC = () => {
       <button
         type="button"
         onClick={toggleMenu}
-        className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-[12px] hover:bg-white/[0.04] transition-colors text-left cursor-pointer group outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)]/60"
+        className="w-full flex items-center gap-3.5 px-3 py-1.5 rounded-[12px] hover:bg-white/[0.04] transition-colors text-left cursor-pointer group outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-primary)]/60"
       >
-        <div className="h-9 w-9 rounded-[10px] bg-[var(--accent-subtle)] border border-[var(--accent-primary)]/30 flex items-center justify-center shrink-0 text-[var(--accent-secondary)]">
-          <Layers size={18} strokeWidth={1.75} />
-        </div>
+        <MinecraftBlockIcon
+          size={40}
+          className="shrink-0 drop-shadow-[0_6px_14px_rgba(0,0,0,0.65)] group-hover:scale-105 transition-transform duration-200"
+        />
         <div className="flex-1 min-w-0">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-            {copy.launchPanel.versionLabel}
+          <p className="text-[11px] font-medium text-[#7C7E8C]">
+            {isRu ? 'Выбранный билд' : 'Selected Build'}
           </p>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[13.5px] font-semibold text-[var(--text-primary)] truncate">
+            <span className="text-[15px] font-bold tracking-tight text-[#FFFFFF] truncate">
               {activeVersion ? activeVersion.name : 'Fabric 1.21.11'}
             </span>
-            {activeVersion && (
-              <span className="px-1.5 py-0.5 text-[10.5px] font-mono rounded-[6px] bg-white/[0.06] text-[var(--text-secondary)] shrink-0">
-                {activeVersion.minecraftVersion}
-              </span>
-            )}
           </div>
         </div>
         <ChevronDown
           size={16}
-          strokeWidth={1.75}
+          strokeWidth={1.85}
           className={cn(
-            'text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-transform duration-200 shrink-0',
+            'text-[#8E909C] group-hover:text-white transition-transform duration-200 shrink-0',
             open && 'rotate-180'
           )}
         />
