@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Check,
   Copy,
   Dices,
   ExternalLink,
+  ImageUp,
   KeyRound,
   LogOut,
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
+  Search,
   ShieldCheck,
   Sparkles,
   UserCheck,
@@ -20,6 +23,7 @@ import { useSettingsStore } from '../stores/settingsStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import {
   isTauriDesktop,
+  resolveMinecraftSkinEverywhere,
   tauriCompleteMsDeviceFlow,
   tauriStartMsDeviceFlow,
 } from '../services/tauriBridge';
@@ -46,6 +50,8 @@ export const AccountPage: React.FC = () => {
     setActiveAccount,
     renameActiveAccount,
     randomizeActiveAccount,
+    setSkinPresetForActive,
+    setCustomSkinForActive,
     addOfflineProfile,
     upsertMicrosoftAccount,
     removeAccount,
@@ -54,11 +60,15 @@ export const AccountPage: React.FC = () => {
   const language = useSettingsStore((s) => s.language);
   const pushToast = useNotificationStore((s) => s.pushToast);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [renameModalOpen, setRenameModalOpen] = useState(false);
   const [oauthModalOpen, setOauthModalOpen] = useState(false);
   const [clientIdInput, setClientIdInput] = useState(DEFAULT_AZURE_CLIENT_ID);
   const [checkingOAuth, setCheckingOAuth] = useState(false);
+  const [loadingSkin, setLoadingSkin] = useState(false);
+  const [skinNickInput, setSkinNickInput] = useState('');
   const [deviceCodeInfo, setDeviceCodeInfo] = useState<{
     deviceCode?: string;
     userCode: string;
@@ -71,6 +81,59 @@ export const AccountPage: React.FC = () => {
   const isRu = language === 'ru';
   const active = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
   const haloEnabled = modules.some((m) => m.id === 'china-hat' && m.enabled);
+
+  const handleUploadSkinFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.includes('png')) {
+      pushToast({
+        type: 'error',
+        title: isRu ? 'Выберите PNG-текстуру скина 64×64' : 'Please select a 64×64 PNG skin file',
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setCustomSkinForActive(reader.result, active.skinModel ?? 'classic');
+        pushToast({
+          type: 'success',
+          title: isRu ? 'Свой PNG-скин загружен' : 'Custom PNG skin applied',
+          description: isRu
+            ? '3D-модель и главный экран синхронизированы.'
+            : 'Synced onto 3D viewer and Home hero stage.',
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleFetchSkinByNickname = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetName = (skinNickInput || active.username).trim();
+    if (!targetName) return;
+    setLoadingSkin(true);
+    try {
+      const resolved = await resolveMinecraftSkinEverywhere(targetName);
+      setCustomSkinForActive(resolved.dataUrl, resolved.slim ? 'slim' : 'classic');
+      pushToast({
+        type: 'success',
+        title: isRu ? `Скин загружен: ${targetName}` : `Loaded skin: ${targetName}`,
+        description: isRu
+          ? 'Пиксельные 3D-слои обновлены на главном экране и в профиле.'
+          : '3D outer layers updated across Account & Home hero.',
+      });
+    } catch (err) {
+      pushToast({
+        type: 'error',
+        title: isRu ? 'Не удалось загрузить скин' : 'Failed to fetch skin',
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setLoadingSkin(false);
+    }
+  };
 
   const openMicrosoftDeviceModal = async () => {
     setOauthModalOpen(true);
@@ -179,10 +242,18 @@ export const AccountPage: React.FC = () => {
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
       className="p-7 space-y-6 max-w-[1040px] pb-12"
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png"
+        onChange={handleUploadSkinFile}
+        className="hidden"
+      />
+
       {/* Top Profile Banner */}
       <div className="relative rounded-[20px] overflow-hidden border border-white/[0.085] shadow-[0_20px_50px_-20px_rgba(0,0,0,0.85)]">
         <div
-          className="h-[142px] bg-cover bg-center"
+          className="h-[136px] bg-cover bg-center"
           style={{ backgroundImage: "url('/images/news-cosmetics.jpg')" }}
         />
         <div
@@ -197,6 +268,7 @@ export const AccountPage: React.FC = () => {
           <div className="flex items-end gap-4">
             <MinecraftAvatar
               preset={active.skinPreset}
+              customSkinDataUrl={active.customSkinDataUrl}
               size={74}
               online={active.online}
               showStatusDot
@@ -248,6 +320,13 @@ export const AccountPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            <Button
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImageUp size={15} strokeWidth={1.75} />
+              {isRu ? 'Свой скин (.png)' : 'Upload Skin (.png)'}
+            </Button>
             <Button variant="secondary" onClick={() => setAddModalOpen(true)}>
               <Plus size={15} strokeWidth={1.75} />
               {isRu ? 'Добавить профиль' : 'Add Profile'}
@@ -260,25 +339,95 @@ export const AccountPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Interactive 3D Character + 144Hz Shader Cape Studio + Saved Accounts */}
+      {/* Interactive 3D Pixel Skin + Custom PNG / Nickname Loader + Saved Accounts */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         <Card className="lg:col-span-5 p-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h2 className="text-[15.5px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
               <Sparkles size={15} className="text-[var(--accent-secondary)]" />
-              {isRu ? '3D Скин и плащ 144 Гц' : '3D Skin & 144Hz Cape'}
+              {isRu ? '3D Скин, слои и плащ 144 Гц' : '3D Pixel Skin & 144Hz Cape'}
             </h2>
-            <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase">
-              {equippedCape}
-            </span>
+            <div className="inline-flex items-center rounded-[8px] bg-white/[0.04] border border-white/[0.08] p-0.5 text-[11px]">
+              {(['classic', 'slim'] as const).map((model) => {
+                const selectedModel = (active.skinModel ?? 'classic') === model;
+                return (
+                  <button
+                    key={model}
+                    type="button"
+                    onClick={() =>
+                      setCustomSkinForActive(active.customSkinDataUrl ?? null, model)
+                    }
+                    className={`px-2 py-0.5 rounded-[6px] capitalize font-medium cursor-pointer ${
+                      selectedModel
+                        ? 'bg-[var(--accent-subtle)] text-white'
+                        : 'text-[var(--text-muted)] hover:text-white'
+                    }`}
+                  >
+                    {model === 'classic' ? 'Steve 4px' : 'Alex 3px'}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <Character3DViewer
             skinPreset={active.skinPreset}
+            skinModel={active.skinModel}
+            customSkinDataUrl={active.customSkinDataUrl}
             cape={equippedCape}
             showHalo={haloEnabled}
           />
 
+          {/* Fetch Skin by Minecraft Nickname or Upload PNG */}
+          <form onSubmit={handleFetchSkinByNickname} className="flex gap-2">
+            <input
+              type="text"
+              placeholder={isRu ? 'Ник для загрузки скина (напр. Notch)' : 'Load skin by nick (e.g. Notch)'}
+              value={skinNickInput}
+              onChange={(e) => setSkinNickInput(e.target.value)}
+              className="flex-1 min-w-0 h-9 px-3 rounded-[10px] bg-[var(--background-secondary)] border border-[var(--border-primary)] focus:border-[var(--accent-primary)] text-[12.5px] text-[var(--text-primary)] outline-none"
+            />
+            <Button type="submit" variant="secondary" size="sm" className="h-9" disabled={loadingSkin}>
+              <Search size={14} strokeWidth={1.85} />
+              {isRu ? 'По нику' : 'Load'}
+            </Button>
+            {active.customSkinDataUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-9"
+                title={isRu ? 'Вернуть пресет WinVisual' : 'Reset custom skin'}
+                onClick={() => setSkinPresetForActive('winvisual')}
+              >
+                <RotateCcw size={14} strokeWidth={1.85} />
+              </Button>
+            )}
+          </form>
+
+          {/* Built-in Skin Presets */}
+          <div className="grid grid-cols-4 gap-2">
+            {(['winvisual', 'slim', 'classic', 'obsidian'] as const).map((preset) => {
+              const selected = !active.customSkinDataUrl && active.skinPreset === preset;
+              return (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setSkinPresetForActive(preset)}
+                  className={`p-2 rounded-[10px] border flex flex-col items-center gap-1.5 capitalize text-[11px] cursor-pointer transition-colors ${
+                    selected
+                      ? 'bg-[var(--accent-subtle)] border-[var(--accent-primary)]/60 text-white'
+                      : 'bg-white/[0.02] border-[var(--border-primary)] text-[var(--text-secondary)] hover:text-white'
+                  }`}
+                >
+                  <MinecraftAvatar preset={preset} size={28} />
+                  <span>{preset}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 144Hz Shader Capes */}
           <div className="grid grid-cols-2 gap-2">
             {CAPE_ITEMS.map((c) => {
               const selected = equippedCape === c.id;
@@ -327,6 +476,7 @@ export const AccountPage: React.FC = () => {
                   <div className="flex items-center gap-3.5 min-w-0">
                     <MinecraftAvatar
                       preset={acc.skinPreset}
+                      customSkinDataUrl={acc.customSkinDataUrl}
                       size={46}
                       online={acc.online}
                       showStatusDot

@@ -50,11 +50,12 @@ export interface SettingsState {
   minimizeOnLaunch: boolean;
   closeAfterLaunch: boolean;
 
-  // Minecraft
+  // Minecraft & Optimization Bundle
   ramAllocationMb: number;
   javaPath: string;
   gameDirectory: string;
   jvmArguments: string;
+  optimizeModsBundle: boolean;
 
   // Launcher
   hardwareAcceleration: boolean;
@@ -87,6 +88,7 @@ const DEFAULT_SETTINGS = {
   gameDirectory: '~/.minecraft/winvisual',
   jvmArguments:
     '-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50',
+  optimizeModsBundle: true,
 
   hardwareAcceleration: true,
   notificationsEnabled: true,

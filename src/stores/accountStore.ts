@@ -32,6 +32,8 @@ function createDefaultUserAccount(): PlayerAccount {
     uuid: generateDeterministicUuid(nick),
     authType: 'local',
     skinPreset: 'winvisual',
+    skinModel: 'classic',
+    customSkinDataUrl: null,
     capeName: 'WinVisual Crown Shader',
     online: true,
     lastUsed: 'Active session',
@@ -44,8 +46,17 @@ interface AccountState {
   setActiveAccount: (id: string) => void;
   renameActiveAccount: (username: string) => PlayerAccount;
   randomizeActiveAccount: () => PlayerAccount;
-  addOfflineProfile: (username: string, skinPreset: PlayerAccount['skinPreset']) => PlayerAccount;
-  upsertMicrosoftAccount: (username: string, uuid: string) => PlayerAccount;
+  setSkinPresetForActive: (preset: PlayerAccount['skinPreset']) => void;
+  setCustomSkinForActive: (
+    dataUrl: string | null,
+    skinModel?: 'classic' | 'slim'
+  ) => void;
+  addOfflineProfile: (
+    username: string,
+    skinPreset: PlayerAccount['skinPreset'],
+    customSkinDataUrl?: string | null
+  ) => PlayerAccount;
+  upsertMicrosoftAccount: (username: string, uuid: string, skinDataUrl?: string | null) => PlayerAccount;
   removeAccount: (id: string) => void;
 }
 
@@ -82,7 +93,36 @@ export const useAccountStore = create<AccountState>()(
       randomizeActiveAccount: () => {
         return get().renameActiveAccount(generateRandomUserNick());
       },
-      addOfflineProfile: (username, skinPreset) => {
+      setSkinPresetForActive: (preset) => {
+        const currentId = get().activeAccountId;
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === currentId
+              ? {
+                  ...acc,
+                  skinPreset: preset,
+                  skinModel: preset === 'slim' ? 'slim' : 'classic',
+                  customSkinDataUrl: null,
+                }
+              : acc
+          ),
+        }));
+      },
+      setCustomSkinForActive: (dataUrl, skinModel = 'classic') => {
+        const currentId = get().activeAccountId;
+        set((state) => ({
+          accounts: state.accounts.map((acc) =>
+            acc.id === currentId
+              ? {
+                  ...acc,
+                  customSkinDataUrl: dataUrl,
+                  skinModel,
+                }
+              : acc
+          ),
+        }));
+      },
+      addOfflineProfile: (username, skinPreset, customSkinDataUrl = null) => {
         const clean = username.trim().slice(0, 16) || generateRandomUserNick();
         const created: PlayerAccount = {
           id: `acc-${Date.now().toString(36)}`,
@@ -90,6 +130,8 @@ export const useAccountStore = create<AccountState>()(
           uuid: generateDeterministicUuid(clean),
           authType: 'local',
           skinPreset,
+          skinModel: skinPreset === 'slim' ? 'slim' : 'classic',
+          customSkinDataUrl,
           capeName: 'WinVisual Default Cloak',
           online: true,
           lastUsed: 'Just created',
@@ -100,13 +142,15 @@ export const useAccountStore = create<AccountState>()(
         }));
         return created;
       },
-      upsertMicrosoftAccount: (username, uuid) => {
+      upsertMicrosoftAccount: (username, uuid, skinDataUrl = null) => {
         const entry: PlayerAccount = {
           id: `ms-${uuid.slice(0, 8)}`,
           username,
           uuid,
           authType: 'microsoft',
           skinPreset: 'winvisual',
+          skinModel: 'classic',
+          customSkinDataUrl: skinDataUrl,
           capeName: 'WinVisual Crown Shader',
           online: true,
           lastUsed: 'Microsoft Verified',

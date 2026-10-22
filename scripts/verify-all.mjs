@@ -33,7 +33,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + strict 3-version Fabric catalog
+// 1. Validate live HTTP API endpoints + v2.6.0 telemetry + strict 3-version Fabric catalog
 const [status, verAll, verStable, newsData, oauth] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -42,8 +42,15 @@ const [status, verAll, verStable, newsData, oauth] = await Promise.all([
   fetch(`${base}/api/auth/device-session`).then((r) => r.json()),
 ]);
 
-if (!status.operational || status.launcherVersion !== '2.5.0' || typeof status.hostTotalMemoryMb !== 'number' || !status.java?.path) {
-  throw new Error('Invalid /api/status telemetry schema: ' + JSON.stringify(status));
+if (
+  !status.operational ||
+  status.launcherVersion !== '2.6.0' ||
+  typeof status.cpuUsagePercent !== 'number' ||
+  typeof status.hostTotalMemoryMb !== 'number' ||
+  typeof status.hostUsedMemoryMb !== 'number' ||
+  !status.java?.path
+) {
+  throw new Error('Invalid /api/status v2.6.0 telemetry schema: ' + JSON.stringify(status));
 }
 
 const expectedMcVersions = ['1.21.11', '1.21.4', '1.16.5'];
@@ -71,7 +78,55 @@ for (const n of newsData.items) {
   }
 }
 
-// 2. Verify all 4 binary SHA-256 artifacts across ALL 3 Fabric builds (12 bundles total)
+// 2. Verify custom 64x64 RGBA PNG skin generator endpoint (/api/skin/resolve)
+const skinRes = await fetch(`${base}/api/skin/resolve?username=Technoblade`).then((r) => r.json());
+if (!skinRes.skinDataUrl?.startsWith('data:image/png;base64,')) {
+  throw new Error('Invalid skinDataUrl response');
+}
+const skinPngBuf = Buffer.from(skinRes.skinDataUrl.split(',')[1], 'base64');
+if (
+  skinPngBuf[0] !== 137 ||
+  skinPngBuf[1] !== 80 ||
+  skinPngBuf[2] !== 78 ||
+  skinPngBuf[3] !== 71 ||
+  skinPngBuf.readUInt32BE(16) !== 64 ||
+  skinPngBuf.readUInt32BE(20) !== 64
+) {
+  throw new Error('Generated Minecraft skin PNG is not a valid 64x64 RGBA PNG');
+}
+
+// 3. Verify version-isolated Modrinth bundle endpoint across all 3 Fabric versions
+for (const mc of expectedMcVersions) {
+  const modBundle = await fetch(`${base}/api/mods/bundle?mc=${mc}`).then((r) => r.json());
+  if (!Array.isArray(modBundle.syncedMods) || modBundle.syncedMods.length !== 4) {
+    throw new Error(`Mod bundle sync failed for ${mc}`);
+  }
+}
+
+// 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
+const sampleHudPayload = {
+  version: '2.6.0',
+  equippedCape: 'nebula',
+  crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
+  hudPositions: { watermark: { x: 24, y: 20 }, 'target-hud': { x: 340, y: 212 } },
+  modules: [{ id: 'watermark', enabled: true, keybind: 'H' }],
+  savedAt: new Date().toISOString(),
+};
+const postHudRes = await fetch(`${base}/api/config/hud`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(sampleHudPayload),
+}).then((r) => r.json());
+const getHudRes = await fetch(`${base}/api/config/hud`).then((r) => r.json());
+if (
+  !postHudRes.ok ||
+  getHudRes.config?.hudPositions?.['target-hud']?.x !== 340 ||
+  !fs.existsSync('.winvisual-runtime/config/winvisual-hud.json')
+) {
+  throw new Error('Disk persistence check for winvisual-hud.json failed');
+}
+
+// 5. Verify all 4 binary SHA-256 artifacts across ALL 3 Fabric builds (12 bundles total)
 for (const buildId of ['winvisual-1.21.11', 'winvisual-1.21.4', 'winvisual-1.16.5']) {
   const manifest = await fetch(`${base}/api/download/${buildId}/manifest`).then((r) => r.json());
   if (manifest.artifacts.length !== 4) throw new Error(`Expected 4 signed artifacts for ${buildId}`);
@@ -111,7 +166,7 @@ for (const icon of [
   if (st.size < 1000) throw new Error(`Icon too small: ${icon}`);
 }
 
-// 3. Full React Component Tree Render Verification across ALL 6 pages x 2 languages + modals
+// 6. Full React Component Tree Render Verification across ALL 6 pages x 2 languages + modals
 const ssrEntry = await import('../.verify-ssr/ssr-entry.js');
 ssrEntry.seedLiveState({
   versions: verAll.versions,
@@ -136,7 +191,7 @@ const routes = ['home', 'modules', 'news', 'versions', 'settings', 'account'];
 for (const lang of ['ru', 'en']) {
   for (const route of routes) {
     const html = ssrEntry.renderRouteSnapshot(route, lang);
-    if (!html || html.length < 1500 || html.includes('NaN')) {
+    if (!html || html.length < 1500 || html.includes('NaN') || html.includes('42.8 MB/s')) {
       throw new Error(`Render check failed on route=${route} lang=${lang}`);
     }
     if (!html.includes(activeNick)) {
@@ -156,7 +211,7 @@ if (!sessionHtml || sessionHtml.length < 1000 || !sessionHtml.includes(activeNic
   throw new Error('LiveClientSessionModal render failed');
 }
 console.log(
-  `[ALL CHECKS PASSED] nick=${activeNick} + 3/3 Fabric versions (1.21.11, 1.21.4, 1.16.5) + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.6.0 nick=${activeNick} + 3/3 Fabric versions + 4/4 Modrinth bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

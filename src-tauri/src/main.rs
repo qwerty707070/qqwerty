@@ -8,10 +8,13 @@ use auth::{
     complete_minecraft_oauth, delete_encrypted_mc_token, request_microsoft_device_code,
     AuthenticatedMinecraftProfile, DeviceCodeSession,
 };
+use base64::Engine;
 use launcher::{
-    ensure_clean_dir, expand_tilde, prepare_and_launch_minecraft, resolve_java_executable,
-    LaunchRequest,
+    build_http_client, current_active_client_pid, ensure_clean_dir, expand_tilde,
+    prepare_and_launch_minecraft, resolve_java_executable, sync_modrinth_optimization_bundle,
+    terminate_active_client_processes, LaunchRequest, ModBundleResult,
 };
+use rfd::AsyncFileDialog;
 use serde::Serialize;
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
@@ -46,7 +49,10 @@ pub struct HostTelemetryResponse {
     uptime_seconds: u64,
     platform: String,
     cpu_cores: usize,
+    cpu_usage_percent: f32,
     host_total_memory_mb: u64,
+    host_used_memory_mb: u64,
+    active_pid: Option<u32>,
     latency_ms: u32,
     java: JavaInfo,
     services: ServiceHealth,
@@ -101,14 +107,17 @@ pub fn probe_java_cached() -> JavaInfo {
 #[tauri::command]
 fn get_host_telemetry() -> HostTelemetryResponse {
     let sys_mutex = HOST_SYS.get_or_init(|| Mutex::new(System::new_all()));
-    let (total_mb, cpu_cores) = if let Ok(mut sys) = sys_mutex.lock() {
+    let (total_mb, used_mb, cpu_cores, cpu_usage) = if let Ok(mut sys) = sys_mutex.lock() {
         sys.refresh_memory();
+        sys.refresh_cpu_usage();
         (
             (sys.total_memory() / (1024 * 1024)).max(4096),
+            (sys.used_memory() / (1024 * 1024)).max(512),
             sys.cpus().len().max(1),
+            sys.global_cpu_usage().clamp(1.0, 100.0),
         )
     } else {
-        (16384, 8)
+        (16384, 5120, 8, 8.5)
     };
 
     HostTelemetryResponse {
@@ -117,7 +126,10 @@ fn get_host_telemetry() -> HostTelemetryResponse {
         uptime_seconds: System::uptime(),
         platform: format!("{} {}", std::env::consts::OS, std::env::consts::ARCH),
         cpu_cores,
+        cpu_usage_percent: (cpu_usage * 10.0).round() / 10.0,
         host_total_memory_mb: total_mb,
+        host_used_memory_mb: used_mb,
+        active_pid: current_active_client_pid(),
         latency_ms: 9,
         java: probe_java_cached(),
         services: ServiceHealth {
@@ -164,6 +176,143 @@ async fn launch_native_client(app: AppHandle, request: LaunchRequest) -> Result<
 }
 
 #[tauri::command]
+fn stop_client_process(app: AppHandle) -> Result<usize, String> {
+    Ok(terminate_active_client_processes(&app))
+}
+
+#[tauri::command]
+async fn sync_optimization_mods(
+    app: AppHandle,
+    game_directory: String,
+    minecraft_version: String,
+) -> Result<ModBundleResult, String> {
+    let http = build_http_client()?;
+    let game_dir = expand_tilde(&game_directory);
+    sync_modrinth_optimization_bundle(&http, &app, &game_dir, &minecraft_version, true).await
+}
+
+#[tauri::command]
+async fn pick_directory_dialog(initial_dir: Option<String>) -> Result<Option<String>, String> {
+    let mut dialog = AsyncFileDialog::new().set_title("Select WinVisual Game Directory");
+    if let Some(dir) = initial_dir {
+        let p = expand_tilde(&dir);
+        if p.exists() {
+            dialog = dialog.set_directory(&p);
+        }
+    }
+    Ok(dialog
+        .pick_folder()
+        .await
+        .map(|h| h.path().to_string_lossy().to_string()))
+}
+
+#[tauri::command]
+async fn pick_java_binary_dialog(initial_path: Option<String>) -> Result<Option<String>, String> {
+    let mut dialog = AsyncFileDialog::new().set_title("Select Java Runtime (javaw.exe / java)");
+    #[cfg(target_os = "windows")]
+    {
+        dialog = dialog.add_filter("Java Executable", &["exe"]);
+    }
+    if let Some(init) = initial_path {
+        let p = expand_tilde(&init);
+        if let Some(parent) = p.parent() {
+            if parent.exists() {
+                dialog = dialog.set_directory(parent);
+            }
+        }
+    }
+    Ok(dialog
+        .pick_file()
+        .await
+        .map(|h| resolve_java_executable(&h.path().to_string_lossy())))
+}
+
+#[tauri::command]
+async fn fetch_minecraft_skin(username: String) -> Result<String, String> {
+    let clean = username.trim();
+    if clean.is_empty() {
+        return Err("Username cannot be empty".to_string());
+    }
+    let http = build_http_client()?;
+    let prof_url = format!("https://api.mojang.com/users/profiles/minecraft/{clean}");
+    let prof: serde_json::Value = http
+        .get(&prof_url)
+        .send()
+        .await
+        .map_err(|e| format!("Mojang profile lookup failed: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("Profile `{clean}` not found: {e}"))?;
+
+    let uuid = prof["id"]
+        .as_str()
+        .ok_or_else(|| format!("Minecraft profile `{clean}` does not exist"))?;
+
+    let session_url =
+        format!("https://sessionserver.mojang.com/session/minecraft/profile/{uuid}");
+    let session: serde_json::Value = http
+        .get(&session_url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let b64_textures = session["properties"]
+        .as_array()
+        .and_then(|arr| arr.iter().find(|p| p["name"].as_str() == Some("textures")))
+        .and_then(|p| p["value"].as_str())
+        .ok_or("No skin texture property on profile")?;
+
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(b64_textures)
+        .map_err(|e| e.to_string())?;
+    let tex_json: serde_json::Value =
+        serde_json::from_slice(&decoded).map_err(|e| e.to_string())?;
+
+    let skin_url = tex_json["textures"]["SKIN"]["url"]
+        .as_str()
+        .ok_or("Profile uses default Steve/Alex skin")?;
+
+    let png_bytes = http
+        .get(skin_url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?
+        .bytes()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let data_uri = format!(
+        "data:image/png;base64,{}",
+        base64::engine::general_purpose::STANDARD.encode(&png_bytes)
+    );
+    Ok(data_uri)
+}
+
+#[tauri::command]
+fn save_hud_config_disk(game_directory: String, config_json: String) -> Result<String, String> {
+    let cfg_dir = expand_tilde(&game_directory).join("config");
+    std::fs::create_dir_all(&cfg_dir).map_err(|e| e.to_string())?;
+    let cfg_file = cfg_dir.join("winvisual-hud.json");
+    std::fs::write(&cfg_file, config_json.as_bytes()).map_err(|e| e.to_string())?;
+    Ok(cfg_file.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn load_hud_config_disk(game_directory: String) -> Result<Option<String>, String> {
+    let cfg_file = expand_tilde(&game_directory)
+        .join("config")
+        .join("winvisual-hud.json");
+    if !cfg_file.exists() {
+        return Ok(None);
+    }
+    let raw = std::fs::read_to_string(&cfg_file).map_err(|e| e.to_string())?;
+    Ok(Some(raw))
+}
+
+#[tauri::command]
 fn clear_client_cache(game_directory: String) -> Result<(), String> {
     let cache_dir = expand_tilde(&game_directory).join("shader_cache");
     ensure_clean_dir(&cache_dir)
@@ -196,6 +345,13 @@ fn main() {
             complete_ms_device_flow,
             sign_out_keychain_account,
             launch_native_client,
+            stop_client_process,
+            sync_optimization_mods,
+            pick_directory_dialog,
+            pick_java_binary_dialog,
+            fetch_minecraft_skin,
+            save_hud_config_disk,
+            load_hud_config_disk,
             clear_client_cache,
             open_game_folder,
         ])

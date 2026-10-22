@@ -60,9 +60,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v2.5.0
-          releaseName: "WinVisual Launcher v2.5.0"
-          releaseBody: "Native Tauri v2 Desktop Installers for Windows x64 (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage)."
+          tagName: v2.6.0
+          releaseName: "WinVisual Launcher v2.6.0"
+          releaseBody: "Native Tauri v2 Desktop Installers for Windows x64 (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage) — full-bleed frameless shell, real javaw lifecycle + Stop, Modrinth Fabric API/Sodium/Iris auto-sync, pixel 3D custom skin loader, and disk HUD persistence."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}

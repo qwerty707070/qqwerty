@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { loadHudConfigEverywhere, saveHudConfigEverywhere } from '../services/tauriBridge';
+import { useSettingsStore } from './settingsStore';
 
 export type VisualModuleCategory = 'hud' | 'render' | 'cosmetics';
 export type ShaderCapeId = 'nebula' | 'pulse' | 'aurora' | 'obsidian';
@@ -28,12 +30,23 @@ export interface HudWidgetPosition {
   y: number;
 }
 
+interface PersistedHudDiskSchema {
+  version: string;
+  equippedCape: ShaderCapeId;
+  crosshair: CrosshairSettings;
+  hudPositions: Record<string, HudWidgetPosition>;
+  modules: { id: string; enabled: boolean; keybind: string }[];
+  savedAt: string;
+}
+
 interface VisualClientState {
   modules: VisualModule[];
   equippedCape: ShaderCapeId;
   crosshair: CrosshairSettings;
   hudPositions: Record<string, HudWidgetPosition>;
   liveSessionModalOpen: boolean;
+  lastDiskSyncPath: string;
+  lastDiskSyncAt: string | null;
 
   toggleModule: (id: string) => void;
   setEquippedCape: (cape: ShaderCapeId) => void;
@@ -43,6 +56,8 @@ interface VisualClientState {
   applyPresetProfile: (preset: 'cinematic' | 'competitive' | 'pure-fps') => void;
   exportPresetCode: () => string;
   importPresetCode: (code: string) => boolean;
+  persistHudConfigToDisk: () => Promise<string | null>;
+  hydrateHudConfigFromDisk: () => Promise<boolean>;
   setLiveSessionModalOpen: (open: boolean) => void;
 }
 
@@ -101,12 +116,12 @@ const INITIAL_MODULES: VisualModule[] = [
   },
   {
     id: 'motion-blur',
-    name: ' Kawase Motion Blur',
+    name: 'Kawase Motion Blur',
     category: 'render',
     keybind: 'M',
     enabled: true,
     descriptionRu: 'Кинематографичное сглаживание поворота камеры без размытия прицела.',
-    descriptionEn: ' High-refresh camera shutter accumulation with zero crosshair smearing.',
+    descriptionEn: 'High-refresh camera shutter accumulation with zero crosshair smearing.',
   },
   {
     id: 'viewmodel',
@@ -146,6 +161,16 @@ const INITIAL_MODULES: VisualModule[] = [
   },
 ];
 
+let diskSyncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleHudDiskWrite(trigger: () => Promise<string | null>) {
+  if (typeof window === 'undefined' || !window.location?.origin) return;
+  if (diskSyncTimer) clearTimeout(diskSyncTimer);
+  diskSyncTimer = setTimeout(() => {
+    trigger().catch(() => {});
+  }, 240);
+}
+
 export const useVisualClientStore = create<VisualClientState>()(
   persist(
     (set, get) => ({
@@ -161,30 +186,44 @@ export const useVisualClientStore = create<VisualClientState>()(
       },
       hudPositions: DEFAULT_HUD_POSITIONS,
       liveSessionModalOpen: false,
+      lastDiskSyncPath: '~/.minecraft/winvisual/config/winvisual-hud.json',
+      lastDiskSyncAt: null,
 
-      toggleModule: (id) =>
+      toggleModule: (id) => {
         set((state) => ({
           modules: state.modules.map((m) => (m.id === id ? { ...m, enabled: !m.enabled } : m)),
-        })),
+        }));
+        scheduleHudDiskWrite(() => get().persistHudConfigToDisk());
+      },
 
-      setEquippedCape: (cape) => set({ equippedCape: cape }),
+      setEquippedCape: (cape) => {
+        set({ equippedCape: cape });
+        scheduleHudDiskWrite(() => get().persistHudConfigToDisk());
+      },
 
-      updateCrosshair: (key, val) =>
+      updateCrosshair: (key, val) => {
         set((state) => ({
           crosshair: { ...state.crosshair, [key]: val },
-        })),
+        }));
+        scheduleHudDiskWrite(() => get().persistHudConfigToDisk());
+      },
 
-      setHudPosition: (id, x, y) =>
+      setHudPosition: (id, x, y) => {
         set((state) => ({
           hudPositions: {
             ...state.hudPositions,
             [id]: { x: Math.round(x), y: Math.round(y) },
           },
-        })),
+        }));
+        scheduleHudDiskWrite(() => get().persistHudConfigToDisk());
+      },
 
-      resetHudPositions: () => set({ hudPositions: DEFAULT_HUD_POSITIONS }),
+      resetHudPositions: () => {
+        set({ hudPositions: DEFAULT_HUD_POSITIONS });
+        scheduleHudDiskWrite(() => get().persistHudConfigToDisk());
+      },
 
-      applyPresetProfile: (preset) =>
+      applyPresetProfile: (preset) => {
         set((state) => ({
           modules: state.modules.map((m) => {
             if (preset === 'pure-fps') {
@@ -205,7 +244,9 @@ export const useVisualClientStore = create<VisualClientState>()(
             }
             return { ...m, enabled: m.id !== 'china-hat' };
           }),
-        })),
+        }));
+        scheduleHudDiskWrite(() => get().persistHudConfigToDisk());
+      },
 
       exportPresetCode: () => {
         const s = get();
@@ -238,6 +279,65 @@ export const useVisualClientStore = create<VisualClientState>()(
               ...m,
               enabled: parsed.on!.includes(m.id),
             })),
+          }));
+          scheduleHudDiskWrite(() => get().persistHudConfigToDisk());
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      persistHudConfigToDisk: async () => {
+        const s = get();
+        const gameDir = useSettingsStore.getState().gameDirectory;
+        const payload: PersistedHudDiskSchema = {
+          version: '2.6.0',
+          equippedCape: s.equippedCape,
+          crosshair: s.crosshair,
+          hudPositions: s.hudPositions,
+          modules: s.modules.map((m) => ({
+            id: m.id,
+            enabled: m.enabled,
+            keybind: m.keybind,
+          })),
+          savedAt: new Date().toISOString(),
+        };
+        const savedPath = await saveHudConfigEverywhere(
+          gameDir,
+          JSON.stringify(payload, null, 2)
+        );
+        if (savedPath) {
+          set({
+            lastDiskSyncPath: savedPath,
+            lastDiskSyncAt: new Date().toLocaleTimeString('en-GB'),
+          });
+        }
+        return savedPath;
+      },
+
+      hydrateHudConfigFromDisk: async () => {
+        const gameDir = useSettingsStore.getState().gameDirectory;
+        const raw = await loadHudConfigEverywhere(gameDir);
+        if (!raw) return false;
+        try {
+          const parsed = JSON.parse(raw) as Partial<PersistedHudDiskSchema>;
+          const enabledMap = new Map(
+            (parsed.modules ?? []).map((item) => [item.id, item.enabled])
+          );
+          set((state) => ({
+            equippedCape: parsed.equippedCape ?? state.equippedCape,
+            crosshair: parsed.crosshair ? { ...state.crosshair, ...parsed.crosshair } : state.crosshair,
+            hudPositions: parsed.hudPositions
+              ? { ...DEFAULT_HUD_POSITIONS, ...parsed.hudPositions }
+              : state.hudPositions,
+            modules:
+              enabledMap.size > 0
+                ? state.modules.map((m) => ({
+                    ...m,
+                    enabled: enabledMap.has(m.id) ? Boolean(enabledMap.get(m.id)) : m.enabled,
+                  }))
+                : state.modules,
+            lastDiskSyncPath: `${gameDir}/config/winvisual-hud.json`,
           }));
           return true;
         } catch {

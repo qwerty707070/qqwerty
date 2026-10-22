@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .verify-ssr/
+.winvisual-runtime/
 src-tauri/target/
 previews/
 Unselected files/

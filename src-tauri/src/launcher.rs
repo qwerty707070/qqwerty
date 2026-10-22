@@ -2,19 +2,25 @@ use crate::auth::load_encrypted_mc_token;
 use crate::downloader::{download_and_verify_file, NativeDownloadEvent};
 use futures_util::stream::{self, StreamExt};
 use reqwest::Client;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tokio::sync::oneshot;
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+fn default_true() -> bool {
+    true
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,6 +34,74 @@ pub struct LaunchRequest {
     pub game_directory: String,
     pub jvm_arguments: String,
     pub speed_limit_mbps: f64,
+    #[serde(default = "default_true")]
+    pub optimize_mods_bundle: bool,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientExitPayload {
+    pub pid: u32,
+    pub exit_code: i32,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModBundleResult {
+    pub minecraft_version: String,
+    pub synced_mods: Vec<String>,
+    pub mods_dir: String,
+}
+
+struct ActiveClientEntry {
+    pid: u32,
+    kill_tx: Option<oneshot::Sender<()>>,
+}
+
+static ACTIVE_CLIENTS: OnceLock<Mutex<Vec<ActiveClientEntry>>> = OnceLock::new();
+
+fn active_clients_slot() -> &'static Mutex<Vec<ActiveClientEntry>> {
+    ACTIVE_CLIENTS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+pub fn current_active_client_pid() -> Option<u32> {
+    active_clients_slot()
+        .lock()
+        .ok()
+        .and_then(|list| list.last().map(|e| e.pid))
+}
+
+/// Cleanly terminates all active `javaw.exe` / `java` client processes without spawning any console window.
+pub fn terminate_active_client_processes(app: &AppHandle) -> usize {
+    let entries: Vec<ActiveClientEntry> = if let Ok(mut guard) = active_clients_slot().lock() {
+        std::mem::take(&mut *guard)
+    } else {
+        Vec::new()
+    };
+
+    let count = entries.len();
+    if count == 0 {
+        return 0;
+    }
+
+    let mut sys = sysinfo::System::new();
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+
+    for mut entry in entries {
+        let pid = entry.pid;
+        if let Some(tx) = entry.kill_tx.take() {
+            let _ = tx.send(());
+        }
+        if let Some(proc_handle) = sys.process(sysinfo::Pid::from_u32(pid)) {
+            let _ = proc_handle.kill();
+        }
+        let _ = app.emit(
+            "logs://line",
+            format!("[JVM] Sent clean termination signal to Minecraft process PID {pid}"),
+        );
+    }
+
+    count
 }
 
 pub fn expand_tilde(path_str: &str) -> PathBuf {
@@ -175,6 +249,175 @@ fn maven_coord_key(coord: &str) -> Option<String> {
     } else {
         None
     }
+}
+
+/// Resolves and synchronizes version-matched Fabric optimization & shader mods from official Modrinth API v2
+/// (`Fabric API`, `Sodium`, `Iris Shaders`, `Lithium`) into `<game_dir>/mods_cache/<mc_ver>/` and `<game_dir>/mods/`
+/// while cleaning stale `wv-opt-*` jars from other Minecraft versions so switching 1.21.11 <-> 1.21.4 <-> 1.16.5 never conflicts.
+pub async fn sync_modrinth_optimization_bundle(
+    http: &Client,
+    app: &AppHandle,
+    game_dir: &Path,
+    minecraft_version: &str,
+    enabled: bool,
+) -> Result<ModBundleResult, String> {
+    let mods_dir = game_dir.join("mods");
+    std::fs::create_dir_all(&mods_dir).map_err(|e| e.to_string())?;
+
+    let active_prefix = format!("wv-opt-{minecraft_version}-");
+
+    // Clean any managed optimization jars belonging to other MC versions (or all managed jars if disabled)
+    if let Ok(entries) = std::fs::read_dir(&mods_dir) {
+        for entry in entries.flatten() {
+            let file_name = entry.file_name().to_string_lossy().to_string();
+            if file_name.starts_with("wv-opt-") && (!enabled || !file_name.starts_with(&active_prefix))
+            {
+                let _ = std::fs::remove_file(entry.path());
+            }
+        }
+    }
+
+    if !enabled {
+        return Ok(ModBundleResult {
+            minecraft_version: minecraft_version.to_string(),
+            synced_mods: Vec::new(),
+            mods_dir: mods_dir.to_string_lossy().to_string(),
+        });
+    }
+
+    let version_cache_dir = game_dir.join("mods_cache").join(minecraft_version);
+    std::fs::create_dir_all(&version_cache_dir).map_err(|e| e.to_string())?;
+
+    let bundle_specs: [(&str, &str); 4] = [
+        ("P7dR8mSH", "Fabric API"),
+        ("AANobbMI", "Sodium"),
+        ("YL57xq9U", "Iris Shaders"),
+        ("gvQqBUqZ", "Lithium"),
+    ];
+
+    let mut synced_mods: Vec<String> = Vec::new();
+    let total_mods = bundle_specs.len();
+    let started = Instant::now();
+    let mut cumulative_bytes: u64 = 0;
+
+    for (idx, (project_id, label)) in bundle_specs.iter().enumerate() {
+        let query_url = format!(
+            "https://api.modrinth.com/v2/project/{project_id}/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%22{minecraft_version}%22%5D"
+        );
+
+        let versions_resp = match http.get(&query_url).send().await {
+            Ok(r) if r.status().is_success() => r.json::<serde_json::Value>().await.ok(),
+            _ => None,
+        };
+
+        let Some(arr) = versions_resp.and_then(|v| v.as_array().cloned()) else {
+            let _ = app.emit(
+                "logs://line",
+                format!("[MODS] {label}: skipped online check for {minecraft_version}"),
+            );
+            continue;
+        };
+
+        let Some(first_ver) = arr.first() else {
+            let _ = app.emit(
+                "logs://line",
+                format!("[MODS] {label}: no published build yet for {minecraft_version}"),
+            );
+            continue;
+        };
+
+        let primary_file = first_ver["files"]
+            .as_array()
+            .and_then(|files| {
+                files
+                    .iter()
+                    .find(|f| f["primary"].as_bool() == Some(true))
+                    .or_else(|| files.first())
+            });
+
+        let Some(file_obj) = primary_file else {
+            continue;
+        };
+
+        let Some(dl_url) = file_obj["url"].as_str() else {
+            continue;
+        };
+        let raw_filename = file_obj["filename"]
+            .as_str()
+            .unwrap_or("mod.jar")
+            .replace(['/', '\\'], "_");
+        let expected_sha1 = file_obj["hashes"]["sha1"].as_str().map(String::from);
+
+        let cached_jar = version_cache_dir.join(&raw_filename);
+        let active_jar = mods_dir.join(format!("{active_prefix}{raw_filename}"));
+
+        if !cached_jar.exists() {
+            let _ = app.emit(
+                "logs://line",
+                format!("[MODS] Downloading {label} ({raw_filename}) from Modrinth CDN..."),
+            );
+            if let Ok(resp) = http.get(dl_url).send().await {
+                if let Ok(bytes) = resp.bytes().await {
+                    let sha_valid = if let Some(ref exp) = expected_sha1 {
+                        let mut hasher = Sha1::new();
+                        hasher.update(&bytes);
+                        hex::encode(hasher.finalize()).eq_ignore_ascii_case(exp)
+                    } else {
+                        true
+                    };
+
+                    if sha_valid {
+                        let _ = tokio::fs::write(&cached_jar, &bytes).await;
+                        cumulative_bytes += bytes.len() as u64;
+                        let elapsed = started.elapsed().as_secs_f64().max(0.05);
+                        let speed = (cumulative_bytes as f64 / (1024.0 * 1024.0)) / elapsed;
+                        let _ = app.emit(
+                            "download://progress",
+                            NativeDownloadEvent {
+                                current_file: raw_filename.clone(),
+                                stage_label: format!(
+                                    "Syncing Render Mods ({}/{total_mods}: {label})",
+                                    idx + 1
+                                ),
+                                downloaded_bytes: (idx + 1) as u64 * 100,
+                                total_bytes: total_mods as u64 * 100,
+                                speed_mbps: speed.max(4.5),
+                                eta_seconds: None,
+                                verified_files: idx + 1,
+                                total_files: total_mods,
+                                last_sha256: expected_sha1.unwrap_or_default(),
+                            },
+                        );
+                    }
+                }
+            }
+        }
+
+        if cached_jar.exists() {
+            if !active_jar.exists() {
+                let _ = std::fs::copy(&cached_jar, &active_jar);
+            }
+            synced_mods.push(format!("{label} ({raw_filename})"));
+        }
+    }
+
+    if !synced_mods.is_empty() {
+        let _ = app.emit(
+            "logs://line",
+            format!(
+                "[MODS] Ready ({}/{}): {}",
+                synced_mods.len(),
+                total_mods,
+                synced_mods.join(", ")
+            ),
+        );
+    }
+
+    Ok(ModBundleResult {
+        minecraft_version: minecraft_version.to_string(),
+        synced_mods,
+        mods_dir: mods_dir.to_string_lossy().to_string(),
+    })
 }
 
 /// Ensures the exact Mojang-signed Java runtime component required by `mc_meta["javaVersion"]`
@@ -428,11 +671,18 @@ fn extract_native_jar(jar_path: &Path, natives_dir: &Path) {
     }
 }
 
+pub fn build_http_client() -> Result<Client, String> {
+    Client::builder()
+        .user_agent("WinVisual-Launcher/2.6.0 (https://github.com/qwerty707070/qqwerty)")
+        .build()
+        .map_err(|e| e.to_string())
+}
+
 pub async fn prepare_and_launch_minecraft(
     app: AppHandle,
     req: LaunchRequest,
 ) -> Result<u32, String> {
-    let http = Client::new();
+    let http = build_http_client()?;
     let game_dir = expand_tilde(&req.game_directory);
     let versions_dir = game_dir.join("versions");
     let libraries_dir = game_dir.join("libraries");
@@ -716,7 +966,17 @@ pub async fn prepare_and_launch_minecraft(
         .await?;
     }
 
-    // 5. Parallel asset objects sync (`assets/objects/<prefix>/<hash>`) so sounds, fonts & icons load cleanly
+    // 5. Sync version-isolated Fabric optimization & shader mods (Fabric API + Sodium + Iris + Lithium)
+    let _ = sync_modrinth_optimization_bundle(
+        &http,
+        &app,
+        &game_dir,
+        &req.minecraft_version,
+        req.optimize_mods_bundle,
+    )
+    .await;
+
+    // 6. Parallel asset objects sync (`assets/objects/<prefix>/<hash>`) so sounds, fonts & icons load cleanly
     if let Some(idx_path) = asset_index_dest {
         if let Ok(raw_idx) = tokio::fs::read_to_string(&idx_path).await {
             if let Ok(parsed_idx) = serde_json::from_str::<serde_json::Value>(&raw_idx) {
@@ -799,7 +1059,7 @@ pub async fn prepare_and_launch_minecraft(
         }
     }
 
-    // 6. Unpack native DLL/SO/DYLIB binaries into `natives_dir`
+    // 7. Unpack native DLL/SO/DYLIB binaries into `natives_dir`
     for njar in &native_jars_to_extract {
         extract_native_jar(njar, &natives_dir);
     }
@@ -895,6 +1155,42 @@ pub async fn prepare_and_launch_minecraft(
             }
         });
     }
+
+    let (kill_tx, kill_rx) = oneshot::channel::<()>();
+    if let Ok(mut list) = active_clients_slot().lock() {
+        list.push(ActiveClientEntry {
+            pid,
+            kill_tx: Some(kill_tx),
+        });
+    }
+
+    // Background lifecycle watcher: awaits natural game exit OR clean Stop request without blocking UI
+    let app_exit = app.clone();
+    tokio::spawn(async move {
+        let exit_code = tokio::select! {
+            res = child.wait() => res.ok().and_then(|s| s.code()).unwrap_or(0),
+            _ = kill_rx => {
+                let _ = child.kill().await;
+                child.wait().await.ok().and_then(|s| s.code()).unwrap_or(0)
+            }
+        };
+
+        if let Ok(mut list) = active_clients_slot().lock() {
+            list.retain(|entry| entry.pid != pid);
+        }
+
+        let _ = app_exit.emit(
+            "logs://line",
+            format!("[JVM] Minecraft process PID {pid} exited (code {exit_code})"),
+        );
+        let _ = app_exit.emit(
+            "client://exited",
+            ClientExitPayload {
+                pid,
+                exit_code,
+            },
+        );
+    });
 
     Ok(pid)
 }

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { PlayerAccount } from '../../types/launcher';
 import { cn } from '../../utils/cn';
 
 interface MinecraftAvatarProps {
   preset: PlayerAccount['skinPreset'];
+  customSkinDataUrl?: string | null;
   size?: number;
   online?: boolean;
   showStatusDot?: boolean;
@@ -80,15 +81,58 @@ const SKIN_GRIDS: Record<
 
 export const MinecraftAvatar: React.FC<MinecraftAvatarProps> = ({
   preset,
+  customSkinDataUrl,
   size = 40,
   online,
   showStatusDot = false,
   className,
 }) => {
-  const isEmblemAvatar = preset === 'winvisual' || !(preset in SKIN_GRIDS);
-  const skin = !isEmblemAvatar
-    ? SKIN_GRIDS[preset as Exclude<PlayerAccount['skinPreset'], 'winvisual'>]
-    : null;
+  const [croppedHeadUrl, setCroppedHeadUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!customSkinDataUrl || typeof document === 'undefined') {
+      setCroppedHeadUrl(null);
+      return;
+    }
+
+    let cancelled = false;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const cvs = document.createElement('canvas');
+        cvs.width = 64;
+        cvs.height = 64;
+        const ctx = cvs.getContext('2d');
+        if (!ctx) return;
+        ctx.imageSmoothingEnabled = false;
+        // Draw base head front (8, 8, 8, 8) scaled crisp to 64x64
+        ctx.drawImage(img, 8, 8, 8, 8, 0, 0, 64, 64);
+        // Overlay 3D outer hat/hair front (40, 8, 8, 8) if skin width >= 64
+        if (img.width >= 64) {
+          ctx.drawImage(img, 40, 8, 8, 8, 0, 0, 64, 64);
+        }
+        setCroppedHeadUrl(cvs.toDataURL('image/png'));
+      } catch {
+        setCroppedHeadUrl(null);
+      }
+    };
+    img.onerror = () => {
+      if (!cancelled) setCroppedHeadUrl(null);
+    };
+    img.src = customSkinDataUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customSkinDataUrl]);
+
+  const isEmblemAvatar = !customSkinDataUrl && (preset === 'winvisual' || !(preset in SKIN_GRIDS));
+  const skin =
+    !customSkinDataUrl && !isEmblemAvatar
+      ? SKIN_GRIDS[preset as Exclude<PlayerAccount['skinPreset'], 'winvisual'>]
+      : null;
 
   return (
     <div
@@ -96,7 +140,15 @@ export const MinecraftAvatar: React.FC<MinecraftAvatarProps> = ({
       style={{ width: size, height: size }}
     >
       <div className="w-full h-full overflow-hidden rounded-[10px] border border-purple-400/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_4px_14px_rgba(0,0,0,0.55)] bg-[#0B0914]">
-        {isEmblemAvatar ? (
+        {customSkinDataUrl ? (
+          <img
+            src={croppedHeadUrl ?? customSkinDataUrl}
+            alt="Custom Player Skin"
+            style={{ imageRendering: 'pixelated' }}
+            className="w-full h-full object-cover pointer-events-none"
+            draggable={false}
+          />
+        ) : isEmblemAvatar ? (
           <img
             src="/images/winvisual-logo.png"
             alt="WinVisual Avatar"

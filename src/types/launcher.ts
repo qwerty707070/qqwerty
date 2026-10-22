@@ -43,7 +43,10 @@ export interface SystemTelemetry {
   uptimeSeconds: number;
   platform: string;
   cpuCores: number;
+  cpuUsagePercent?: number;
   hostTotalMemoryMb: number;
+  hostUsedMemoryMb?: number;
+  activePid?: number | null;
   latencyMs: number;
   java: {
     installed: boolean;
@@ -92,6 +95,8 @@ export interface PlayerAccount {
   uuid: string;
   authType: AccountAuthType;
   skinPreset: 'winvisual' | 'obsidian' | 'classic' | 'slim';
+  skinModel?: 'classic' | 'slim';
+  customSkinDataUrl?: string | null;
   capeName: string;
   online: boolean;
   lastUsed: string;

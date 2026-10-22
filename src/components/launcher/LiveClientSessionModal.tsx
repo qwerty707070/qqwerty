@@ -127,7 +127,7 @@ export const LiveClientSessionModal: React.FC = () => {
                 <div className="glass-panel rounded-[12px] px-3.5 py-2 flex items-center gap-2.5 text-[12px] font-mono">
                   <Sparkles size={14} className="text-[var(--accent-secondary)]" />
                   <span className="font-semibold text-[var(--text-primary)]">
-                    {activeVer?.name ?? 'WinVisual 2.4.0'}
+                    {activeVer?.name ?? 'Fabric 1.21.11'}
                   </span>
                   <span className="text-white/25">|</span>
                   <span className="text-emerald-300">438 FPS</span>

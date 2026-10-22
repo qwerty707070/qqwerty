@@ -20,6 +20,7 @@ import {
   tauriCloseWindow,
   tauriLaunchMinecraft,
   tauriMinimizeWindow,
+  tauriStopClientProcess,
 } from '../services/tauriBridge';
 import { useSettingsStore } from './settingsStore';
 import { useAccountStore } from './accountStore';
@@ -47,6 +48,7 @@ interface LauncherState {
   telemetryLoading: boolean;
 
   launchPhase: LaunchPhase;
+  activeProcessPid: number | null;
   downloadDrawerOpen: boolean;
   simulateNetworkDrop: boolean;
   logsModalOpen: boolean;
@@ -64,7 +66,8 @@ interface LauncherState {
   clearLogs: () => void;
   startLaunchSequence: () => Promise<void>;
   cancelDownload: () => void;
-  stopRunningSession: () => void;
+  stopRunningSession: () => Promise<void>;
+  notifyNativeProcessExited: (pid: number, exitCode: number) => void;
 }
 
 let activeAbortController: AbortController | null = null;
@@ -108,11 +111,12 @@ export const useLauncherStore = create<LauncherState>()(
       telemetryLoading: true,
 
       launchPhase: 'idle',
+      activeProcessPid: null,
       downloadDrawerOpen: false,
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.5.0 initialized`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.6.0 initialized`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 
@@ -234,7 +238,7 @@ export const useLauncherStore = create<LauncherState>()(
         }
 
         if (state.launchPhase === 'running') {
-          get().stopRunningSession();
+          await get().stopRunningSession();
           return;
         }
 
@@ -251,6 +255,9 @@ export const useLauncherStore = create<LauncherState>()(
         const activeAccount =
           accState.accounts.find((a) => a.id === accState.activeAccountId) ?? accState.accounts[0];
         const isRu = settings.language === 'ru';
+
+        // Ensure latest HUD layout & module states are flushed to disk before client boot
+        await useVisualClientStore.getState().persistHudConfigToDisk().catch(() => null);
 
         set({
           launchPhase: 'preparing',
@@ -277,10 +284,12 @@ export const useLauncherStore = create<LauncherState>()(
               gameDirectory: settings.gameDirectory,
               jvmArguments: settings.jvmArguments,
               speedLimitMbps: settings.downloadSpeedLimitMbps,
+              optimizeModsBundle: settings.optimizeModsBundle,
             });
             get().appendLog(`[TAURI-JVM] Spawned native Minecraft process PID ${pid}`);
             set((prev) => ({
               launchPhase: 'running',
+              activeProcessPid: pid,
               downloadDrawerOpen: false,
               downloadProgress: { ...prev.downloadProgress, active: false },
             }));
@@ -321,6 +330,7 @@ export const useLauncherStore = create<LauncherState>()(
 
           set((prev) => ({
             launchPhase: 'running',
+            activeProcessPid: null,
             downloadDrawerOpen: false,
             downloadProgress: {
               ...prev.downloadProgress,
@@ -344,6 +354,7 @@ export const useLauncherStore = create<LauncherState>()(
             get().appendLog('[ABORT] Client installation cancelled by user.');
             set({
               launchPhase: 'idle',
+              activeProcessPid: null,
               downloadProgress: { ...INITIAL_PROGRESS },
             });
             if (settings.notificationsEnabled) {
@@ -362,6 +373,7 @@ export const useLauncherStore = create<LauncherState>()(
           get().appendLog(`[ERROR] ${message}`);
           set((prev) => ({
             launchPhase: 'error',
+            activeProcessPid: null,
             downloadProgress: {
               ...prev.downloadProgress,
               active: false,
@@ -384,15 +396,47 @@ export const useLauncherStore = create<LauncherState>()(
         activeAbortController = null;
       },
 
-      stopRunningSession: () => {
+      stopRunningSession: async () => {
         const settings = useSettingsStore.getState();
+        const prevPid = get().activeProcessPid;
+        if (isTauriDesktop()) {
+          await tauriStopClientProcess();
+        }
         useVisualClientStore.getState().setLiveSessionModalOpen(false);
-        get().appendLog('[SESSION] Client session terminated cleanly.');
-        set({ launchPhase: 'idle', downloadDrawerOpen: false });
+        get().appendLog(
+          prevPid
+            ? `[SESSION] Terminated native Minecraft process PID ${prevPid} cleanly.`
+            : '[SESSION] Client session terminated cleanly.'
+        );
+        set({ launchPhase: 'idle', activeProcessPid: null, downloadDrawerOpen: false });
         if (settings.notificationsEnabled) {
           useNotificationStore.getState().pushToast({
             type: 'info',
-            title: settings.language === 'ru' ? 'Сессия клиента завершена' : 'Client session ended',
+            title: settings.language === 'ru' ? 'Процесс клиента остановлен' : 'Client session stopped',
+          });
+        }
+      },
+
+      notifyNativeProcessExited: (pid, exitCode) => {
+        const current = get();
+        if (current.launchPhase !== 'running' && current.activeProcessPid === null) {
+          return;
+        }
+        set({ launchPhase: 'idle', activeProcessPid: null, downloadDrawerOpen: false });
+        const settings = useSettingsStore.getState();
+        if (settings.notificationsEnabled) {
+          useNotificationStore.getState().pushToast({
+            type: exitCode === 0 ? 'info' : 'warning',
+            title:
+              settings.language === 'ru'
+                ? `Minecraft завершил работу (PID ${pid})`
+                : `Minecraft exited (PID ${pid})`,
+            description:
+              exitCode === 0
+                ? settings.language === 'ru'
+                  ? 'Сессия закрыта штатно — лаунчер снова готов к запуску.'
+                  : 'Exited cleanly — ready for next launch.'
+                : `Exit code: ${exitCode}`,
           });
         }
       },

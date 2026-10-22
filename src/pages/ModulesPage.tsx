@@ -4,6 +4,7 @@ import {
   Crosshair,
   Download,
   GripHorizontal,
+  HardDrive,
   MonitorPlay,
   RotateCcw,
   Share2,
@@ -33,12 +34,14 @@ export const ModulesPage: React.FC = () => {
     modules,
     crosshair,
     hudPositions,
+    lastDiskSyncAt,
     toggleModule,
     updateCrosshair,
     setHudPosition,
     resetHudPositions,
     exportPresetCode,
     importPresetCode,
+    persistHudConfigToDisk,
     setLiveSessionModalOpen,
   } = useVisualClientStore();
   const language = useSettingsStore((s) => s.language);
@@ -80,6 +83,15 @@ export const ModulesPage: React.FC = () => {
     });
   };
 
+  const handleSaveDisk = async () => {
+    const path = await persistHudConfigToDisk();
+    pushToast({
+      type: 'success',
+      title: isRu ? 'Сохранено в winvisual-hud.json' : 'Saved to winvisual-hud.json',
+      description: path ?? '~/.minecraft/winvisual/config/winvisual-hud.json',
+    });
+  };
+
   const handleApplyImport = (e: React.FormEvent) => {
     e.preventDefault();
     if (importPresetCode(importInput)) {
@@ -116,12 +128,20 @@ export const ModulesPage: React.FC = () => {
           </h1>
           <p className="mt-1 text-[13.5px] text-[var(--text-secondary)]">
             {isRu
-              ? 'Перетаскивайте виджеты мышью прямо на сцене, настраивайте векторный прицел и обменивайтесь пресетами.'
-              : 'Drag HUD widgets directly across the live viewport, tune crosshairs, and share layout codes.'}
+              ? 'Перетаскивайте виджеты на сцене — координаты автоматически пишутся в config/winvisual-hud.json.'
+              : 'Drag HUD widgets across the live viewport — coordinates sync directly to config/winvisual-hud.json.'}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="secondary" size="sm" onClick={handleSaveDisk}>
+            <HardDrive size={14} strokeWidth={1.75} />
+            {lastDiskSyncAt
+              ? `HUD • ${lastDiskSyncAt}`
+              : isRu
+                ? 'Сохранить HUD'
+                : 'Flush Disk'}
+          </Button>
           <Button variant="secondary" size="sm" onClick={handleExportPreset}>
             <Share2 size={14} strokeWidth={1.75} />
             {isRu ? 'Экспорт кода' : 'Export Code'}
@@ -163,11 +183,11 @@ export const ModulesPage: React.FC = () => {
               className="absolute glass-panel rounded-[10px] px-3 py-1.5 flex items-center gap-2 text-[11.5px] font-mono cursor-move border border-white/15"
             >
               <GripHorizontal size={12} className="text-[var(--text-muted)]" />
-              <span className="font-semibold text-[var(--accent-secondary)]">WINVISUAL 2.5</span>
+              <span className="font-semibold text-[var(--accent-secondary)]">WINVISUAL 2.6</span>
               <span className="text-white/30">|</span>
               <span className="text-[#F5F5F7]">412 FPS</span>
               <span className="text-white/30">|</span>
-              <span className="text-emerald-300">14ms</span>
+              <span className="text-emerald-300">9ms</span>
             </div>
           )}
 

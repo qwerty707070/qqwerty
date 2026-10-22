@@ -113,10 +113,10 @@ export const HomePage: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className="h-full px-5 pt-4 pb-2 flex flex-col gap-3.5"
+      className="h-full px-5 pt-3.5 pb-1.5 flex flex-col gap-3"
     >
-      {/* Atmospheric Hero Stage with Live 3D Character + Starry 144Hz Shader Cape */}
-      <section className="relative isolate z-0 flex-1 min-h-[346px] rounded-[22px] overflow-hidden border border-white/[0.085] shadow-[0_26px_70px_-18px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.1)] flex items-stretch justify-between px-9 py-7">
+      {/* Atmospheric Hero Stage with Live 3D Pixel Skin + Starry 144Hz Shader Cape */}
+      <section className="relative isolate z-0 flex-1 min-h-[304px] rounded-[22px] overflow-hidden border border-white/[0.085] shadow-[0_26px_70px_-18px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.1)] flex items-stretch justify-between px-9 py-6">
         {/* Violet Castle & Floating Islands Shader Scene */}
         <div
           aria-hidden="true"
@@ -144,8 +144,8 @@ export const HomePage: React.FC = () => {
         <AmbientGlow className="absolute -bottom-24 -left-16" />
 
         {/* Left Column: Display Headline + Subtitle + Dual CTA Buttons */}
-        <div className="relative z-10 max-w-[490px] flex flex-col justify-center space-y-5 py-2">
-          <h1 className="text-[40px] xl:text-[46px] font-extrabold tracking-[-0.03em] leading-[1.05] uppercase">
+        <div className="relative z-10 max-w-[490px] flex flex-col justify-center space-y-4 py-1">
+          <h1 className="text-[38px] xl:text-[44px] font-extrabold tracking-[-0.03em] leading-[1.05] uppercase">
             <span className="block text-[#FFFFFF]">
               {isRu ? 'НОВЫЙ ВЗГЛЯД' : 'REIMAGINE YOUR'}
             </span>
@@ -154,7 +154,7 @@ export const HomePage: React.FC = () => {
             </span>
           </h1>
 
-          <p className="text-[14px] text-[#C2C4D0] leading-[1.6] max-w-[400px]">
+          <p className="text-[14px] text-[#C2C4D0] leading-[1.58] max-w-[400px]">
             {isRu
               ? 'Погрузись в совершенно новую атмосферу игры с лучшей графикой, плавностью и максимальным комфортом.'
               : 'Immerse yourself in a next-generation visual client with atmospheric GLSL shaders, silky frame pacing, and effortless HUD control.'}
@@ -181,11 +181,13 @@ export const HomePage: React.FC = () => {
         </div>
 
         {/* Right Column: Live Interactive 3D Full-Body Character + 144Hz Starry Cape + Switcher */}
-        <div className="hidden md:flex relative z-10 w-[330px] lg:w-[370px] flex-col items-center justify-end -my-4">
-          <div className="w-full h-[290px]">
+        <div className="hidden md:flex relative z-10 w-[330px] lg:w-[366px] flex-col items-center justify-end -my-4">
+          <div className="w-full h-[272px]">
             <Character3DViewer
               heroStage
               skinPreset={activeAccount.skinPreset}
+              skinModel={activeAccount.skinModel}
+              customSkinDataUrl={activeAccount.customSkinDataUrl}
               cape={equippedCape}
               showHalo={haloEnabled}
             />
@@ -234,12 +236,12 @@ export const HomePage: React.FC = () => {
       </section>
 
       {/* Bottom 3 Illustrated Shader & Telemetry Cards matching the WinVisual Concept */}
-      <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3.5">
+      <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3.5 shrink-0">
         {/* Card 1: Evo Atmospheric with Purple Clouds Shader Backdrop */}
         <Card
           interactive
           onClick={cycleVisualProfile}
-          className="h-[146px] p-0 cursor-pointer"
+          className="h-[138px] p-0 cursor-pointer"
         >
           <div
             aria-hidden="true"
@@ -277,7 +279,7 @@ export const HomePage: React.FC = () => {
         <Card
           interactive
           onClick={() => setCurrentPage('account')}
-          className="h-[146px] p-0 cursor-pointer"
+          className="h-[138px] p-0 cursor-pointer"
         >
           <div
             aria-hidden="true"
@@ -317,7 +319,7 @@ export const HomePage: React.FC = () => {
         <Card
           interactive
           onClick={() => setCurrentPage('settings')}
-          className="h-[146px] p-0 flex flex-col justify-between cursor-pointer bg-[#0B0D16]/95"
+          className="h-[138px] p-0 flex flex-col justify-between cursor-pointer bg-[#0B0D16]/95"
         >
           <div className="relative z-10 p-4 pb-0 flex items-start justify-between gap-3">
             <div className="flex items-start gap-3 min-w-0">

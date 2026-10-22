@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Power, RotateCcw } from 'lucide-react';
 import { TitleBar } from './TitleBar';
@@ -14,11 +14,16 @@ import { Button } from '../ui/Button';
 import { BrandMark } from '../ui/BrandMark';
 import { useLauncherStore } from '../../stores/launcherStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { tauriCloseWindow, tauriToggleMaximizeWindow } from '../../services/tauriBridge';
+import {
+  isTauriDesktop,
+  tauriCloseWindow,
+  tauriToggleMaximizeWindow,
+} from '../../services/tauriBridge';
 import { cn } from '../../utils/cn';
 
 export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isNativeDesktop, setIsNativeDesktop] = useState(false);
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [windowClosedState, setWindowClosedState] = useState(false);
 
@@ -26,6 +31,12 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   const setWindowMinimized = useLauncherStore((s) => s.setWindowMinimized);
   const downloadProgress = useLauncherStore((s) => s.downloadProgress);
   const language = useSettingsStore((s) => s.language);
+
+  useEffect(() => {
+    setIsNativeDesktop(isTauriDesktop());
+  }, []);
+
+  const fullBleedShell = isNativeDesktop || isMaximized;
 
   const handleToggleMax = async () => {
     await tauriToggleMaximizeWindow();
@@ -44,9 +55,14 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden flex items-center justify-center bg-[#040509] p-0 lg:p-4">
+    <div
+      className={cn(
+        'relative h-screen w-screen overflow-hidden flex items-center justify-center bg-[#040509]',
+        fullBleedShell ? 'p-0' : 'p-0 lg:p-4'
+      )}
+    >
       <SplashIntro />
-      <BackgroundEffects />
+      {!isNativeDesktop && <BackgroundEffects />}
 
       {windowClosedState ? (
         <motion.div
@@ -91,11 +107,13 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
           transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
           className={cn(
             'relative z-10 flex flex-col overflow-hidden bg-[#07080E]',
-            'border border-[rgba(var(--accent-rgb),0.26)]',
-            'shadow-[0_0_0_1px_rgba(var(--accent-rgb),0.12),0_40px_120px_-16px_rgba(0,0,0,0.96),0_0_90px_-30px_var(--accent-glow)]',
-            isMaximized
-              ? 'w-full h-full rounded-none'
-              : 'w-full h-full lg:w-[1260px] lg:max-w-[calc(100vw-28px)] lg:h-[790px] lg:max-h-[calc(100vh-28px)] lg:rounded-[22px]'
+            fullBleedShell
+              ? 'w-full h-full rounded-none border border-white/[0.06]'
+              : [
+                  'border border-[rgba(var(--accent-rgb),0.26)]',
+                  'shadow-[0_0_0_1px_rgba(var(--accent-rgb),0.12),0_40px_120px_-16px_rgba(0,0,0,0.96),0_0_90px_-30px_var(--accent-glow)]',
+                  'w-full h-full lg:w-[1260px] lg:max-w-[calc(100vw-28px)] lg:h-[790px] lg:max-h-[calc(100vh-28px)] lg:rounded-[22px]',
+                ]
           )}
         >
           <TitleBar
@@ -113,7 +131,7 @@ export const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }
                 <AnimatePresence mode="wait">{children}</AnimatePresence>
               </main>
 
-              <div className="shrink-0 px-5 pb-4 pt-2 bg-gradient-to-t from-[#07080E] via-[#07080E] to-transparent">
+              <div className="shrink-0 px-5 pb-3 pt-1.5 bg-gradient-to-t from-[#07080E] via-[#07080E] to-transparent">
                 <LaunchPanel />
               </div>
             </div>

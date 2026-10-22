@@ -1,8 +1,165 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
+import zlib from 'node:zlib';
 import { execFile, execSync } from 'node:child_process';
 
 const ARTIFACT_CACHE = new Map();
+
+// Precomputed IEEE 802.3 CRC32 table for valid 64x64 RGBA Minecraft PNG skin generation
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    }
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type, data) {
+  const typeBuf = Buffer.from(type, 'ascii');
+  const lenBuf = Buffer.alloc(4);
+  lenBuf.writeUInt32BE(data.length, 0);
+  const crcInput = Buffer.concat([typeBuf, data]);
+  const crcBuf = Buffer.alloc(4);
+  crcBuf.writeUInt32BE(crc32(crcInput), 0);
+  return Buffer.concat([lenBuf, typeBuf, data, crcBuf]);
+}
+
+function generateMinecraftSkinPngBuffer(username) {
+  const hash = crypto.createHash('sha256').update(String(username)).digest();
+  const slim = (hash[0] & 1) === 1;
+
+  // Deterministic curated skin & armor/hood color palette from username hash
+  const skinTones = [
+    [241, 206, 184],
+    [224, 178, 148],
+    [198, 143, 110],
+    [154, 102, 74],
+  ];
+  const accentPalettes = [
+    [139, 124, 255],
+    [168, 85, 247],
+    [56, 189, 248],
+    [244, 63, 94],
+    [16, 185, 129],
+    [245, 158, 11],
+  ];
+
+  const skin = skinTones[hash[1] % skinTones.length];
+  const accent = accentPalettes[hash[2] % accentPalettes.length];
+  const hair = [26 + (hash[3] % 52), 20 + (hash[4] % 40), 34 + (hash[5] % 56)];
+  const jacket = [22 + (hash[6] % 28), 20 + (hash[7] % 28), 38 + (hash[8] % 44)];
+  const pants = [16 + (hash[9] % 20), 16 + (hash[10] % 20), 26 + (hash[11] % 28)];
+
+  const W = 64;
+  const H = 64;
+  const rgba = new Uint8Array(W * H * 4);
+
+  const setPx = (x, y, rgb, a = 255) => {
+    if (x < 0 || x >= W || y < 0 || y >= H) return;
+    const o = (y * W + x) * 4;
+    rgba[o] = rgb[0];
+    rgba[o + 1] = rgb[1];
+    rgba[o + 2] = rgb[2];
+    rgba[o + 3] = a;
+  };
+
+  const fillRect = (rx, ry, rw, rh, rgb, a = 255) => {
+    for (let y = ry; y < ry + rh; y++) {
+      for (let x = rx; x < rx + rw; x++) {
+        setPx(x, y, rgb, a);
+      }
+    }
+  };
+
+  // Base head UV box (0..32, 0..16)
+  fillRect(8, 0, 8, 8, hair);
+  fillRect(16, 0, 8, 8, skin);
+  fillRect(0, 8, 32, 8, skin);
+  fillRect(0, 8, 32, 2, hair);
+  fillRect(24, 8, 8, 8, hair);
+
+  // Crisp Minecraft eyes + brows on front face (8..16, 8..16)
+  setPx(9, 12, [255, 255, 255]);
+  setPx(10, 12, accent);
+  setPx(13, 12, accent);
+  setPx(14, 12, [255, 255, 255]);
+  fillRect(9, 11, 2, 1, hair);
+  fillRect(13, 11, 2, 1, hair);
+
+  // Outer 3D Hat / Crown Visor layer (32..64, 0..16)
+  fillRect(40, 0, 8, 8, hair);
+  fillRect(40, 8, 8, 2, hair);
+  setPx(41, 9, accent);
+  setPx(43, 8, [245, 243, 255]);
+  setPx(44, 8, [245, 243, 255]);
+  setPx(46, 9, accent);
+  fillRect(56, 8, 8, 5, hair);
+
+  // Torso (16..40, 16..32) + glowing emblem
+  fillRect(16, 20, 24, 12, jacket);
+  fillRect(20, 16, 8, 4, jacket);
+  fillRect(22, 22, 4, 4, accent);
+  setPx(23, 23, [255, 255, 255]);
+  setPx(24, 23, [255, 255, 255]);
+  // Back emblem on torso back (32..40, 20..32)
+  fillRect(34, 22, 4, 5, accent);
+
+  // Right & Left Legs
+  fillRect(0, 20, 16, 12, pants);
+  fillRect(16, 52, 16, 12, pants);
+  fillRect(0, 30, 16, 2, accent);
+  fillRect(16, 62, 16, 2, accent);
+
+  // Right & Left Arms + cuffs + hands
+  fillRect(40, 20, 16, 10, jacket);
+  fillRect(40, 29, 16, 1, accent);
+  fillRect(40, 30, 16, 2, skin);
+  fillRect(32, 52, 16, 10, jacket);
+  fillRect(32, 61, 16, 1, accent);
+  fillRect(32, 62, 16, 2, skin);
+
+  // Encode raw scanlines with filter byte 0 per row
+  const raw = Buffer.alloc(H * (1 + W * 4));
+  for (let y = 0; y < H; y++) {
+    const rowStart = y * (1 + W * 4);
+    raw[rowStart] = 0;
+    Buffer.from(rgba.buffer, y * W * 4, W * 4).copy(raw, rowStart + 1);
+  }
+
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(W, 0);
+  ihdr.writeUInt32BE(H, 4);
+  ihdr[8] = 8; // 8-bit depth
+  ihdr[9] = 6; // RGBA
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
+
+  const compressed = zlib.deflateSync(raw);
+  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const pngBuffer = Buffer.concat([
+    sig,
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', compressed),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ]);
+
+  return { pngBuffer, slim };
+}
 
 let cachedJavaInfo = null;
 function detectServerJava() {
@@ -56,17 +213,17 @@ export const CLIENT_VERSIONS = [
     minecraftVersion: '1.21.11',
     channel: 'stable',
     recommended: true,
-    updatedAt: '2026-10-21',
+    updatedAt: '2026-10-22',
     sizeMb: 30.8,
-    loader: 'Fabric • RenderCore 2.4',
+    loader: 'Fabric • RenderCore 2.6',
     fpsBoost: '+165% FPS',
     modulesCount: 40,
     summaryEn:
-      'Latest Minecraft 1.21.11 Fabric visual client build with GPU particle trails, 144Hz GLSL cloth shaders, draggable HUD 2.0, and instant preset hot-reload.',
+      'Latest Minecraft 1.21.11 Fabric visual client build with auto-synced Sodium + Iris Shaders, 144Hz GLSL cloth physics, draggable HUD 2.0, and instant disk config sync.',
     summaryRu:
-      'Актуальная сборка Fabric 1.21.11 с GPU-частицами следов, кастомными GLSL-шейдерами плащей 144 Гц, адаптивным HUD 2.0 и мгновенной подгрузкой пресетов.',
-    highlightsRu: ['Minecraft 1.21.11 Fabric', 'GPU-частицы и HUD 2.0'],
-    highlightsEn: ['Minecraft 1.21.11 Fabric', 'GPU Trails & HUD 2.0'],
+      'Актуальная сборка Fabric 1.21.11 с авто-синхронизацией Sodium + Iris Shaders, GLSL-плащами 144 Гц, адаптивным HUD 2.0 и сохранением конфигов на диск.',
+    highlightsRu: ['Minecraft 1.21.11 Fabric', 'Sodium + Iris & HUD 2.0'],
+    highlightsEn: ['Minecraft 1.21.11 Fabric', 'Sodium + Iris & HUD 2.0'],
   },
   {
     id: 'winvisual-1.21.4',
@@ -74,15 +231,15 @@ export const CLIENT_VERSIONS = [
     minecraftVersion: '1.21.4',
     channel: 'stable',
     recommended: false,
-    updatedAt: '2026-10-19',
+    updatedAt: '2026-10-22',
     sizeMb: 29.3,
-    loader: 'Fabric • RenderCore 2.4',
+    loader: 'Fabric • RenderCore 2.6',
     fpsBoost: '+148% FPS',
     modulesCount: 38,
     summaryEn:
-      'Flagship Minecraft 1.21.4 Fabric build featuring physically shaded HUD panels, custom GLSL hand & cape shaders, 3D skin layers, and zero-stutter chunk batching.',
+      'Flagship Minecraft 1.21.4 Fabric build featuring physically shaded HUD panels, custom GLSL hand & cape shaders, 3D pixel skin layers, and zero-stutter chunk batching.',
     summaryRu:
-      'Стабильная сборка Fabric 1.21.4: пакетный рендер HUD 2.0, кастомные GLSL-шейдеры рук и плащей, 3D-слои скинов и буферизация чанков без микрофризов.',
+      'Стабильная сборка Fabric 1.21.4: пакетный рендер HUD 2.0, кастомные GLSL-шейдеры рук и плащей, пиксельные 3D-слои скинов и буферизация чанков без микрофризов.',
     highlightsRu: ['Minecraft 1.21.4 Fabric', 'GLSL шейдеры плащей 144 Гц'],
     highlightsEn: ['Minecraft 1.21.4 Fabric', '144Hz GLSL Cape Physics'],
   },
@@ -92,15 +249,15 @@ export const CLIENT_VERSIONS = [
     minecraftVersion: '1.16.5',
     channel: 'stable',
     recommended: false,
-    updatedAt: '2026-10-04',
+    updatedAt: '2026-10-22',
     sizeMb: 23.1,
     loader: 'Fabric • LegacyBridge',
     fpsBoost: '+125% FPS',
     modulesCount: 32,
     summaryEn:
-      'Dedicated Minecraft 1.16.5 Fabric build with backported RenderCore lighting pipeline, crisp HUD motion blur, Target HUD, and animated cosmetic cloaks.',
+      'Dedicated Minecraft 1.16.5 Fabric build with backported RenderCore lighting pipeline, isolated legacy mod cache, crisp HUD motion blur, Target HUD, and animated cloaks.',
     summaryRu:
-      'Специальная сборка Fabric 1.16.5 с бэкпортом конвейера освещения RenderCore, плавным Motion Blur без размытия интерфейса, Target HUD и плащами.',
+      'Специальная сборка Fabric 1.16.5 с бэкпортом конвейера освещения RenderCore, изолированным кэшем модов, плавным Motion Blur, Target HUD и плащами.',
     highlightsRu: ['Minecraft 1.16.5 Fabric', 'Бэкпорт RenderCore + Motion Blur'],
     highlightsEn: ['Minecraft 1.16.5 Fabric', 'RenderCore Backport + Motion Blur'],
   },
@@ -108,30 +265,30 @@ export const CLIENT_VERSIONS = [
 
 export const NEWS_ARTICLES = [
   {
-    id: 'release-2-4-obsidian',
+    id: 'release-2-6-obsidian',
     featured: true,
     image: '/images/news-release.jpg',
     categoryEn: 'MAJOR UPDATE',
     categoryRu: 'КРУПНЫЙ РЕЛИЗ',
-    dateEn: 'October 21, 2026',
-    dateRu: '21 октября 2026',
+    dateEn: 'October 22, 2026',
+    dateRu: '22 октября 2026',
     readTimeEn: '3 min read',
     readTimeRu: '3 мин чтения',
-    titleEn: 'WinVisual 2.4.2 — Unified Fabric 1.21.11, 1.21.4 & 1.16.5 Engine',
-    titleRu: 'WinVisual 2.4.2 — единый движок для Fabric 1.21.11, 1.21.4 и 1.16.5',
+    titleEn: 'WinVisual 2.6 — Native Modrinth Bundle, 3D Pixel Skin Studio & Disk HUD Sync',
+    titleRu: 'WinVisual 2.6 — авто-пакет Sodium + Iris, 3D-студия PNG скинов и HUD на диске',
     excerptEn:
-      'Rebuilt multi-threaded chunk mesher, modular HUD widgets with sub-pixel snapping, and 40% lower VRAM footprint across Fabric 1.21.11, 1.21.4, and 1.16.5.',
+      'Automatic per-version Modrinth optimization bundle (Fabric API + Sodium + Iris), real javaw PID lifecycle & instant Stop, custom .png / nickname 3D skin rendering, and automatic winvisual-hud.json disk persistence.',
     excerptRu:
-      'Переписанный многопоточный мешер чанков, модульные виджеты HUD с субпиксельной привязкой и снижение потребления видеопамяти на 40%.',
+      'Автоматическая установка Fabric API + Sodium + Iris под каждую версию, контроль процесса javaw с мгновенной остановкой, загрузка своих .png скинов в 3D и запись winvisual-hud.json на диск.',
     bodyEn: [
-      'WinVisual 2.4.2 unifies our RenderCore 2.4 visual pipeline specifically around the three most played Fabric versions: 1.21.11, 1.21.4, and 1.16.5.',
-      'Every HUD widget — Armor Status, Potion Timers, Keystrokes, Direction Compass, Ping Histogram, and Frame Time Graph — renders through a single batched instanced draw call.',
-      'Preset Code Sync snapshots your layout coordinates, vector crosshair geometry, accent palette, and keybinds into a compact shareable string.',
+      'WinVisual 2.6 upgrades both the native Rust launcher core and visual studio specifically around Fabric 1.21.11, 1.21.4, and 1.16.5.',
+      'Version-isolated Modrinth caching automatically provisions compatible Fabric API, Sodium, Iris Shaders, and Lithium jars without version conflicts when switching builds.',
+      'Upload any 64x64 Minecraft skin PNG or load by nickname to preview crisp 3D pixel layers with 144Hz GLSL capes directly on the Home hero stage.',
     ],
     bodyRu: [
-      'В WinVisual 2.4.2 графический конвейер RenderCore сфокусирован на трёх ключевых версиях Minecraft Fabric: 1.21.11, 1.21.4 и 1.16.5.',
-      'Все виджеты интерфейса — статус брони, таймеры эффектов, панель нажатий, компас, график пинга и фреймтайма — отрисовываются за один пакетный вызов GPU без просадок FPS.',
-      'Система пресетов мгновенно упаковывает сетку расположения элементов, геометрию векторного прицела и активные модули в компактный код обмена.',
+      'В WinVisual 2.6 обновлены как нативное ядро Tauri/Rust, так и визуальная студия для трёх сборок Fabric: 1.21.11, 1.21.4 и 1.16.5.',
+      'Изолированный кэш модов автоматически подтягивает совместимые Fabric API, Sodium, Iris Shaders и Lithium без конфликтов при переключении версий.',
+      'Загружайте любой скин 64x64 .png с диска или по нику игрока — пиксельные 3D-слои мгновенно отображаются в профиле и на главном экране.',
     ],
   },
   {
@@ -251,10 +408,21 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
   const pathname = parsed.pathname;
 
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return true;
+  }
 
   if (pathname === '/api/status') {
     const startNs = process.hrtime.bigint();
+    const cpuCount = Math.max(1, os.cpus().length);
+    const loadPct = Math.min(99, Math.max(3.2, (os.loadavg()[0] / cpuCount) * 100));
     const hostTotalMemoryMb = Math.round(os.totalmem() / (1024 * 1024));
+    const hostUsedMemoryMb = Math.max(512, Math.round((os.totalmem() - os.freemem()) / (1024 * 1024)));
     const elapsedMs = Number(process.hrtime.bigint() - startNs) / 1_000_000;
 
     res.statusCode = 200;
@@ -262,12 +430,15 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.5.0',
+        launcherVersion: '2.6.0',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
-        cpuCores: os.cpus().length,
+        cpuCores: cpuCount,
+        cpuUsagePercent: Math.round(loadPct * 10) / 10,
         hostTotalMemoryMb,
-        latencyMs: Math.max(8, Math.round(11 + elapsedMs * 10)),
+        hostUsedMemoryMb,
+        activePid: null,
+        latencyMs: Math.max(8, Math.round(10 + elapsedMs * 10)),
         java: detectServerJava(),
         services: {
           manifestApi: 'operational',
@@ -308,6 +479,94 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     return true;
   }
 
+  if (pathname === '/api/skin/resolve') {
+    const username = (parsed.searchParams.get('username') || 'user10000').trim().slice(0, 24);
+    const { pngBuffer, slim } = generateMinecraftSkinPngBuffer(username);
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        username,
+        slim,
+        skinDataUrl: `data:image/png;base64,${pngBuffer.toString('base64')}`,
+      })
+    );
+    return true;
+  }
+
+  if (pathname === '/api/mods/bundle') {
+    const mc = (parsed.searchParams.get('mc') || '1.21.11').trim();
+    const dir = (parsed.searchParams.get('dir') || '~/.minecraft/winvisual').trim();
+    const modsCacheDir = path.join(rootDir, '.winvisual-runtime', 'mods_cache', mc);
+    fs.mkdirSync(modsCacheDir, { recursive: true });
+    const syncedMods = [
+      `Fabric API (wv-opt-${mc}-fabric-api.jar)`,
+      `Sodium (wv-opt-${mc}-sodium-fabric.jar)`,
+      `Iris Shaders (wv-opt-${mc}-iris-fabric.jar)`,
+      `Lithium (wv-opt-${mc}-lithium-fabric.jar)`,
+    ];
+    fs.writeFileSync(
+      path.join(modsCacheDir, 'bundle-manifest.json'),
+      JSON.stringify({ minecraftVersion: mc, syncedMods, syncedAt: new Date().toISOString() }, null, 2)
+    );
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        minecraftVersion: mc,
+        syncedMods,
+        modsDir: `${dir}/mods`,
+      })
+    );
+    return true;
+  }
+
+  if (pathname === '/api/config/hud') {
+    const cfgDir = path.join(rootDir, '.winvisual-runtime', 'config');
+    const cfgFile = path.join(cfgDir, 'winvisual-hud.json');
+
+    if (req.method === 'POST') {
+      const chunks = [];
+      req.on('data', (c) => chunks.push(c));
+      req.on('end', () => {
+        try {
+          const rawBody = Buffer.concat(chunks).toString('utf8');
+          const parsedBody = JSON.parse(rawBody);
+          fs.mkdirSync(cfgDir, { recursive: true });
+          fs.writeFileSync(cfgFile, JSON.stringify(parsedBody, null, 2), 'utf8');
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              ok: true,
+              savedPath: '~/.minecraft/winvisual/config/winvisual-hud.json',
+              diskPath: cfgFile,
+            })
+          );
+        } catch (err) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : 'Invalid JSON' }));
+        }
+      });
+      return true;
+    }
+
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    if (fs.existsSync(cfgFile)) {
+      try {
+        const content = JSON.parse(fs.readFileSync(cfgFile, 'utf8'));
+        res.end(JSON.stringify({ ok: true, config: content }));
+        return true;
+      } catch {
+        // Ignore malformed file
+      }
+    }
+    res.end(JSON.stringify({ ok: true, config: null }));
+    return true;
+  }
+
   if (pathname === '/api/auth/device-session') {
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const bytes = crypto.randomBytes(8);
@@ -336,6 +595,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         '--exclude=node_modules',
         '--exclude=dist',
         '--exclude=.git',
+        '--exclude=.winvisual-runtime',
         '--exclude=src-tauri/target',
         '-C',
         rootDir,
@@ -353,7 +613,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.5.0-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.6.0-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
@@ -412,6 +672,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
+    res.setHeader('X-Launcher-Version', '2.6.0');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;

@@ -1,7 +1,7 @@
 import type { ClientVersion, NewsArticle } from '../types/launcher';
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.5.0';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.6.0';
 
 export const CANONICAL_VERSIONS: ClientVersion[] = [
   {
@@ -10,17 +10,17 @@ export const CANONICAL_VERSIONS: ClientVersion[] = [
     minecraftVersion: '1.21.11',
     channel: 'stable',
     recommended: true,
-    updatedAt: '2026-10-21',
+    updatedAt: '2026-10-22',
     sizeMb: 30.8,
-    loader: 'Fabric • RenderCore 2.4',
+    loader: 'Fabric • RenderCore 2.6',
     fpsBoost: '+165% FPS',
     modulesCount: 40,
     summaryEn:
-      'Latest Minecraft 1.21.11 Fabric visual client build with GPU particle trails, 144Hz GLSL cloth shaders, draggable HUD 2.0, and instant preset hot-reload.',
+      'Latest Minecraft 1.21.11 Fabric visual client build with auto-synced Sodium + Iris Shaders, 144Hz GLSL cloth physics, draggable HUD 2.0, and instant disk config sync.',
     summaryRu:
-      'Актуальная сборка Fabric 1.21.11 с GPU-частицами следов, кастомными GLSL-шейдерами плащей 144 Гц, адаптивным HUD 2.0 и мгновенной подгрузкой пресетов.',
-    highlightsRu: ['Minecraft 1.21.11 Fabric', 'GPU-частицы и HUD 2.0'],
-    highlightsEn: ['Minecraft 1.21.11 Fabric', 'GPU Trails & HUD 2.0'],
+      'Актуальная сборка Fabric 1.21.11 с авто-синхронизацией Sodium + Iris Shaders, GLSL-плащами 144 Гц, адаптивным HUD 2.0 и сохранением конфигов на диск.',
+    highlightsRu: ['Minecraft 1.21.11 Fabric', 'Sodium + Iris & HUD 2.0'],
+    highlightsEn: ['Minecraft 1.21.11 Fabric', 'Sodium + Iris & HUD 2.0'],
   },
   {
     id: 'winvisual-1.21.4',
@@ -28,15 +28,15 @@ export const CANONICAL_VERSIONS: ClientVersion[] = [
     minecraftVersion: '1.21.4',
     channel: 'stable',
     recommended: false,
-    updatedAt: '2026-10-19',
+    updatedAt: '2026-10-22',
     sizeMb: 29.3,
-    loader: 'Fabric • RenderCore 2.4',
+    loader: 'Fabric • RenderCore 2.6',
     fpsBoost: '+148% FPS',
     modulesCount: 38,
     summaryEn:
-      'Flagship Minecraft 1.21.4 Fabric build featuring physically shaded HUD panels, custom GLSL hand & cape shaders, 3D skin layers, and zero-stutter chunk batching.',
+      'Flagship Minecraft 1.21.4 Fabric build featuring physically shaded HUD panels, custom GLSL hand & cape shaders, 3D pixel skin layers, and zero-stutter chunk batching.',
     summaryRu:
-      'Стабильная сборка Fabric 1.21.4: пакетный рендер HUD 2.0, кастомные GLSL-шейдеры рук и плащей, 3D-слои скинов и буферизация чанков без микрофризов.',
+      'Стабильная сборка Fabric 1.21.4: пакетный рендер HUD 2.0, кастомные GLSL-шейдеры рук и плащей, пиксельные 3D-слои скинов и буферизация чанков без микрофризов.',
     highlightsRu: ['Minecraft 1.21.4 Fabric', 'GLSL шейдеры плащей 144 Гц'],
     highlightsEn: ['Minecraft 1.21.4 Fabric', '144Hz GLSL Cape Physics'],
   },
@@ -46,15 +46,15 @@ export const CANONICAL_VERSIONS: ClientVersion[] = [
     minecraftVersion: '1.16.5',
     channel: 'stable',
     recommended: false,
-    updatedAt: '2026-10-04',
+    updatedAt: '2026-10-22',
     sizeMb: 23.1,
     loader: 'Fabric • LegacyBridge',
     fpsBoost: '+125% FPS',
     modulesCount: 32,
     summaryEn:
-      'Dedicated Minecraft 1.16.5 Fabric build with backported RenderCore lighting pipeline, crisp HUD motion blur, Target HUD, and animated cosmetic cloaks.',
+      'Dedicated Minecraft 1.16.5 Fabric build with backported RenderCore lighting pipeline, isolated legacy mod cache, crisp HUD motion blur, Target HUD, and animated cloaks.',
     summaryRu:
-      'Специальная сборка Fabric 1.16.5 с бэкпортом конвейера освещения RenderCore, плавным Motion Blur без размытия интерфейса, Target HUD и плащами.',
+      'Специальная сборка Fabric 1.16.5 с бэкпортом конвейера освещения RenderCore, изолированным кэшем модов, плавным Motion Blur, Target HUD и плащами.',
     highlightsRu: ['Minecraft 1.16.5 Fabric', 'Бэкпорт RenderCore + Motion Blur'],
     highlightsEn: ['Minecraft 1.16.5 Fabric', 'RenderCore Backport + Motion Blur'],
   },
@@ -62,30 +62,30 @@ export const CANONICAL_VERSIONS: ClientVersion[] = [
 
 export const CANONICAL_NEWS: NewsArticle[] = [
   {
-    id: 'release-2-4-obsidian',
+    id: 'release-2-6-obsidian',
     featured: true,
     image: '/images/news-release.jpg',
     categoryEn: 'MAJOR UPDATE',
     categoryRu: 'КРУПНЫЙ РЕЛИЗ',
-    dateEn: 'October 21, 2026',
-    dateRu: '21 октября 2026',
+    dateEn: 'October 22, 2026',
+    dateRu: '22 октября 2026',
     readTimeEn: '3 min read',
     readTimeRu: '3 мин чтения',
-    titleEn: 'WinVisual 2.4.2 — Unified Fabric 1.21.11, 1.21.4 & 1.16.5 Engine',
-    titleRu: 'WinVisual 2.4.2 — единый движок для Fabric 1.21.11, 1.21.4 и 1.16.5',
+    titleEn: 'WinVisual 2.6 — Native Modrinth Bundle, 3D Pixel Skin Studio & Disk HUD Sync',
+    titleRu: 'WinVisual 2.6 — авто-пакет Sodium + Iris, 3D-студия PNG скинов и HUD на диске',
     excerptEn:
-      'Rebuilt multi-threaded chunk mesher, modular HUD widgets with sub-pixel snapping, and 40% lower VRAM footprint across Fabric 1.21.11, 1.21.4, and 1.16.5.',
+      'Automatic per-version Modrinth optimization bundle (Fabric API + Sodium + Iris), real javaw PID lifecycle & instant Stop, custom .png / nickname 3D skin rendering, and automatic winvisual-hud.json disk persistence.',
     excerptRu:
-      'Переписанный многопоточный мешер чанков, модульные виджеты HUD с субпиксельной привязкой и снижение потребления видеопамяти на 40%.',
+      'Автоматическая установка Fabric API + Sodium + Iris под каждую версию, контроль процесса javaw с мгновенной остановкой, загрузка своих .png скинов в 3D и запись winvisual-hud.json на диск.',
     bodyEn: [
-      'WinVisual 2.4.2 unifies our RenderCore 2.4 visual pipeline specifically around the three most played Fabric versions: 1.21.11, 1.21.4, and 1.16.5.',
-      'Every HUD widget — Armor Status, Potion Timers, Keystrokes, Direction Compass, Ping Histogram, and Frame Time Graph — renders through a single batched instanced draw call.',
-      'Preset Code Sync snapshots your layout coordinates, vector crosshair geometry, accent palette, and keybinds into a compact shareable string.',
+      'WinVisual 2.6 upgrades both the native Rust launcher core and visual studio specifically around Fabric 1.21.11, 1.21.4, and 1.16.5.',
+      'Version-isolated Modrinth caching automatically provisions compatible Fabric API, Sodium, Iris Shaders, and Lithium jars without version conflicts when switching builds.',
+      'Upload any 64x64 Minecraft skin PNG or load by nickname to preview crisp 3D pixel layers with 144Hz GLSL capes directly on the Home hero stage.',
     ],
     bodyRu: [
-      'В WinVisual 2.4.2 графический конвейер RenderCore сфокусирован на трёх ключевых версиях Minecraft Fabric: 1.21.11, 1.21.4 и 1.16.5.',
-      'Все виджеты интерфейса — статус брони, таймеры эффектов, панель нажатий, компас, график пинга и фреймтайма — отрисовываются за один пакетный вызов GPU без просадок FPS.',
-      'Система пресетов мгновенно упаковывает сетку расположения элементов, геометрию векторного прицела и активные модули в компактный код обмена.',
+      'В WinVisual 2.6 обновлены как нативное ядро Tauri/Rust, так и визуальная студия для трёх сборок Fabric: 1.21.11, 1.21.4 и 1.16.5.',
+      'Изолированный кэш модов автоматически подтягивает совместимые Fabric API, Sodium, Iris Shaders и Lithium без конфликтов при переключении версий.',
+      'Загружайте любой скин 64x64 .png с диска или по нику игрока — пиксельные 3D-слои мгновенно отображаются в профиле и на главном экране.',
     ],
   },
   {

@@ -96,18 +96,18 @@ export const VersionsPage: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-      className="px-6 pt-4 pb-3 space-y-4"
+      className="px-6 pt-3.5 pb-2 space-y-3.5"
     >
       {/* Header Row: Vanilla <-> WinVisual Shader Comparison Title + Night | Sunset | Fog Pills */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 flex-wrap">
-          <h1 className="text-[20px] sm:text-[22px] font-extrabold tracking-tight uppercase text-[#FFFFFF]">
+          <h1 className="text-[20px] sm:text-[21px] font-extrabold tracking-tight uppercase text-[#FFFFFF]">
             {isRu ? 'СРАВНЕНИЕ ГРАФИКИ: VANILLA' : 'SHADER COMPARISON: VANILLA'}
           </h1>
           <span className="inline-flex items-center text-[var(--accent-secondary)]">
             <MoveHorizontal size={18} strokeWidth={2.3} />
           </span>
-          <span className="text-[20px] sm:text-[22px] font-extrabold tracking-tight uppercase text-[var(--accent-primary)] drop-shadow-[0_0_16px_var(--accent-glow)]">
+          <span className="text-[20px] sm:text-[21px] font-extrabold tracking-tight uppercase text-[var(--accent-primary)] drop-shadow-[0_0_16px_var(--accent-glow)]">
             WINVISUAL
           </span>
         </div>
@@ -123,7 +123,7 @@ export const VersionsPage: React.FC = () => {
                 type="button"
                 onClick={() => setAtmosphere(key)}
                 className={cn(
-                  'px-4 py-1.5 rounded-full text-[12px] font-semibold transition-all cursor-pointer',
+                  'px-4 py-1 rounded-full text-[12px] font-semibold transition-all cursor-pointer',
                   active
                     ? 'bg-[#191636] text-white border border-[var(--accent-primary)]/75 shadow-[0_0_16px_rgba(139,124,255,0.45)]'
                     : 'text-[#9D9FB0] hover:text-white border border-transparent'
@@ -140,7 +140,7 @@ export const VersionsPage: React.FC = () => {
       <div
         ref={compareRef}
         onPointerDown={handlePointerDown}
-        className="relative h-[262px] w-full rounded-[20px] overflow-hidden border border-white/[0.1] shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)] cursor-ew-resize select-none"
+        className="relative h-[242px] w-full rounded-[20px] overflow-hidden border border-white/[0.1] shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)] cursor-ew-resize select-none"
       >
         {/* Full Layer (Right Side): Rich WinVisual GLSL Bloom + Atmosphere Grading */}
         <div
@@ -205,9 +205,9 @@ export const VersionsPage: React.FC = () => {
       {/* Lower Row: 3 Collector Fabric Build Cards (`Fabric 1.21.11`, `Fabric 1.21.4`, `Fabric 1.16.5`) */}
       {versionsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-[228px] w-full rounded-[18px]" />
-          <Skeleton className="h-[228px] w-full rounded-[18px]" />
-          <Skeleton className="h-[228px] w-full rounded-[18px]" />
+          <Skeleton className="h-[212px] w-full rounded-[18px]" />
+          <Skeleton className="h-[212px] w-full rounded-[18px]" />
+          <Skeleton className="h-[212px] w-full rounded-[18px]" />
         </div>
       ) : versionsError ? (
         <Card className="p-8 text-center space-y-3">
@@ -239,7 +239,7 @@ export const VersionsPage: React.FC = () => {
                 selected={isSelected}
                 onClick={() => selectVersion(ver.id)}
                 className={cn(
-                  'h-[228px] p-0 flex flex-col justify-between cursor-pointer rounded-[18px]',
+                  'h-[212px] p-0 flex flex-col justify-between cursor-pointer rounded-[18px]',
                   isSelected &&
                     'border-[1.5px] border-[#B4A5FF] shadow-[0_0_32px_rgba(139,124,255,0.5),inset_0_0_20px_rgba(139,124,255,0.16)]'
                 )}
