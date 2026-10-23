@@ -10,7 +10,7 @@ declare global {
 }
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.1';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.2';
 
 export function isTauriDesktop(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);

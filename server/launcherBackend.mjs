@@ -111,23 +111,26 @@ function generateMinecraftSkinPngBuffer(username) {
 
   // Torso (16..40, 16..32) + glowing emblem
   fillRect(16, 20, 24, 12, jacket);
-  fillRect(20, 16, 8, 4, jacket);
+  fillRect(20, 16, 16, 4, jacket);
   fillRect(22, 22, 4, 4, accent);
   setPx(23, 23, [255, 255, 255]);
   setPx(24, 23, [255, 255, 255]);
-  // Back emblem on torso back (32..40, 20..32)
   fillRect(34, 22, 4, 5, accent);
 
-  // Right & Left Legs
+  // Right & Left Legs (including top & bottom UV caps)
+  fillRect(4, 16, 8, 4, pants);
   fillRect(0, 20, 16, 12, pants);
+  fillRect(20, 48, 8, 4, pants);
   fillRect(16, 52, 16, 12, pants);
   fillRect(0, 30, 16, 2, accent);
   fillRect(16, 62, 16, 2, accent);
 
-  // Right & Left Arms + cuffs + hands
+  // Right & Left Arms + cuffs + hands (including top & bottom UV caps)
+  fillRect(44, 16, 8, 4, jacket);
   fillRect(40, 20, 16, 10, jacket);
   fillRect(40, 29, 16, 1, accent);
   fillRect(40, 30, 16, 2, skin);
+  fillRect(36, 48, 8, 4, jacket);
   fillRect(32, 52, 16, 10, jacket);
   fillRect(32, 61, 16, 1, accent);
   fillRect(32, 62, 16, 2, skin);
@@ -263,110 +266,7 @@ export const CLIENT_VERSIONS = [
   },
 ];
 
-export const NEWS_ARTICLES = [
-  {
-    id: 'release-2-6-obsidian',
-    featured: true,
-    image: '/images/news-release.jpg',
-    categoryEn: 'MAJOR UPDATE',
-    categoryRu: 'КРУПНЫЙ РЕЛИЗ',
-    dateEn: 'October 23, 2026',
-    dateRu: '23 октября 2026',
-    readTimeEn: '3 min read',
-    readTimeRu: '3 мин чтения',
-    titleEn: 'WinVisual 2.7.1 — Embedded Client Mod for WinVisual 1.16.5 / 1.21.4 / 1.21.11',
-    titleRu: 'WinVisual 2.7.1 — вшитый визуальный мод для WinVisual 1.16.5, 1.21.4 и 1.21.11',
-    excerptEn:
-      'Compiled client jars embedded directly in WinVisual Launcher: 28 ESP & visual modules, 11 draggable HUD 2.0 widgets, ChinaHat, 3D Crystal Wings, JumpCircles, Trails, and Right-Shift Studio.',
-    excerptRu:
-      'Вшитые прямо в лаунчер клиент-моды WinVisual 1.16.5, WinVisual 1.21.4 и WinVisual 1.21.11: 28 модулей, 11 перетаскиваемых виджетов HUD 2.0, ChinaHat, 3D-крылья, JumpCircles, шлейфы и меню Right Shift.',
-    bodyEn: [
-      'WinVisual 2.7.1 ships compiled Fabric client jars embedded inside every native desktop installer across WinVisual 1.16.5, WinVisual 1.21.4, and WinVisual 1.21.11.',
-      'Includes full Player/Item/Pearl ESP, Rotating Minimap radar, Target HUD 2.0, ChinaHat 3D halo, Crystal Wings, JumpCircles, 3D Trails, and two-way winvisual-hud.json sync.',
-      'Press Right Shift anywhere in-game to open the interactive WinVisual Studio ClickGUI and drag HUD widgets directly across your screen.',
-    ],
-    bodyRu: [
-      'В WinVisual 2.7.1 прямо внутрь бинарника лаунчера вшиты скомпилированные клиент-моды WinVisual 1.16.5, WinVisual 1.21.4 и WinVisual 1.21.11.',
-      'Доступны все 28 модулей: Player/Item/Pearl ESP, вращающийся радар-миникарта, Target HUD 2.0, 3D ChinaHat, крылья, JumpCircles, 3D-шлейфы и живая синхронизация winvisual-hud.json.',
-      'В самой игре нажмите Right Shift, чтобы открыть интерактивное меню WinVisual Studio и свободно перетаскивать элементы HUD мышкой.',
-    ],
-  },
-  {
-    id: 'shader-pipeline-1-21-11',
-    featured: false,
-    image: '/images/news-shaders.jpg',
-    categoryEn: 'ENGINEERING',
-    categoryRu: 'ИНЖЕНЕРИЯ',
-    dateEn: 'October 12, 2026',
-    dateRu: '12 октября 2026',
-    readTimeEn: '4 min read',
-    readTimeRu: '4 мин чтения',
-    titleEn: 'Zero-Overhead Atmospheric Bloom & Volumetric Fog Presets',
-    titleRu: 'Атмосферное свечение и объёмный туман без потери кадровой частоты',
-    excerptEn:
-      'How we engineered half-resolution dual-Kawase bloom and biome-aware horizon grading that runs above 360 FPS on midrange GPUs.',
-    excerptRu:
-      'Как мы реализовали двухпроходное свечение Kawase и биомную цветокоррекцию горизонта с частотой свыше 360 FPS.',
-    bodyEn: [
-      'Traditional shader packs sacrifice competitive visibility and input latency. WinVisual solves both with native post-processing passes integrated directly into Fabric.',
-      'Switch seamlessly between Obsidian Atmospheric, Neon Competitive, or Ultra FPS directly from the Home deck or in-game Right-Shift ClickGUI.',
-    ],
-    bodyRu: [
-      'Тяжёлые шейдер-паки часто ухудшают читаемость сцены и увеличивают задержку ввода. В WinVisual постобработка встроена напрямую в конвейер рендера Fabric.',
-      'Переключайтесь между профилями Obsidian Atmospheric, Neon Competitive и Ultra FPS прямо на главном экране или в игре по правому Shift.',
-    ],
-  },
-  {
-    id: 'cosmetics-season-autumn',
-    featured: false,
-    image: '/images/news-cosmetics.jpg',
-    categoryEn: 'COSMETICS',
-    categoryRu: 'КОСМЕТИКА',
-    dateEn: 'October 3, 2026',
-    dateRu: '3 октября 2026',
-    readTimeEn: '2 min read',
-    readTimeRu: '2 мин чтения',
-    titleEn: 'Nebula Cloth Physics: 144Hz Simulated Capes & Subtle Auras',
-    titleRu: 'Физика ткани 144 Гц: коллекция плащей Nebula и деликатные эффекты',
-    excerptEn:
-      'Spring-mass cloth simulation interpolated at monitor refresh rate, paired with optional clean silhouette mode for competitive duels.',
-    excerptRu:
-      'Пружинная симуляция ткани с интерполяцией под герцовку монитора и возможностью мгновенного отключения чужих эффектов.',
-    bodyEn: [
-      'All WinVisual cosmetics follow strict visual discipline: zero blinding neon wings or screen clutter. Every player can toggle cosmetic visibility per category at any time.',
-      'Preview Nebula Starlight, Pulse Crimson, Aurora Borealis, and Obsidian Monarch in real time inside the Account 3D Skin & Cape viewer.',
-    ],
-    bodyRu: [
-      'Вся косметика WinVisual следует строгому визуальному коду: никаких слепящих эффектов или визуального шума. Видимость любых элементов настраивается по категориям.',
-      'Оцените волновую физику плащей Nebula Starlight, Pulse Crimson, Aurora Borealis и Obsidian Monarch прямо в 3D-просмотрщике раздела «Аккаунт».',
-    ],
-  },
-  {
-    id: 'hud-studio-2',
-    featured: false,
-    image: '/images/news-hud.jpg',
-    categoryEn: 'INTERFACE',
-    categoryRu: 'ИНТЕРФЕЙС',
-    dateEn: 'September 21, 2026',
-    dateRu: '21 сентября 2026',
-    readTimeEn: '3 min read',
-    readTimeRu: '3 мин чтения',
-    titleEn: 'HUD Studio 2.0: Drag-and-Drop Viewport & Shareable Config Strings',
-    titleRu: 'HUD Studio 2.0: свободное перетаскивание и мгновенный обмен кодами',
-    excerptEn:
-      'Design pixel-accurate minimalist overlays with live crosshair tuning and one-click preset code sharing.',
-    excerptRu:
-      'Создавайте выверенные минималистичные оверлеи с живой настройкой прицела и кодами быстрого импорта.',
-    bodyEn: [
-      'HUD Studio 2.0 unifies typography, corner radius tokens, and backdrop contrast across all client modules so your interface looks native rather than stitched together.',
-      'Export any layout as a WINVISUAL-CFG code in one click and test it immediately inside the live interactive viewport.',
-    ],
-    bodyRu: [
-      'HUD Studio 2.0 объединяет типографику, радиусы скругления и контраст подложек во всех модулях, чтобы интерфейс в игре выглядел цельно и благородно.',
-      'Экспортируйте готовую раскладку кодом WINVISUAL-CFG в один клик и сразу проверяйте её в интерактивном окне клиента.',
-    ],
-  },
-];
+export const NEWS_ARTICLES = [];
 
 export function buildManifest(versionId) {
   const found = CLIENT_VERSIONS.find((v) => v.id === versionId) ?? CLIENT_VERSIONS[0];
@@ -434,7 +334,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.7.1',
+        launcherVersion: '2.7.2',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: cpuCount,
@@ -520,7 +420,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     });
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ version: '2.7.1', mods: entries }));
+    res.end(JSON.stringify({ version: '2.7.2', mods: entries }));
     return true;
   }
 
@@ -672,7 +572,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.7.1-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.7.2-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
@@ -743,7 +643,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
-    res.setHeader('X-Launcher-Version', '2.7.1');
+    res.setHeader('X-Launcher-Version', '2.7.2');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;

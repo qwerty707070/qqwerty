@@ -19,6 +19,7 @@ import { useAccountStore } from '../../stores/accountStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { Toggle } from '../ui/Toggle';
 import { Button } from '../ui/Button';
+import { Character3DViewer } from '../ui/Character3DViewer';
 
 interface SparkParticle {
   id: number;
@@ -31,7 +32,7 @@ interface SparkParticle {
 export const LiveClientSessionModal: React.FC = () => {
   const open = useVisualClientStore((s) => s.liveSessionModalOpen);
   const setOpen = useVisualClientStore((s) => s.setLiveSessionModalOpen);
-  const { modules, themeId, crosshair, toggleModule, setModuleMode, setThemeId } =
+  const { modules, themeId, equippedCape, crosshair, toggleModule, setModuleMode, setThemeId } =
     useVisualClientStore();
   const stopRunningSession = useLauncherStore((s) => s.stopRunningSession);
   const versions = useLauncherStore((s) => s.versions);
@@ -247,49 +248,27 @@ export const LiveClientSessionModal: React.FC = () => {
               </div>
             )}
 
-            {/* Simulated Opponent Entity with Live Player ESP + ChinaHat + Wings + Tracer */}
+            {/* Solid 3D Opponent Entity with Live Player ESP */}
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center z-10">
-              <div className="relative translate-x-[150px] -translate-y-[8px] w-[112px] h-[196px] flex flex-col items-center">
+              <div className="relative translate-x-[150px] w-[116px] h-[204px] flex flex-col items-center">
                 {isModOn('nametags') && (
-                  <div className="-mt-7 px-2.5 py-0.5 rounded-[8px] bg-[#0B0D16]/90 border border-white/15 text-[10.5px] font-mono flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="text-white font-semibold">user84910</span>
+                  <div className="mb-1.5 px-2.5 py-0.5 rounded-[8px] bg-[#0B0D16]/95 border border-white/15 text-[10.5px] font-mono flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="text-white font-semibold">{activeAcc.username}</span>
                     <span className="text-emerald-400">{targetHp} HP</span>
                     <span style={{ color: activeTheme.primaryHex }}>3.4m</span>
                   </div>
                 )}
 
-                <div className="relative w-full flex-1 flex items-center justify-center">
-                  {isModOn('wings') && (
-                    <>
-                      <div
-                        className="absolute -left-6 top-8 w-8 h-16 rounded-l-[14px] border -rotate-12"
-                        style={{
-                          borderColor: activeTheme.primaryHex,
-                          background: `linear-gradient(135deg, ${activeTheme.primaryHex}55, transparent)`,
-                        }}
-                      />
-                      <div
-                        className="absolute -right-6 top-8 w-8 h-16 rounded-r-[14px] border rotate-12"
-                        style={{
-                          borderColor: activeTheme.secondaryHex,
-                          background: `linear-gradient(225deg, ${activeTheme.secondaryHex}55, transparent)`,
-                        }}
-                      />
-                    </>
-                  )}
-
-                  {isModOn('china-hat') && (
-                    <div
-                      className="absolute -top-2 w-16 h-5 rounded-full border"
-                      style={{
-                        borderColor: activeTheme.primaryHex,
-                        background: `radial-gradient(circle, ${activeTheme.secondaryHex}99 0%, ${activeTheme.primaryHex}33 75%)`,
-                        boxShadow: `0 0 18px ${activeTheme.primaryHex}`,
-                      }}
+                <div className="relative w-[108px] flex-1 flex items-center justify-center">
+                  <div className="w-[116px] h-[164px]">
+                    <Character3DViewer
+                      previewEntity
+                      skinPreset={activeAcc.skinPreset}
+                      skinModel={activeAcc.skinModel}
+                      customSkinDataUrl={activeAcc.customSkinDataUrl}
+                      cape={equippedCape}
                     />
-                  )}
-
-                  <div className="w-11 h-32 rounded-[10px] bg-white/[0.12] border border-white/20" />
+                  </div>
 
                   {isModOn('player-esp') && (
                     <div

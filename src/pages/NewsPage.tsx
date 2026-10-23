@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Calendar, Clock } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, Newspaper } from 'lucide-react';
 import type { NewsArticle } from '../types/launcher';
 import { useLauncherStore } from '../stores/launcherStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -30,24 +30,33 @@ export const NewsPage: React.FC = () => {
     >
       <div>
         <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-          {isRu ? 'Новости и обновления' : 'News & Changelogs'}
+          {isRu ? 'Новости' : 'News'}
         </h1>
         <p className="mt-1 text-[13.5px] text-[var(--text-secondary)]">
           {isRu
-            ? 'Журнал разработки рендер-ядра, новых шейдерных модулей и коллекций косметики.'
-            : 'Engineering updates, shader pipeline releases, and new cosmetic drops.'}
+            ? 'Официальные публикации и объявления проекта WinVisual.'
+            : 'Official announcements and updates from WinVisual.'}
         </p>
       </div>
 
       {newsLoading ? (
         <div className="space-y-5">
-          <Skeleton className="h-[260px] w-full rounded-[20px]" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Skeleton className="h-[270px] rounded-[16px]" />
-            <Skeleton className="h-[270px] rounded-[16px]" />
-            <Skeleton className="h-[270px] rounded-[16px]" />
-          </div>
+          <Skeleton className="h-[220px] w-full rounded-[20px]" />
         </div>
+      ) : news.length === 0 ? (
+        <Card className="p-12 rounded-[20px] flex flex-col items-center justify-center text-center space-y-3">
+          <div className="w-12 h-12 rounded-[14px] bg-[rgba(var(--accent-rgb),0.14)] border border-[rgba(var(--accent-rgb),0.3)] flex items-center justify-center text-[var(--accent-secondary)]">
+            <Newspaper size={22} strokeWidth={1.75} />
+          </div>
+          <h2 className="text-[17px] font-semibold text-[var(--text-primary)]">
+            {isRu ? 'Пока новостей нет' : 'No news published yet'}
+          </h2>
+          <p className="text-[13px] text-[var(--text-secondary)] max-w-[400px] leading-relaxed">
+            {isRu
+              ? 'Новые записи появятся здесь сразу после официальной публикации.'
+              : 'Official posts will appear here as soon as they are published.'}
+          </p>
+        </Card>
       ) : (
         <>
           {/* Featured Article Banner */}
@@ -108,51 +117,53 @@ export const NewsPage: React.FC = () => {
           )}
 
           {/* Secondary Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {secondary.map((item) => (
-              <Card
-                key={item.id}
-                interactive
-                onClick={() => setSelectedArticle(item)}
-                className="overflow-hidden flex flex-col cursor-pointer group"
-              >
-                <div className="h-[152px] overflow-hidden relative">
-                  <img
-                    src={item.image}
-                    alt={isRu ? item.titleRu : item.titleEn}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-                  />
-                  <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-black/65 backdrop-blur-md text-[var(--text-primary)] border border-white/10">
-                    {isRu ? item.categoryRu : item.categoryEn}
-                  </span>
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between gap-4">
-                  <div className="space-y-2">
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      {isRu ? item.dateRu : item.dateEn}
-                    </p>
-                    <h3 className="text-[15.5px] font-semibold text-[var(--text-primary)] leading-snug">
-                      {isRu ? item.titleRu : item.titleEn}
-                    </h3>
-                    <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-3">
-                      {isRu ? item.excerptRu : item.excerptEn}
-                    </p>
-                  </div>
-
-                  <div className="pt-2 flex items-center justify-between text-[12px] font-medium text-[var(--accent-secondary)]">
-                    <span>{isRu ? 'Открыть статью' : 'Read More'}</span>
-                    <ArrowRight
-                      size={14}
-                      strokeWidth={1.75}
-                      className="transition-transform duration-200 group-hover:translate-x-1"
+          {secondary.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {secondary.map((item) => (
+                <Card
+                  key={item.id}
+                  interactive
+                  onClick={() => setSelectedArticle(item)}
+                  className="overflow-hidden flex flex-col cursor-pointer group"
+                >
+                  <div className="h-[152px] overflow-hidden relative">
+                    <img
+                      src={item.image}
+                      alt={isRu ? item.titleRu : item.titleEn}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
                     />
+                    <span className="absolute top-3 left-3 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-black/65 backdrop-blur-md text-[var(--text-primary)] border border-white/10">
+                      {isRu ? item.categoryRu : item.categoryEn}
+                    </span>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between gap-4">
+                    <div className="space-y-2">
+                      <p className="text-[11px] text-[var(--text-muted)]">
+                        {isRu ? item.dateRu : item.dateEn}
+                      </p>
+                      <h3 className="text-[15.5px] font-semibold text-[var(--text-primary)] leading-snug">
+                        {isRu ? item.titleRu : item.titleEn}
+                      </h3>
+                      <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-3">
+                        {isRu ? item.excerptRu : item.excerptEn}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-between text-[12px] font-medium text-[var(--accent-secondary)]">
+                      <span>{isRu ? 'Открыть статью' : 'Read More'}</span>
+                      <ArrowRight
+                        size={14}
+                        strokeWidth={1.75}
+                        className="transition-transform duration-200 group-hover:translate-x-1"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </>
       )}
 

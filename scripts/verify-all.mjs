@@ -34,7 +34,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.7.1 telemetry + strict 3-version WinVisual catalog
+// 1. Validate live HTTP API endpoints + v2.7.2 telemetry + strict 3-version WinVisual catalog
 const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -46,13 +46,13 @@ const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.7.1' ||
+  status.launcherVersion !== '2.7.2' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
   !status.java?.path
 ) {
-  throw new Error('Invalid /api/status v2.7.1 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.7.2 telemetry schema: ' + JSON.stringify(status));
 }
 
 if (!Array.isArray(embeddedMods.mods) || embeddedMods.mods.length !== 3) {
@@ -88,13 +88,8 @@ for (const v of verAll.versions) {
   }
 }
 
-if (!Array.isArray(newsData.items) || newsData.items.length !== 4) {
-  throw new Error('Missing news items array');
-}
-for (const n of newsData.items) {
-  if (!n.image || !Array.isArray(n.bodyRu) || !Array.isArray(n.bodyEn)) {
-    throw new Error(`Incomplete article schema on ${n.id}`);
-  }
+if (!Array.isArray(newsData.items) || newsData.items.length !== 0) {
+  throw new Error('Expected empty news items array until official posts are provided');
 }
 
 // 2. Verify custom 64x64 RGBA PNG skin generator endpoint (/api/skin/resolve)
@@ -124,7 +119,7 @@ for (const mc of expectedMcVersions) {
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.7.1',
+  version: '2.7.2',
   themeId: 'violet',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
@@ -217,6 +212,11 @@ for (const lang of ['ru', 'en']) {
     if (!html.includes(activeNick)) {
       throw new Error(`Active userXXXXX nick missing from rendered route=${route}`);
     }
+    if (route === 'home' && lang === 'ru') {
+      if (!html.includes('С возвращением') || !html.includes(`${activeNick}!`)) {
+        throw new Error(`Missing top-left welcome greeting on home RU route`);
+      }
+    }
     for (const removedVer of [
       '1.21.5',
       '1.21.1"',
@@ -253,7 +253,7 @@ console.log(
 );
 
 console.log(
-  `[ALL CHECKS PASSED] v2.7.1 nick=${activeNick} + WinVisual 1.16.5 / WinVisual 1.21.4 / WinVisual 1.21.11 + Cancel Launch (Web + Tauri Native) + 5/5 Mod Bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.7.2 nick=${activeNick}! + Welcome back + 0..100% Shader Split + Solid 3D Skin + Clean News + WinVisual 1.16.5 / 1.21.4 / 1.21.11 + Cancel Launch + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

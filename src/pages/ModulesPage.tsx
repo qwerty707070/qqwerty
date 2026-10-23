@@ -23,9 +23,11 @@ import {
   type PresetProfileId,
 } from '../stores/visualClientStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useAccountStore } from '../stores/accountStore';
 import { useNotificationStore } from '../stores/notificationStore';
 import { installOrDownloadClientModEverywhere } from '../services/tauriBridge';
 import { Card } from '../components/ui/Card';
+import { Character3DViewer } from '../components/ui/Character3DViewer';
 import { Toggle } from '../components/ui/Toggle';
 import { Slider } from '../components/ui/Slider';
 import { SegmentedControl } from '../components/ui/SegmentedControl';
@@ -82,10 +84,13 @@ export const ModulesPage: React.FC = () => {
     persistHudConfigToDisk,
     setLiveSessionModalOpen,
   } = useVisualClientStore();
+  const { accounts, activeAccountId } = useAccountStore();
+  const equippedCape = useVisualClientStore((s) => s.equippedCape);
   const language = useSettingsStore((s) => s.language);
   const gameDirectory = useSettingsStore((s) => s.gameDirectory);
   const pushToast = useNotificationStore((s) => s.pushToast);
   const isRu = language === 'ru';
+  const activeAccount = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
 
   const activeTheme = EVO_THEMES.find((t) => t.id === themeId) ?? EVO_THEMES[0];
 
@@ -314,52 +319,26 @@ export const ModulesPage: React.FC = () => {
           />
           <div className="absolute inset-0 bg-black/30" />
 
-          {/* Simulated In-World Player Model with Live WinVisual ESP + ChinaHat + Crystal Wings + JumpCircle */}
-          <div className="pointer-events-none absolute right-[108px] top-[62px] w-[96px] h-[156px] flex flex-col items-center justify-between">
-            {/* Evo Nametag */}
+          {/* Solid 3D Player Character with Clean Live ESP Frame */}
+          <div className="pointer-events-none absolute right-[86px] top-[76px] w-[108px] h-[176px] flex flex-col items-center">
             {isEnabled('nametags') && (
-              <div className="-mt-7 px-2.5 py-0.5 rounded-[8px] bg-[#0B0D16]/90 border border-white/15 whitespace-nowrap text-[10px] font-mono flex items-center gap-1.5 shadow-lg">
-                <span className="text-white font-semibold">user84910</span>
-                <span className="text-emerald-400">19.2 HP</span>
+              <div className="mb-1.5 px-2.5 py-0.5 rounded-[8px] bg-[#0B0D16]/95 border border-white/15 whitespace-nowrap text-[10px] font-mono flex items-center gap-1.5 shadow-lg">
+                <span className="text-white font-semibold">{activeAccount.username}</span>
+                <span className="text-emerald-400">20.0 HP</span>
                 <span style={{ color: activeTheme.primaryHex }}>4.1m</span>
               </div>
             )}
 
-            <div className="relative w-full h-full flex items-center justify-center">
-              {/* Crystal 3D Wings */}
-              {isEnabled('wings') && (
-                <>
-                  <div
-                    className="absolute -left-5 top-7 w-7 h-12 rounded-l-[12px] border opacity-75 -rotate-12"
-                    style={{
-                      borderColor: activeTheme.primaryHex,
-                      background: `linear-gradient(135deg, ${activeTheme.primaryHex}55, transparent)`,
-                    }}
-                  />
-                  <div
-                    className="absolute -right-5 top-7 w-7 h-12 rounded-r-[12px] border opacity-75 rotate-12"
-                    style={{
-                      borderColor: activeTheme.secondaryHex,
-                      background: `linear-gradient(225deg, ${activeTheme.secondaryHex}55, transparent)`,
-                    }}
-                  />
-                </>
-              )}
-
-              {/* ChinaHat 3D Cone */}
-              {isEnabled('china-hat') && (
-                <div
-                  className="absolute -top-2.5 w-14 h-4 rounded-full border"
-                  style={{
-                    borderColor: activeTheme.primaryHex,
-                    background: `radial-gradient(circle, ${activeTheme.secondaryHex}99 0%, ${activeTheme.primaryHex}33 75%)`,
-                    boxShadow: `0 0 16px ${activeTheme.primaryHex}`,
-                  }}
+            <div className="relative w-[96px] flex-1 flex items-center justify-center">
+              <div className="w-[108px] h-[146px]">
+                <Character3DViewer
+                  previewEntity
+                  skinPreset={activeAccount.skinPreset}
+                  skinModel={activeAccount.skinModel}
+                  customSkinDataUrl={activeAccount.customSkinDataUrl}
+                  cape={equippedCape}
                 />
-              )}
-
-              {/* Silhouette Avatar */}
-              <div className="w-9 h-24 rounded-[8px] bg-white/[0.10] border border-white/15" />
+              </div>
 
               {/* Player ESP Box (Corner / Full / Glow) */}
               {isEnabled('player-esp') && (
@@ -401,20 +380,9 @@ export const ModulesPage: React.FC = () => {
 
               {/* Health & Armor ESP Bar */}
               {isEnabled('health-bar') && (
-                <div className="absolute -left-2.5 inset-y-0 w-1 rounded-full bg-black/70 overflow-hidden flex items-end">
-                  <div className="w-full h-[88%] bg-emerald-400 rounded-full" />
+                <div className="absolute -left-2.5 inset-y-0 w-1 rounded-full bg-black/75 overflow-hidden flex items-end">
+                  <div className="w-full h-[92%] bg-emerald-400 rounded-full" />
                 </div>
-              )}
-
-              {/* Jump Circles 3D Shockwave */}
-              {isEnabled('jump-circles') && (
-                <div
-                  className="absolute -bottom-2.5 w-24 h-5 rounded-full border-2"
-                  style={{
-                    borderColor: activeTheme.primaryHex,
-                    boxShadow: `0 0 16px ${activeTheme.primaryHex}`,
-                  }}
-                />
               )}
             </div>
           </div>
@@ -431,7 +399,7 @@ export const ModulesPage: React.FC = () => {
             >
               <GripHorizontal size={12} className="text-[var(--text-muted)]" />
               <span className="font-bold" style={{ color: activeTheme.primaryHex }}>
-                WINVISUAL 2.7
+                WINVISUAL
               </span>
               <span className="text-white/30">|</span>
               <span className="text-[#F5F5F7]">438 FPS</span>
@@ -471,8 +439,8 @@ export const ModulesPage: React.FC = () => {
             <div
               onPointerDown={(e) => startDragWidget('armor-hud', e)}
               style={{
-                left: hudPositions['armor-hud']?.x ?? 320,
-                top: hudPositions['armor-hud']?.y ?? 18,
+                left: hudPositions['armor-hud']?.x ?? 220,
+                top: hudPositions['armor-hud']?.y ?? 14,
               }}
               className="absolute glass-panel rounded-[10px] px-3 py-1.5 flex items-center gap-2.5 text-[11px] font-mono cursor-move border border-white/15"
             >

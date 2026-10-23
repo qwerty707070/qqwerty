@@ -143,40 +143,52 @@ export const HomePage: React.FC = () => {
         />
         <AmbientGlow className="absolute -bottom-24 -left-16" />
 
-        {/* Left Column: Display Headline + Subtitle + Dual CTA Buttons */}
-        <div className="relative z-10 max-w-[490px] flex flex-col justify-center space-y-4 py-1">
-          <h1 className="text-[38px] xl:text-[44px] font-extrabold tracking-[-0.03em] leading-[1.05] uppercase">
-            <span className="block text-[#FFFFFF]">
-              {isRu ? 'НОВЫЙ ВЗГЛЯД' : 'REIMAGINE YOUR'}
-            </span>
-            <span className="block bg-gradient-to-r from-[#8B7CFF] via-[#A99CFF] to-[#C8BEFF] bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(139,124,255,0.35)]">
-              {isRu ? 'НА MINECRAFT' : 'MINECRAFT'}
-            </span>
-          </h1>
+        {/* Left Column: Top-Left Player Greeting + Display Headline + Dual CTA Buttons */}
+        <div className="relative z-10 max-w-[490px] flex flex-col justify-between py-0.5">
+          {/* Top-Left Main Menu Welcome Greeting (`С возвращением` + `<никнейм>!`) */}
+          <div className="space-y-0.5">
+            <p className="text-[13.5px] font-medium text-[#B4B6C8] tracking-[-0.01em] leading-snug">
+              {isRu ? 'С возвращением' : 'Welcome back'}
+            </p>
+            <p className="text-[22px] font-extrabold tracking-[-0.02em] leading-tight bg-gradient-to-r from-[#FFFFFF] via-[#ECE8FF] to-[#B8ACFF] bg-clip-text text-transparent drop-shadow-[0_0_18px_rgba(139,124,255,0.3)]">
+              {`${activeAccount.username}!`}
+            </p>
+          </div>
 
-          <p className="text-[14px] text-[#C2C4D0] leading-[1.58] max-w-[400px]">
-            {isRu
-              ? 'Погрузись в совершенно новую атмосферу игры с лучшей графикой, плавностью и максимальным комфортом.'
-              : 'Immerse yourself in a next-generation visual client with atmospheric GLSL shaders, silky frame pacing, and effortless HUD control.'}
-          </p>
+          <div className="space-y-3.5 pt-2">
+            <h1 className="text-[36px] xl:text-[42px] font-extrabold tracking-[-0.03em] leading-[1.05] uppercase">
+              <span className="block text-[#FFFFFF]">
+                {isRu ? 'НОВЫЙ ВЗГЛЯД' : 'REIMAGINE YOUR'}
+              </span>
+              <span className="block bg-gradient-to-r from-[#8B7CFF] via-[#A99CFF] to-[#C8BEFF] bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(139,124,255,0.35)]">
+                {isRu ? 'НА MINECRAFT' : 'MINECRAFT'}
+              </span>
+            </h1>
 
-          <div className="flex items-center gap-3.5 pt-1 flex-wrap">
-            <button
-              type="button"
-              onClick={() => setCurrentPage('news')}
-              className="h-[44px] px-6 rounded-[12px] inline-flex items-center gap-2.5 text-[12.5px] font-bold tracking-[0.05em] uppercase text-white bg-[linear-gradient(135deg,#6E54FF_0%,#8B7CFF_100%)] border border-[#CFC7FF]/60 shadow-[0_0_26px_rgba(124,99,255,0.6),inset_0_1px_0_rgba(255,255,255,0.45)] hover:brightness-110 transition-all cursor-pointer"
-            >
-              <Play size={13} fill="currentColor" strokeWidth={2.2} />
-              <span>{isRu ? 'УЗНАТЬ БОЛЬШЕ' : 'LEARN MORE'}</span>
-            </button>
+            <p className="text-[13.5px] text-[#C2C4D0] leading-[1.55] max-w-[400px]">
+              {isRu
+                ? 'Погрузись в совершенно новую атмосферу игры с лучшей графикой, плавностью и максимальным комфортом.'
+                : 'Immerse yourself in a next-generation visual client with atmospheric GLSL shaders, silky frame pacing, and effortless HUD control.'}
+            </p>
 
-            <button
-              type="button"
-              onClick={() => setCurrentPage('modules')}
-              className="h-[44px] px-6 rounded-[12px] inline-flex items-center gap-2 text-[12.5px] font-bold tracking-[0.05em] uppercase text-[#E4E4EC] bg-[#0B0D16]/75 hover:bg-[#141728]/90 backdrop-blur-md border border-white/[0.15] hover:border-[rgba(var(--accent-rgb),0.5)] transition-all cursor-pointer"
-            >
-              <span>{isRu ? 'НАШИ МОДУЛИ' : 'OUR MODULES'}</span>
-            </button>
+            <div className="flex items-center gap-3.5 pt-0.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setCurrentPage('news')}
+                className="h-[42px] px-6 rounded-[12px] inline-flex items-center gap-2.5 text-[12.5px] font-bold tracking-[0.05em] uppercase text-white bg-[linear-gradient(135deg,#6E54FF_0%,#8B7CFF_100%)] border border-[#CFC7FF]/60 shadow-[0_0_26px_rgba(124,99,255,0.6),inset_0_1px_0_rgba(255,255,255,0.45)] hover:brightness-110 transition-all cursor-pointer"
+              >
+                <Play size={13} fill="currentColor" strokeWidth={2.2} />
+                <span>{isRu ? 'УЗНАТЬ БОЛЬШЕ' : 'LEARN MORE'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage('modules')}
+                className="h-[42px] px-6 rounded-[12px] inline-flex items-center gap-2 text-[12.5px] font-bold tracking-[0.05em] uppercase text-[#E4E4EC] bg-[#0B0D16]/75 hover:bg-[#141728]/90 backdrop-blur-md border border-white/[0.15] hover:border-[rgba(var(--accent-rgb),0.5)] transition-all cursor-pointer"
+              >
+                <span>{isRu ? 'НАШИ МОДУЛИ' : 'OUR MODULES'}</span>
+              </button>
+            </div>
           </div>
         </div>
 

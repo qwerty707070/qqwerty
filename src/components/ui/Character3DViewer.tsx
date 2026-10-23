@@ -11,6 +11,8 @@ interface Character3DViewerProps {
   showHalo?: boolean;
   /** Frameless transparent mode with glowing double floor aura ring for the Home Hero banner */
   heroStage?: boolean;
+  /** Compact solid entity mode for ESP / HUD stage previews (no cape or floor aura) */
+  previewEntity?: boolean;
   className?: string;
 }
 
@@ -83,7 +85,14 @@ function buildProceduralSkinRgba(preset: PlayerAccount['skinPreset']): Uint8Clam
     buf[o + 3] = a;
   };
 
-  const fill = (rx: number, ry: number, rw: number, rh: number, rgb: [number, number, number], a = 255) => {
+  const fill = (
+    rx: number,
+    ry: number,
+    rw: number,
+    rh: number,
+    rgb: [number, number, number],
+    a = 255
+  ) => {
     for (let y = ry; y < ry + rh; y++) {
       for (let x = rx; x < rx + rw; x++) {
         setPx(x, y, rgb, a);
@@ -91,12 +100,11 @@ function buildProceduralSkinRgba(preset: PlayerAccount['skinPreset']): Uint8Clam
     }
   };
 
-  // Head base (0..32, 0..16)
+  // Head base (0..32, 0..16) — all 6 UV faces completely filled with alpha=255
   fill(8, 0, 8, 8, pal.hair);
   fill(16, 0, 8, 8, pal.skin);
   fill(0, 8, 32, 8, pal.skin);
   fill(0, 8, 32, 2, pal.hair);
-  // Sides & back hair hood
   fill(0, 10, 8, 4, pal.hair);
   fill(16, 10, 8, 4, pal.hair);
   fill(24, 8, 8, 8, pal.hair);
@@ -121,11 +129,10 @@ function buildProceduralSkinRgba(preset: PlayerAccount['skinPreset']): Uint8Clam
   setPx(59, 10, pal.torsoTrim);
   setPx(60, 10, pal.torsoTrim);
 
-  // Torso (16..40, 16..32) with WinVisual chest emblem & trim
+  // Torso (16..40, 16..32) — all 6 UV faces completely filled with alpha=255
   fill(20, 16, 8, 4, pal.torso);
   fill(28, 16, 8, 4, pal.torso);
   fill(16, 20, 24, 12, pal.torso);
-  // Subtle Crown-W emblem on chest front (20..28, 20..32)
   setPx(21, 22, pal.torsoTrim);
   setPx(22, 24, pal.torsoTrim);
   setPx(23, 23, [255, 255, 255]);
@@ -134,7 +141,7 @@ function buildProceduralSkinRgba(preset: PlayerAccount['skinPreset']): Uint8Clam
   setPx(26, 22, pal.torsoTrim);
   fill(20, 31, 8, 1, pal.torsoTrim);
 
-  // Right & Left Legs (0..16, 20..32 and 16..32, 52..64)
+  // Right & Left Legs — all 6 UV faces completely filled with alpha=255
   fill(4, 16, 8, 4, pal.pants);
   fill(0, 20, 16, 10, pal.pants);
   fill(0, 30, 16, 2, pal.boots);
@@ -143,7 +150,7 @@ function buildProceduralSkinRgba(preset: PlayerAccount['skinPreset']): Uint8Clam
   fill(16, 52, 16, 10, pal.pants);
   fill(16, 62, 16, 2, pal.boots);
 
-  // Right & Left Arms (40..56, 20..32 and 32..48, 52..64)
+  // Right & Left Arms — all 6 UV faces completely filled with alpha=255
   fill(44, 16, 8, 4, pal.torso);
   fill(40, 20, 16, 9, pal.torso);
   fill(40, 29, 16, 1, pal.torsoTrim);
@@ -173,6 +180,7 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
   cape,
   showHalo = false,
   heroStage = false,
+  previewEntity = false,
   className = '',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -180,18 +188,20 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
   const [skinPixels, setSkinPixels] = useState<Uint8ClampedArray>(() =>
     buildProceduralSkinRgba(skinPreset)
   );
-  // Default angle shows iconic 3/4 back-right cape silhouette on Home Hero, and 3/4 front-right on Account
-  const yawRef = useRef(heroStage ? 2.62 : 0.62);
+  // Home Hero shows iconic 3/4 back-right cape pose; Account & Preview show crisp 3/4 front-right pose
+  const yawRef = useRef(previewEntity ? -0.42 : heroStage ? 2.62 : -0.52);
   const hoverOffsetRef = useRef(0);
   const lastXRef = useRef(0);
   const reducedMotion = useSettingsStore((s) => s.reducedMotion);
 
   const isSlim = skinModel ? skinModel === 'slim' : skinPreset === 'slim';
 
-  // Decode custom 64x64 / 64x32 PNG skin whenever customSkinDataUrl or preset changes
+  // Decode custom 64x64 / 64x32 PNG skin whenever customSkinDataUrl or preset changes,
+  // guaranteeing 100% opaque base skin regions so no uploaded skin can ever appear transparent.
   useEffect(() => {
+    const fallbackBuf = buildProceduralSkinRgba(skinPreset);
     if (!customSkinDataUrl || typeof document === 'undefined') {
-      setSkinPixels(buildProceduralSkinRgba(skinPreset));
+      setSkinPixels(fallbackBuf);
       return;
     }
 
@@ -209,18 +219,49 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
         off.imageSmoothingEnabled = false;
         off.clearRect(0, 0, 64, 64);
         off.drawImage(img, 0, 0);
-        // Legacy 64x32 skin compatibility: mirror right leg/arm to left leg/arm slots
+        // Legacy 64x32 skin compatibility: copy right leg/arm into left leg/arm UV regions
         if (img.height === 32) {
           off.drawImage(img, 0, 16, 16, 16, 16, 48, 16, 16);
           off.drawImage(img, 40, 16, 16, 16, 32, 48, 16, 16);
         }
-        setSkinPixels(off.getImageData(0, 0, 64, 64).data);
+        const raw = off.getImageData(0, 0, 64, 64).data;
+        // Ensure every pixel inside base body regions (not outer overlay layers) is 100% opaque
+        const baseRegions: [number, number, number, number][] = [
+          [8, 0, 16, 8],
+          [0, 8, 32, 8],
+          [20, 16, 16, 4],
+          [16, 20, 24, 12],
+          [4, 16, 8, 4],
+          [0, 20, 16, 12],
+          [20, 48, 8, 4],
+          [16, 52, 16, 12],
+          [44, 16, 8, 4],
+          [40, 20, 16, 12],
+          [36, 48, 8, 4],
+          [32, 52, 16, 12],
+        ];
+        for (const [rx, ry, rw, rh] of baseRegions) {
+          for (let y = ry; y < ry + rh; y++) {
+            for (let x = rx; x < rx + rw; x++) {
+              const o = (y * 64 + x) * 4;
+              if (raw[o + 3] < 255) {
+                if (raw[o + 3] === 0) {
+                  raw[o] = fallbackBuf[o];
+                  raw[o + 1] = fallbackBuf[o + 1];
+                  raw[o + 2] = fallbackBuf[o + 2];
+                }
+                raw[o + 3] = 255;
+              }
+            }
+          }
+        }
+        setSkinPixels(raw);
       } catch {
-        setSkinPixels(buildProceduralSkinRgba(skinPreset));
+        setSkinPixels(fallbackBuf);
       }
     };
     img.onerror = () => {
-      if (!cancelled) setSkinPixels(buildProceduralSkinRgba(skinPreset));
+      if (!cancelled) setSkinPixels(fallbackBuf);
     };
     img.src = customSkinDataUrl;
 
@@ -236,7 +277,11 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
     if (!ctx) return;
 
     let rafId = 0;
+    const zoomScale = previewEntity ? 0.78 : 1;
 
+    // Right-handed camera projection:
+    // +x = right, +y = down, +z = front toward viewer at yaw=0.
+    // Camera looks slightly down (pitch = +0.20 rad), so larger czCam is closer to viewer.
     const projectPt = (x: number, y: number, z: number, yaw: number) => {
       const cosY = Math.cos(yaw);
       const sinY = Math.sin(yaw);
@@ -245,13 +290,19 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
       const pitch = 0.2;
       const cosP = Math.cos(pitch);
       const sinP = Math.sin(pitch);
-      const py = y * cosP - rz * sinP;
-      const pz = y * sinP + rz * cosP;
-      const scale = 240 / (240 + pz + 36);
-      return { sx: rx * scale, sy: py * scale, z: pz };
+      const cyCam = y * cosP + rz * sinP;
+      const czCam = -y * sinP + rz * cosP;
+      const scale = (260 / Math.max(80, 290 - czCam)) * zoomScale;
+      return { sx: rx * scale, sy: cyCam * scale, z: czCam };
     };
 
-    const projectTexturedBox = (
+    interface RenderPrimitive {
+      depth: number;
+      draw: () => void;
+    }
+
+    const collectBoxPrimitives = (
+      out: RenderPrimitive[],
       cx: number,
       cy: number,
       cz: number,
@@ -260,7 +311,7 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
       d: number,
       yaw: number,
       uv: BoxUvMap,
-      allowTransparency = false
+      isOverlayLayer = false
     ) => {
       const hw = w / 2;
       const hh = h / 2;
@@ -279,97 +330,98 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
 
       const projected = corners.map(([vx, vy, vz]) => projectPt(vx, vy, vz, yaw));
 
-      // Each face defines [topLeftIdx, topRightIdx, botRightIdx, botLeftIdx], shade, uvRect
+      // All 6 faces wound clockwise in screen space (+sx right, +sy down) when facing viewer
       const faceDefs: {
         idx: [number, number, number, number];
         shade: number;
         rect: [number, number, number, number];
       }[] = [
         { idx: [4, 5, 6, 7], shade: 1.0, rect: uv.front },
-        { idx: [1, 0, 3, 2], shade: 0.72, rect: uv.back },
-        { idx: [5, 1, 2, 6], shade: 0.86, rect: uv.right },
-        { idx: [0, 4, 7, 3], shade: 0.82, rect: uv.left },
-        { idx: [0, 1, 5, 4], shade: 1.14, rect: uv.top },
+        { idx: [1, 0, 3, 2], shade: 0.78, rect: uv.back },
+        { idx: [5, 1, 2, 6], shade: 0.88, rect: uv.right },
+        { idx: [0, 4, 7, 3], shade: 0.85, rect: uv.left },
+        { idx: [0, 1, 5, 4], shade: 1.12, rect: uv.top },
         { idx: [7, 6, 2, 3], shade: 0.62, rect: uv.bottom },
       ];
 
-      const sortedFaces = faceDefs
-        .map((f) => ({
-          ...f,
-          depth: f.idx.reduce((acc, i) => acc + projected[i].z, 0) * 0.25,
-        }))
-        .sort((a, b) => b.depth - a.depth);
-
-      for (const face of sortedFaces) {
+      for (const face of faceDefs) {
         const [i0, i1, i2, i3] = face.idx;
         const p0 = projected[i0];
         const p1 = projected[i1];
         const p3 = projected[i3];
 
-        // Screen-space Winding Culling (unless outer 3D layer where interior might peek through)
         const cross = (p1.sx - p0.sx) * (p3.sy - p0.sy) - (p1.sy - p0.sy) * (p3.sx - p0.sx);
-        if (!allowTransparency && cross <= 0.05) continue;
+        if (cross <= 0.01) continue;
+
+        const avgZ =
+          (projected[i0].z + projected[i1].z + projected[i2].z + projected[i3].z) * 0.25 +
+          (isOverlayLayer ? 0.6 : 0);
 
         const c0 = corners[i0];
         const c1 = corners[i1];
         const c2 = corners[i2];
         const c3 = corners[i3];
-
         const [ux, uy, uw, uh] = face.rect;
 
-        for (let ty = 0; ty < uh; ty++) {
-          const v0 = ty / uh;
-          const v1 = (ty + 1) / uh;
-          for (let tx = 0; tx < uw; tx++) {
-            const o = ((uy + ty) * 64 + (ux + tx)) * 4;
-            const alpha = skinPixels[o + 3];
-            if (allowTransparency && alpha < 32) continue;
+        out.push({
+          depth: avgZ,
+          draw: () => {
+            ctx.globalAlpha = 1;
+            for (let ty = 0; ty < uh; ty++) {
+              const v0 = ty / uh;
+              const v1 = (ty + 1) / uh;
+              for (let tx = 0; tx < uw; tx++) {
+                const o = ((uy + ty) * 64 + (ux + tx)) * 4;
+                const alpha = skinPixels[o + 3];
+                if (isOverlayLayer && alpha < 128) continue;
 
-            const u0 = tx / uw;
-            const u1 = (tx + 1) / uw;
+                const u0 = tx / uw;
+                const u1 = (tx + 1) / uw;
 
-            const bilerp = (u: number, v: number) => {
-              const wx =
-                (1 - u) * (1 - v) * c0[0] +
-                u * (1 - v) * c1[0] +
-                u * v * c2[0] +
-                (1 - u) * v * c3[0];
-              const wy =
-                (1 - u) * (1 - v) * c0[1] +
-                u * (1 - v) * c1[1] +
-                u * v * c2[1] +
-                (1 - u) * v * c3[1];
-              const wz =
-                (1 - u) * (1 - v) * c0[2] +
-                u * (1 - v) * c1[2] +
-                u * v * c2[2] +
-                (1 - u) * v * c3[2];
-              return projectPt(wx, wy, wz, yaw);
-            };
+                const bilerp = (u: number, v: number) => {
+                  const wx =
+                    (1 - u) * (1 - v) * c0[0] +
+                    u * (1 - v) * c1[0] +
+                    u * v * c2[0] +
+                    (1 - u) * v * c3[0];
+                  const wy =
+                    (1 - u) * (1 - v) * c0[1] +
+                    u * (1 - v) * c1[1] +
+                    u * v * c2[1] +
+                    (1 - u) * v * c3[1];
+                  const wz =
+                    (1 - u) * (1 - v) * c0[2] +
+                    u * (1 - v) * c1[2] +
+                    u * v * c2[2] +
+                    (1 - u) * v * c3[2];
+                  return projectPt(wx, wy, wz, yaw);
+                };
 
-            const q0 = bilerp(u0, v0);
-            const q1 = bilerp(u1, v0);
-            const q2 = bilerp(u1, v1);
-            const q3 = bilerp(u0, v1);
+                const q0 = bilerp(u0, v0);
+                const q1 = bilerp(u1, v0);
+                const q2 = bilerp(u1, v1);
+                const q3 = bilerp(u0, v1);
 
-            const r = Math.min(255, Math.round(skinPixels[o] * face.shade));
-            const g = Math.min(255, Math.round(skinPixels[o + 1] * face.shade));
-            const b = Math.min(255, Math.round(skinPixels[o + 2] * face.shade));
-            const colorCss = `rgb(${r},${g},${b})`;
+                const r = Math.min(255, Math.round(skinPixels[o] * face.shade));
+                const g = Math.min(255, Math.round(skinPixels[o + 1] * face.shade));
+                const b = Math.min(255, Math.round(skinPixels[o + 2] * face.shade));
+                const colorCss = `rgb(${r},${g},${b})`;
 
-            ctx.fillStyle = colorCss;
-            ctx.strokeStyle = colorCss;
-            ctx.lineWidth = 0.65;
-            ctx.beginPath();
-            ctx.moveTo(q0.sx, q0.sy);
-            ctx.lineTo(q1.sx, q1.sy);
-            ctx.lineTo(q2.sx, q2.sy);
-            ctx.lineTo(q3.sx, q3.sy);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-          }
-        }
+                ctx.fillStyle = colorCss;
+                ctx.strokeStyle = colorCss;
+                ctx.lineWidth = 0.85;
+                ctx.beginPath();
+                ctx.moveTo(q0.sx, q0.sy);
+                ctx.lineTo(q1.sx, q1.sy);
+                ctx.lineTo(q2.sx, q2.sy);
+                ctx.lineTo(q3.sx, q3.sy);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+              }
+            }
+          },
+        });
       }
     };
 
@@ -450,46 +502,46 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
       ctx.save();
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, width, height);
-      ctx.translate(width / 2, height / 2 + (heroStage ? 6 : 12));
+      ctx.translate(width / 2, height / 2 + (previewEntity ? 4 : heroStage ? 6 : 12));
 
       const [cPrimary, cDark, cBright] = CAPE_PALETTES[cape];
 
-      // Luminous double neon floor aura ring beneath the character's feet
-      const grad = ctx.createRadialGradient(0, 78, 4, 0, 78, 92);
-      grad.addColorStop(0, `${cPrimary}66`);
-      grad.addColorStop(0.55, `${cPrimary}22`);
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.ellipse(0, 78, 88, 24, 0, 0, Math.PI * 2);
-      ctx.fill();
+      if (!previewEntity) {
+        const grad = ctx.createRadialGradient(0, 78, 4, 0, 78, 92);
+        grad.addColorStop(0, `${cPrimary}66`);
+        grad.addColorStop(0.55, `${cPrimary}22`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(0, 78, 88, 24, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-      ctx.save();
-      ctx.shadowColor = cPrimary;
-      ctx.shadowBlur = 16;
-      ctx.strokeStyle = cBright;
-      ctx.lineWidth = 2.4;
-      ctx.beginPath();
-      ctx.ellipse(0, 77, 68, 16, 0, 0, Math.PI * 2);
-      ctx.stroke();
+        ctx.save();
+        ctx.shadowColor = cPrimary;
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = cBright;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.ellipse(0, 77, 68, 16, 0, 0, Math.PI * 2);
+        ctx.stroke();
 
-      ctx.strokeStyle = `${cPrimary}AA`;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-      ctx.ellipse(0, 77, 54, 11.5, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
+        ctx.strokeStyle = `${cPrimary}AA`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(0, 77, 54, 11.5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       const yaw =
         yawRef.current +
         hoverOffsetRef.current +
-        (reducedMotion ? 0 : Math.sin(tSec * 0.85) * 0.09);
-      const backVisible = Math.cos(yaw) < 0.28;
+        (reducedMotion ? 0 : Math.sin(tSec * 0.85) * 0.08);
 
-      const drawCape = () => {
+      const primitives: RenderPrimitive[] = [];
+
+      if (!previewEntity) {
         const segs = 12;
-        const capePoints: { sx: number; sy: number }[] = [];
-
         for (let i = 0; i < segs; i++) {
           const frac = i / segs;
           const nextFrac = (i + 1) / segs;
@@ -497,8 +549,8 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
           const wave2 = Math.sin(tSec * 4.0 - nextFrac * 3.0) * (5 + nextFrac * 14);
           const y1 = -24 + frac * 84;
           const y2 = -24 + nextFrac * 84;
-          const z1 = -9 - frac * 16 - wave1 * 0.6;
-          const z2 = -9 - nextFrac * 16 - wave2 * 0.6;
+          const z1 = -9.5 - frac * 16 - wave1 * 0.6;
+          const z2 = -9.5 - nextFrac * 16 - wave2 * 0.6;
           const w1 = 19 + frac * 6;
           const w2 = 19 + nextFrac * 6;
 
@@ -509,82 +561,84 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
             [-w2, y2, z2],
           ].map(([x, y, z]) => projectPt(x, y, z, yaw));
 
-          if (i === 4) {
-            capePoints.push(pts[0], pts[1], pts[2], pts[3]);
-          }
+          const avgZ = (pts[0].z + pts[1].z + pts[2].z + pts[3].z) * 0.25;
+          const segIndex = i;
 
-          ctx.beginPath();
-          pts.forEach((p, idx) => (idx === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy)));
-          ctx.closePath();
-          const pulse = 0.5 + 0.5 * Math.sin(tSec * 3.2 - frac * 4.2);
-          ctx.fillStyle = i % 2 === 0 ? cDark : cPrimary;
-          ctx.globalAlpha = 0.94;
-          ctx.fill();
+          primitives.push({
+            depth: avgZ,
+            draw: () => {
+              ctx.globalAlpha = 1;
+              ctx.beginPath();
+              pts.forEach((p, idx) =>
+                idx === 0 ? ctx.moveTo(p.sx, p.sy) : ctx.lineTo(p.sx, p.sy)
+              );
+              ctx.closePath();
+              const pulse = 0.5 + 0.5 * Math.sin(tSec * 3.2 - frac * 4.2);
+              ctx.fillStyle = segIndex % 2 === 0 ? cDark : cPrimary;
+              ctx.fill();
 
-          if (pulse > 0.52) {
-            ctx.fillStyle = cBright;
-            ctx.globalAlpha = (pulse - 0.52) * 0.72;
-            ctx.fill();
-          }
+              if (pulse > 0.52) {
+                ctx.fillStyle = cBright;
+                ctx.globalAlpha = (pulse - 0.52) * 0.72;
+                ctx.fill();
+              }
 
-          ctx.globalAlpha = 0.85;
-          ctx.fillStyle = '#FFFFFF';
-          const starX = (pts[0].sx + pts[2].sx) * 0.5 + Math.sin(i * 7.3) * 9;
-          const starY = (pts[0].sy + pts[2].sy) * 0.5;
-          ctx.beginPath();
-          ctx.arc(starX, starY, (i % 3 === 0 ? 1.5 : 0.95) * (0.65 + pulse * 0.5), 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = 1;
+              ctx.globalAlpha = 0.9;
+              ctx.fillStyle = '#FFFFFF';
+              const starX = (pts[0].sx + pts[2].sx) * 0.5 + Math.sin(segIndex * 7.3) * 9;
+              const starY = (pts[0].sy + pts[2].sy) * 0.5;
+              ctx.beginPath();
+              ctx.arc(
+                starX,
+                starY,
+                (segIndex % 3 === 0 ? 1.5 : 0.95) * (0.65 + pulse * 0.5),
+                0,
+                Math.PI * 2
+              );
+              ctx.fill();
+              ctx.globalAlpha = 1;
+
+              if (segIndex === 4 && Math.cos(yaw) < 0) {
+                const cx = (pts[0].sx + pts[2].sx) / 2;
+                const cy = (pts[0].sy + pts[2].sy) / 2 - 4;
+                ctx.save();
+                ctx.strokeStyle = cBright;
+                ctx.lineWidth = 1.6;
+                ctx.shadowColor = cBright;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.moveTo(cx - 7, cy - 5);
+                ctx.lineTo(cx - 4, cy + 5);
+                ctx.lineTo(cx, cy - 1);
+                ctx.lineTo(cx + 4, cy + 5);
+                ctx.lineTo(cx + 7, cy - 5);
+                ctx.stroke();
+                ctx.restore();
+              }
+            },
+          });
         }
-
-        if (capePoints.length === 4) {
-          const cx = (capePoints[0].sx + capePoints[2].sx) / 2;
-          const cy = (capePoints[0].sy + capePoints[2].sy) / 2 - 4;
-          ctx.save();
-          ctx.strokeStyle = cBright;
-          ctx.lineWidth = 1.6;
-          ctx.shadowColor = cBright;
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.moveTo(cx - 7, cy - 5);
-          ctx.lineTo(cx - 4, cy + 5);
-          ctx.lineTo(cx, cy - 1);
-          ctx.lineTo(cx + 4, cy + 5);
-          ctx.lineTo(cx + 7, cy - 5);
-          ctx.stroke();
-          ctx.restore();
-        }
-      };
-
-      if (!backVisible) drawCape();
+      }
 
       const armBoxW = isSlim ? 11.5 : 14.5;
       const armOffsetX = isSlim ? 23.2 : 24.5;
       const armSwing = Math.sin(tSec * 1.6) * 2.2;
 
-      // Depth-sort left vs right limbs based on camera rotation yaw so overlap is always geometrically exact
-      const sinYaw = Math.sin(yaw);
-      if (sinYaw >= 0) {
-        projectTexturedBox(-8.8, 52, 0, 15.5, 44, 15.5, yaw, rightLegUv);
-        projectTexturedBox(8.8, 52, 0, 15.5, 44, 15.5, yaw, leftLegUv);
-        projectTexturedBox(-armOffsetX, 8 + armSwing, 0, armBoxW, 44, 15.5, yaw, rightArmUv);
-        projectTexturedBox(0, 8, 0, 34, 44, 17, yaw, torsoUv);
-        projectTexturedBox(armOffsetX, 8 - armSwing, 0, armBoxW, 44, 15.5, yaw, leftArmUv);
-      } else {
-        projectTexturedBox(8.8, 52, 0, 15.5, 44, 15.5, yaw, leftLegUv);
-        projectTexturedBox(-8.8, 52, 0, 15.5, 44, 15.5, yaw, rightLegUv);
-        projectTexturedBox(armOffsetX, 8 - armSwing, 0, armBoxW, 44, 15.5, yaw, leftArmUv);
-        projectTexturedBox(0, 8, 0, 34, 44, 17, yaw, torsoUv);
-        projectTexturedBox(-armOffsetX, 8 + armSwing, 0, armBoxW, 44, 15.5, yaw, rightArmUv);
+      collectBoxPrimitives(primitives, -8.8, 52, 0, 15.5, 44, 15.5, yaw, rightLegUv, false);
+      collectBoxPrimitives(primitives, 8.8, 52, 0, 15.5, 44, 15.5, yaw, leftLegUv, false);
+      collectBoxPrimitives(primitives, -armOffsetX, 8 + armSwing, 0, armBoxW, 44, 15.5, yaw, rightArmUv, false);
+      collectBoxPrimitives(primitives, armOffsetX, 8 - armSwing, 0, armBoxW, 44, 15.5, yaw, leftArmUv, false);
+      collectBoxPrimitives(primitives, 0, 8, 0, 34, 44, 17, yaw, torsoUv, false);
+      collectBoxPrimitives(primitives, 0, -34, 0, 32, 32, 32, yaw, headUv, false);
+      collectBoxPrimitives(primitives, 0, -34, 0, 35.2, 35.2, 35.2, yaw, hatUv, true);
+
+      // True back-to-front painter's sort across every limb, torso, head, hat & cape segment
+      primitives.sort((a, b) => a.depth - b.depth);
+      for (const prim of primitives) {
+        prim.draw();
       }
 
-      // Base Head + Raised 3D Outer Hat/Hair Layer
-      projectTexturedBox(0, -34, 0, 32, 32, 32, yaw, headUv, false);
-      projectTexturedBox(0, -34, 0, 35.4, 35.4, 35.4, yaw, hatUv, true);
-
-      if (backVisible) drawCape();
-
-      if (showHalo) {
+      if (showHalo && !previewEntity) {
         ctx.strokeStyle = cBright;
         ctx.lineWidth = 2.2;
         ctx.shadowColor = cPrimary;
@@ -601,7 +655,15 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
 
     rafId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(rafId);
-  }, [skinPixels, isSlim, cape, showHalo, heroStage, reducedMotion]);
+  }, [skinPixels, isSlim, cape, showHalo, heroStage, previewEntity, reducedMotion]);
+
+  if (previewEntity) {
+    return (
+      <div className={`relative w-full h-full pointer-events-none select-none ${className}`}>
+        <canvas ref={canvasRef} className="w-full h-full block" />
+      </div>
+    );
+  }
 
   if (heroStage) {
     return (

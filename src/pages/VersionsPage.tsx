@@ -103,7 +103,7 @@ export const VersionsPage: React.FC = () => {
     if (!el) return;
     const rect = el.getBoundingClientRect();
     const pct = ((clientX - rect.left) / Math.max(1, rect.width)) * 100;
-    setSplitPct(Math.min(90, Math.max(10, Math.round(pct * 10) / 10)));
+    setSplitPct(Math.min(100, Math.max(0, Math.round(pct * 100) / 100)));
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -165,69 +165,58 @@ export const VersionsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Upper Interactive Split-Screen Viewport: VANILLA vs WINVISUAL */}
+      {/* Upper Interactive Split-Screen Viewport: VANILLA vs WINVISUAL (0%..100% full travel) */}
       <div
         ref={compareRef}
         onPointerDown={handlePointerDown}
-        className="relative h-[242px] w-full rounded-[20px] overflow-hidden border border-white/[0.1] shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)] cursor-ew-resize select-none"
+        className="relative h-[242px] w-full cursor-ew-resize select-none"
       >
-        {/* Full Layer (Right Side): Rich WinVisual GLSL Bloom + Atmosphere Grading */}
-        <div
-          className="absolute inset-0 bg-cover bg-center saturate-[1.32] contrast-[1.08]"
-          style={{ backgroundImage: "url('/images/hero-castle-violet.jpg')" }}
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 transition-all duration-300"
-          style={{ background: atm.tintGradient }}
-        />
-
-        {/* WinVisual Neon Ground Aura Ring + Radar HUD Overlay on Right Side */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-14 bottom-5 w-[150px] h-[34px] rounded-full border-2 border-[#C4B5FD] shadow-[0_0_24px_#8B7CFF,inset_0_0_16px_#8B7CFF]"
-        />
-
-        <div className="pointer-events-none absolute top-3.5 right-4 z-10 px-3.5 py-1 rounded-full bg-[#191538]/90 border border-[var(--accent-primary)]/70 text-[11px] font-bold tracking-[0.06em] uppercase text-white shadow-[0_0_18px_rgba(139,124,255,0.5)]">
-          WINVISUAL
-        </div>
-
-        <div className="pointer-events-none hidden sm:flex items-center gap-3 absolute top-14 right-4 z-10 px-3.5 py-2.5 rounded-[14px] bg-[#0B0D18]/80 backdrop-blur-md border border-white/[0.1]">
-          <div className="relative w-12 h-12 rounded-full border border-[var(--accent-secondary)]/70 flex items-center justify-center shadow-[0_0_14px_rgba(139,124,255,0.35)]">
-            <div className="w-7 h-7 rounded-full border border-[var(--accent-secondary)]/45" />
-            <div className="absolute inset-x-0 h-[1px] bg-[var(--accent-secondary)]/55" />
-            <div className="absolute inset-y-0 w-[1px] bg-[var(--accent-secondary)]/55" />
-          </div>
-          <div className="font-mono text-[10.5px] leading-relaxed text-[#D4D6E4]">
-            <p>{atm.coords}</p>
-            <p className="text-[#9D9FB0]">{atm.biome}</p>
-          </div>
-        </div>
-
-        {/* Clipped Left Layer: Flat Dark Unshaded Vanilla Scene */}
-        <div
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-          style={{ clipPath: `inset(0 ${100 - splitPct}% 0 0)` }}
-        >
+        <div className="relative h-full w-full rounded-[20px] overflow-hidden border border-white/[0.1] shadow-[0_24px_60px_-18px_rgba(0,0,0,0.9)]">
+          {/* Full Layer (Right Side): Rich WinVisual GLSL Bloom + Atmosphere Grading */}
           <div
-            className="absolute inset-0 bg-cover bg-center grayscale-[0.88] brightness-[0.44] contrast-[0.88]"
+            className="absolute inset-0 bg-cover bg-center saturate-[1.32] contrast-[1.08]"
             style={{ backgroundImage: "url('/images/hero-castle-violet.jpg')" }}
           />
-          <div className="absolute inset-0 bg-[#0A0C12]/35" />
-          <div className="absolute top-3.5 left-4 px-3.5 py-1 rounded-full bg-[#090B11]/90 border border-white/[0.12] text-[11px] font-bold tracking-[0.06em] uppercase text-[#D4D4DC]">
-            VANILLA
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 transition-all duration-300"
+            style={{ background: atm.tintGradient }}
+          />
+
+          <div className="pointer-events-none absolute top-3.5 right-4 z-10 px-3.5 py-1 rounded-full bg-[#191538]/90 border border-[var(--accent-primary)]/70 text-[11px] font-bold tracking-[0.06em] uppercase text-white shadow-[0_0_18px_rgba(139,124,255,0.5)]">
+            WINVISUAL
+          </div>
+
+          {/* Clipped Left Layer: Flat Dark Unshaded Vanilla Scene */}
+          <div
+            className="pointer-events-none absolute inset-0 overflow-hidden"
+            style={{ clipPath: `inset(0 ${100 - splitPct}% 0 0)` }}
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center grayscale-[0.88] brightness-[0.44] contrast-[0.88]"
+              style={{ backgroundImage: "url('/images/hero-castle-violet.jpg')" }}
+            />
+            <div className="absolute inset-0 bg-[#0A0C12]/35" />
+            <div className="absolute top-3.5 left-4 px-3.5 py-1 rounded-full bg-[#090B11]/90 border border-white/[0.12] text-[11px] font-bold tracking-[0.06em] uppercase text-[#D4D4DC]">
+              VANILLA
+            </div>
+          </div>
+
+          {/* Glowing Vertical Neon-Violet Divider Line */}
+          <div
+            style={{ left: `${splitPct}%` }}
+            className="pointer-events-none absolute inset-y-0 z-20 -translate-x-1/2"
+          >
+            <div className="h-full w-[2.5px] bg-[#C4B5FD] shadow-[0_0_18px_#8B7CFF,0_0_6px_#FFFFFF]" />
           </div>
         </div>
 
-        {/* Glowing Vertical Neon-Violet Divider Line + Interactive Handle */}
+        {/* Interactive Handle Pill (unclipped so 0% and 100% reach exact borders seamlessly) */}
         <div
           style={{ left: `${splitPct}%` }}
-          className="pointer-events-none absolute inset-y-0 z-20 -translate-x-1/2 flex items-center justify-center"
+          className="pointer-events-none absolute top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 w-9 h-14 rounded-full bg-[#171336]/95 border-2 border-[#D8D0FF] shadow-[0_0_26px_#8B7CFF] flex items-center justify-center text-white"
         >
-          <div className="h-full w-[2.5px] bg-[#C4B5FD] shadow-[0_0_18px_#8B7CFF,0_0_6px_#FFFFFF]" />
-          <div className="absolute w-9 h-14 rounded-full bg-[#171336]/95 border-2 border-[#D8D0FF] shadow-[0_0_26px_#8B7CFF] flex items-center justify-center text-white">
-            <MoveHorizontal size={15} strokeWidth={2.4} />
-          </div>
+          <MoveHorizontal size={15} strokeWidth={2.4} />
         </div>
       </div>
 
