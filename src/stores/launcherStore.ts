@@ -15,6 +15,7 @@ import {
   fetchSystemTelemetry,
 } from '../services/launcherService';
 import { installAndVerifyClientBuild } from '../services/downloadService';
+import { initGameDirectoryEverywhere } from '../services/gameDirectoryService';
 import {
   isTauriDesktop,
   tauriCancelNativeLaunch,
@@ -118,7 +119,7 @@ export const useLauncherStore = create<LauncherState>()(
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.7.1 initialized (WinVisual 1.16.5 / 1.21.4 / 1.21.11)`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.7.4 initialized (WinVisual 1.16.5 / 1.21.4 / 1.21.11)`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 
@@ -310,6 +311,16 @@ export const useLauncherStore = create<LauncherState>()(
               await tauriMinimizeWindow();
             }
             return;
+          }
+
+          // Real WinVisual game folder scaffold (mods/, resourcepacks/, logs/, ...) before the build
+          const gdir = await initGameDirectoryEverywhere(settings.gameDirectory);
+          if (gdir && myRunId === currentLaunchRunId) {
+            get().appendLog(
+              `[GAME-DIR] ${gdir.displayDir} ready — ${gdir.folders.length} folders, ${
+                gdir.modsJars?.length ?? 0
+              } embedded WinVisual client mod JARs synced into mods/`
+            );
           }
 
           const summary = await installAndVerifyClientBuild({

@@ -10,7 +10,7 @@ declare global {
 }
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.3';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.4';
 
 export function isTauriDesktop(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
@@ -147,6 +147,32 @@ export async function tauriCompleteMsDeviceFlow(
   return window.__TAURI_INTERNALS__!.invoke<NativeMinecraftProfile>('complete_ms_device_flow', {
     clientId,
     deviceCode,
+  });
+}
+
+export interface GameDirEntry {
+  name: string;
+  sizeBytes: number;
+  files: number;
+}
+
+export interface GameDirInitResult {
+  ok: boolean;
+  dir: string;
+  displayDir: string;
+  folders: GameDirEntry[];
+  modsJars?: string[];
+}
+
+export async function tauriInitGameDirectory(gameDirectory: string): Promise<GameDirInitResult> {
+  return window.__TAURI_INTERNALS__!.invoke<GameDirInitResult>('init_game_directory', {
+    gameDirectory,
+  });
+}
+
+export async function tauriGetGameDirectoryTree(gameDirectory: string): Promise<GameDirEntry[]> {
+  return window.__TAURI_INTERNALS__!.invoke<GameDirEntry[]>('get_game_directory_tree', {
+    gameDirectory,
   });
 }
 

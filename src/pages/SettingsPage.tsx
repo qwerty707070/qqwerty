@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Check,
@@ -11,6 +11,7 @@ import {
   HardDrive,
   HelpCircle,
   Laptop,
+  Layers,
   RefreshCw,
   RotateCcw,
   Save,
@@ -33,6 +34,12 @@ import {
   tauriPickDirectory,
   tauriPickJavaBinary,
 } from '../services/tauriBridge';
+import {
+  formatGameDirBytes,
+  getGameDirectoryTreeEverywhere,
+  initGameDirectoryEverywhere,
+  type GameDirEntry,
+} from '../services/gameDirectoryService';
 import type { AnimationIntensity, LanguageCode, SurfaceTheme } from '../types/launcher';
 import { Card } from '../components/ui/Card';
 import { Toggle } from '../components/ui/Toggle';
@@ -81,6 +88,8 @@ export const SettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTabId>('general');
   const [syncingMods, setSyncingMods] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'cache' | 'reset' | null>(null);
+  const [gameDirTree, setGameDirTree] = useState<GameDirEntry[] | null>(null);
+  const [gameDirBusy, setGameDirBusy] = useState(false);
 
   const settings = useSettingsStore();
   const telemetry = useLauncherStore((s) => s.telemetry);
@@ -103,6 +112,46 @@ export const SettingsPage: React.FC = () => {
       title: isRu ? labelRu : labelEn,
       description,
     });
+  };
+
+  const refreshGameDirTree = async () => {
+    const tree = await getGameDirectoryTreeEverywhere(settings.gameDirectory);
+    setGameDirTree(tree);
+  };
+
+  useEffect(() => {
+    void refreshGameDirTree();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.gameDirectory]);
+
+  const handleScaffoldWinVisualFolder = async () => {
+    setGameDirBusy(true);
+    try {
+      const report = await initGameDirectoryEverywhere(settings.gameDirectory);
+      if (report) {
+        setGameDirTree(report.folders);
+        appendLog(
+          `[GAME-DIR] ${report.displayDir} — ${report.folders.length} folders, ${
+            report.modsJars?.length ?? 0
+          } embedded WinVisual client mods in mods/`
+        );
+        notifySaved(
+          'Папка WinVisual создана',
+          'WinVisual folder created',
+          `${report.displayDir} — mods, resourcepacks, logs, ...`
+        );
+      } else {
+        pushToast({
+          type: 'error',
+          title: isRu ? 'Не удалось создать папку' : 'Could not create the folder',
+          description: isRu
+            ? 'Проверьте путь директории в поле выше.'
+            : 'Check the directory path above.',
+        });
+      }
+    } finally {
+      setGameDirBusy(false);
+    }
   };
 
   const handleSyncModsNow = async () => {
@@ -177,8 +226,8 @@ export const SettingsPage: React.FC = () => {
                   <h2 className="text-[15.5px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
                     <Laptop size={17} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
                     {isRu
-                      ? 'Нативный лаунчер и вшитые моды (WinVisual v2.7.3)'
-                      : 'Native Installers & Embedded Client Mods (WinVisual v2.7.3)'}
+                      ? 'Нативный лаунчер и вшитые моды (WinVisual v2.7.4)'
+                      : 'Native Installers & Embedded Client Mods (WinVisual v2.7.4)'}
                   </h2>
                   <p className="text-[12.5px] text-[var(--text-secondary)]">
                     {isRu
@@ -444,9 +493,9 @@ export const SettingsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-[12.5px] font-medium text-[var(--text-secondary)]">
-                {isRu ? 'Директория клиента' : 'Game Directory'}
+                {isRu ? 'Папка игры WinVisual' : 'WinVisual Game Folder'}
               </label>
               <div className="flex gap-2">
                 <input
@@ -476,6 +525,7 @@ export const SettingsPage: React.FC = () => {
                   size="sm"
                   className="h-9"
                   aria-label="Open game directory"
+                  title={isRu ? 'Открыть папку в проводнике' : 'Open folder in explorer'}
                   onClick={async () => {
                     const openedNative = await tauriOpenGameFolder(settings.gameDirectory);
                     if (!openedNative) {
@@ -489,7 +539,72 @@ export const SettingsPage: React.FC = () => {
                 >
                   <FolderOpen size={14} strokeWidth={1.75} />
                 </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="h-9"
+                  disabled={gameDirBusy}
+                  onClick={handleScaffoldWinVisualFolder}
+                  title={
+                    isRu
+                      ? 'Создать структуру WinVisual: mods, resourcepacks, logs и т.д.'
+                      : 'Create the WinVisual structure: mods, resourcepacks, logs, etc.'
+                  }
+                >
+                  <Layers size={14} strokeWidth={1.75} className={gameDirBusy ? 'animate-pulse' : ''} />
+                  {isRu ? 'Создать папку WinVisual' : 'Create WinVisual Folder'}
+                </Button>
               </div>
+              <p className="text-[11px] text-[var(--text-muted)] leading-snug">
+                {isRu
+                  ? 'Внутри создаются те же разделы, что и в EvoVisual: mods, resourcepacks, shaderpacks, config, logs, screenshots, saves, versions, libraries, assets. При первом запуске лаунчер сам докачает Minecraft, Fabric-загрузчик и все необходимые моды прямо в эту папку.'
+                  : 'The same sections as EvoVisual are created inside: mods, resourcepacks, shaderpacks, config, logs, screenshots, saves, versions, libraries, assets. On first launch the launcher downloads Minecraft, the Fabric loader and every required mod straight into this folder.'}
+              </p>
+            </div>
+
+            {/* Live WinVisual folder structure (real sizes from disk) */}
+            <div className="rounded-[14px] bg-[var(--background-secondary)] border border-[var(--border-primary)] overflow-hidden">
+              <div className="px-3.5 py-2.5 flex items-center justify-between gap-2 border-b border-[var(--border-primary)]">
+                <p className="text-[11.5px] font-semibold text-[var(--text-secondary)] flex items-center gap-1.5">
+                  <FolderArchive size={13} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
+                  {isRu ? 'Структура папки (реальные размеры)' : 'Folder structure (real sizes)'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void refreshGameDirTree()}
+                  className="p-1 rounded-[6px] text-[var(--text-muted)] hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  aria-label="Refresh folder tree"
+                >
+                  <RefreshCw size={12} strokeWidth={2} />
+                </button>
+              </div>
+              {gameDirTree && gameDirTree.length > 0 ? (
+                <div className="p-2 grid grid-cols-2 md:grid-cols-3 gap-1.5 max-h-[210px] overflow-y-auto">
+                  {gameDirTree.map((f) => (
+                    <div
+                      key={f.name}
+                      className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-[9px] bg-white/[0.03] border border-white/[0.05]"
+                    >
+                      <span className="text-[11.5px] font-mono text-[var(--text-secondary)] truncate">
+                        {f.name}/
+                      </span>
+                      <span className="text-[10.5px] font-mono text-[var(--text-muted)] shrink-0">
+                        {f.files === 0
+                          ? isRu
+                            ? 'пусто'
+                            : 'empty'
+                          : `${f.files} • ${formatGameDirBytes(f.sizeBytes)}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="px-3.5 py-3 text-[11.5px] text-[var(--text-muted)]">
+                  {isRu
+                    ? 'Папка ещё не создана — нажмите «Создать папку WinVisual» или просто запустите игру.'
+                    : 'Folder does not exist yet — press "Create WinVisual Folder" or just launch the game.'}
+                </p>
+              )}
             </div>
           </div>
 

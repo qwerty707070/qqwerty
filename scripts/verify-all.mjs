@@ -34,7 +34,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.7.3 telemetry + strict 3-version WinVisual catalog
+// 1. Validate live HTTP API endpoints + v2.7.4 telemetry + strict 3-version WinVisual catalog
 const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -46,13 +46,13 @@ const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.7.3' ||
+  status.launcherVersion !== '2.7.4' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
   !status.java?.path
 ) {
-  throw new Error('Invalid /api/status v2.7.3 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.7.4 telemetry schema: ' + JSON.stringify(status));
 }
 
 if (!Array.isArray(embeddedMods.mods) || embeddedMods.mods.length !== 3) {
@@ -119,7 +119,7 @@ for (const mc of expectedMcVersions) {
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.7.3',
+  version: '2.7.4',
   themeId: 'violet',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
@@ -141,10 +141,16 @@ if (
   throw new Error('Disk persistence check for winvisual-hud.json failed');
 }
 
-// 5. Verify all 4 binary SHA-256 artifacts across ALL 3 Fabric builds (12 bundles total)
+// 5. Verify all 5 binary SHA-256 artifacts (1 real embedded WinVisual mod JAR + 4 build bundles)
+// across ALL 3 Fabric builds (15 bundles total)
 for (const buildId of ['winvisual-1.21.11', 'winvisual-1.21.4', 'winvisual-1.16.5']) {
+  const mcVer = buildId.replace('winvisual-', '');
   const manifest = await fetch(`${base}/api/download/${buildId}/manifest`).then((r) => r.json());
-  if (manifest.artifacts.length !== 4) throw new Error(`Expected 4 signed artifacts for ${buildId}`);
+  if (manifest.artifacts.length !== 5) throw new Error(`Expected 5 signed artifacts for ${buildId}`);
+  const embeddedArt = manifest.artifacts[0];
+  if (embeddedArt.filename !== `winvisual-client-${mcVer}.jar`) {
+    throw new Error(`Expected embedded WinVisual mod JAR first in ${buildId} manifest`);
+  }
   for (const art of manifest.artifacts) {
     const res = await fetch(`${base}${art.url}?speed_mbps=200`);
     const buf = Buffer.from(await res.arrayBuffer());
@@ -154,6 +160,24 @@ for (const buildId of ['winvisual-1.21.11', 'winvisual-1.21.4', 'winvisual-1.16.
     }
   }
 }
+
+// 5b. Verify the WinVisual game directory scaffold (EvoVisual-style folder structure)
+const gdirInit = await fetch(`${base}/api/game-dir/init?dir=~/WinVisual`).then((r) => r.json());
+if (!gdirInit.ok) throw new Error('Game directory init failed: ' + JSON.stringify(gdirInit));
+const gdirNames = gdirInit.folders.map((f) => f.name);
+for (const required of ['mods', 'resourcepacks', 'shaderpacks', 'config', 'logs', 'screenshots', 'saves', 'versions', 'libraries', 'assets']) {
+  if (!gdirNames.includes(required)) throw new Error(`WinVisual folder is missing "${required}/"`);
+}
+if (!Array.isArray(gdirInit.modsJars) || gdirInit.modsJars.length !== 3) {
+  throw new Error('Expected 3 embedded WinVisual client mod JARs copied into WinVisual/mods/');
+}
+const gdirTree = await fetch(`${base}/api/game-dir/tree?dir=~/WinVisual`).then((r) => r.json());
+if (!gdirTree.ok || !Array.isArray(gdirTree.folders) || gdirTree.folders.length < 10) {
+  throw new Error('Game directory tree readback failed');
+}
+const modsEntry = gdirTree.folders.find((f) => f.name === 'mods');
+if (!modsEntry || modsEntry.files < 3) throw new Error('WinVisual/mods/ does not contain the embedded JARs on disk');
+console.log(`[GAME-DIR OK] ~/WinVisual scaffolded: ${gdirTree.folders.length} folders, mods/ = ${modsEntry.files} files (${(modsEntry.sizeBytes / 1024).toFixed(0)} KB)`);
 
 // Check simulated HTTP 503 error recovery endpoint
 const errRes = await fetch(`${base}/api/download/winvisual-1.21.11/winvisual-1.21.11-rendercore.jar?simulate_error=1`);
@@ -223,6 +247,16 @@ for (const lang of ['ru', 'en']) {
         throw new Error(`Missing top-left welcome greeting or 3 cards on home RU route`);
       }
     }
+    if (route === 'account') {
+      for (const forbidden of ['Steve', 'Alex', 'Steve 4px', 'Alex 3px']) {
+        if (html.includes(forbidden)) {
+          throw new Error(`Forbidden "Steve/Alex" option "${forbidden}" leaked into account route`);
+        }
+      }
+      if (!html.includes('64×32')) {
+        throw new Error('Account route must advertise the strict 64×32 / 64×64 skin upload rule');
+      }
+    }
     for (const removedVer of [
       '1.21.5',
       '1.21.1"',
@@ -261,7 +295,7 @@ console.log(
 );
 
 console.log(
-  `[ALL CHECKS PASSED] v2.7.3 nick=${activeNick}! + Новости/Аккаунты/Настройки cards + Clean VersionSelector (no Все версии / +% FPS) + 0..100% Shader Split + Solid 3D Skin + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.7.4 nick=${activeNick}! + ~/WinVisual folder (mods/resourcepacks/logs + 3 embedded JARs) + Real WinVisual mod JAR in launch manifest + Skin-only upload (64×32/64×64, no Steve/Alex) + Fixed 3D Cape + Solid Skin + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

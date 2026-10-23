@@ -85,7 +85,7 @@ const DEFAULT_SETTINGS = {
 
   ramAllocationMb: 6144,
   javaPath: 'java',
-  gameDirectory: '~/.minecraft/winvisual',
+  gameDirectory: '~/WinVisual',
   jvmArguments:
     '-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=20 -XX:G1ReservePercent=20 -XX:MaxGCPauseMillis=50',
   optimizeModsBundle: true,

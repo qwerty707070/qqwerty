@@ -82,31 +82,78 @@ export const AccountPage: React.FC = () => {
   const active = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
   const haloEnabled = modules.some((m) => m.id === 'china-hat' && m.enabled);
 
+  /**
+   * Strict Minecraft skin upload gate: only valid skin PNGs are accepted.
+   * - Format: PNG (magic bytes + type), size cap 512 KB
+   * - Dimensions: exactly 64×32 (classic) or 64×64 (modern) pixels
+   * Any other .png (photos, avatars, random graphics) is rejected with a clear error.
+   */
   const handleUploadSkinFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    if (!file.type.includes('png')) {
+
+    const looksLikePng = file.type.includes('png') || /\.png$/i.test(file.name);
+    if (!looksLikePng) {
       pushToast({
         type: 'error',
-        title: isRu ? 'Выберите PNG-текстуру скина 64×64' : 'Please select a 64×64 PNG skin file',
+        title: isRu ? 'Можно загрузить только PNG' : 'Only PNG files are allowed',
+        description: isRu
+          ? 'Скин Майнкрафта — это PNG-файл 64×32 или 64×64.'
+          : 'A Minecraft skin must be a 64×32 or 64×64 PNG.',
       });
       return;
     }
+
+    if (file.size > 512 * 1024) {
+      pushToast({
+        type: 'error',
+        title: isRu ? 'Файл слишком большой для скина' : 'File too large for a skin',
+        description: isRu
+          ? 'Допустимый размер скина — до 512 KB.'
+          : 'Skin files must be 512 KB or smaller.',
+      });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setCustomSkinForActive(reader.result, active.skinModel ?? 'classic');
+      if (typeof reader.result !== 'string') return;
+      const probe = new Image();
+      probe.onload = () => {
+        const w = probe.naturalWidth;
+        const h = probe.naturalHeight;
+        if (!(w === 64 && (h === 32 || h === 64))) {
+          pushToast({
+            type: 'error',
+            title: isRu ? 'Это не скин Майнкрафта' : 'Not a valid Minecraft skin',
+            description: isRu
+              ? `Ожидался PNG 64×32 или 64×64, получен ${w}×${h}. Загрузите именно текстуру скина.`
+              : `Expected a 64×32 or 64×64 PNG, got ${w}×${h}. Upload an actual skin texture.`,
+          });
+          return;
+        }
+        setCustomSkinForActive(reader.result as string, 'classic');
         pushToast({
           type: 'success',
-          title: isRu ? 'Свой PNG-скин загружен' : 'Custom PNG skin applied',
+          title: isRu ? `Скин ${w}×${h} загружен` : `Skin ${w}×${h} applied`,
           description: isRu
             ? '3D-модель и главный экран синхронизированы.'
             : 'Synced onto 3D viewer and Home hero stage.',
         });
-      }
+      };
+      probe.onerror = () => {
+        pushToast({
+          type: 'error',
+          title: isRu ? 'Не удалось прочитать PNG' : 'Could not read PNG',
+          description: isRu
+            ? 'Файл повреждён или не является валидным изображением PNG.'
+            : 'The file is corrupt or not a valid PNG image.',
+        });
+      };
+      probe.src = reader.result;
     };
     reader.readAsDataURL(file);
-    e.target.value = '';
   };
 
   const handleFetchSkinByNickname = async (e: React.FormEvent) => {
@@ -323,9 +370,14 @@ export const AccountPage: React.FC = () => {
             <Button
               variant="secondary"
               onClick={() => fileInputRef.current?.click()}
+              title={
+                isRu
+                  ? 'Допустимы только скины Minecraft: PNG 64×32 или 64×64'
+                  : 'Only Minecraft skins are accepted: 64×32 or 64×64 PNG'
+              }
             >
               <ImageUp size={15} strokeWidth={1.75} />
-              {isRu ? 'Свой скин (.png)' : 'Upload Skin (.png)'}
+              {isRu ? 'Скин (64×32 / 64×64)' : 'Skin (64×32 / 64×64)'}
             </Button>
             <Button variant="secondary" onClick={() => setAddModalOpen(true)}>
               <Plus size={15} strokeWidth={1.75} />
@@ -347,27 +399,6 @@ export const AccountPage: React.FC = () => {
               <Sparkles size={15} className="text-[var(--accent-secondary)]" />
               {isRu ? '3D Скин, слои и плащ 144 Гц' : '3D Pixel Skin & 144Hz Cape'}
             </h2>
-            <div className="inline-flex items-center rounded-[8px] bg-white/[0.04] border border-white/[0.08] p-0.5 text-[11px]">
-              {(['classic', 'slim'] as const).map((model) => {
-                const selectedModel = (active.skinModel ?? 'classic') === model;
-                return (
-                  <button
-                    key={model}
-                    type="button"
-                    onClick={() =>
-                      setCustomSkinForActive(active.customSkinDataUrl ?? null, model)
-                    }
-                    className={`px-2 py-0.5 rounded-[6px] capitalize font-medium cursor-pointer ${
-                      selectedModel
-                        ? 'bg-[var(--accent-subtle)] text-white'
-                        : 'text-[var(--text-muted)] hover:text-white'
-                    }`}
-                  >
-                    {model === 'classic' ? 'Steve 4px' : 'Alex 3px'}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           <Character3DViewer
@@ -406,8 +437,8 @@ export const AccountPage: React.FC = () => {
           </form>
 
           {/* Built-in Skin Presets */}
-          <div className="grid grid-cols-4 gap-2">
-            {(['winvisual', 'slim', 'classic', 'obsidian'] as const).map((preset) => {
+          <div className="grid grid-cols-2 gap-2">
+            {(['winvisual', 'obsidian'] as const).map((preset) => {
               const selected = !active.customSkinDataUrl && active.skinPreset === preset;
               return (
                 <button
@@ -616,8 +647,8 @@ export const AccountPage: React.FC = () => {
             <label className="text-[12.5px] font-medium text-[var(--text-secondary)]">
               {isRu ? 'Пресет скина' : 'Skin Preset'}
             </label>
-            <div className="grid grid-cols-4 gap-2.5">
-              {(['winvisual', 'slim', 'classic', 'obsidian'] as const).map((preset) => (
+            <div className="grid grid-cols-2 gap-2.5">
+              {(['winvisual', 'obsidian'] as const).map((preset) => (
                 <button
                   key={preset}
                   type="button"

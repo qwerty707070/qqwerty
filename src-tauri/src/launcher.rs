@@ -851,6 +851,10 @@ pub async fn prepare_and_launch_minecraft(
 ) -> Result<u32, String> {
     let http = build_http_client()?;
     let game_dir = expand_tilde(&req.game_directory);
+
+    // Build the complete WinVisual game folder (EvoVisual-style) before touching anything else
+    scaffold_winvisual_game_dir(&game_dir)?;
+
     let versions_dir = game_dir.join("versions");
     let libraries_dir = game_dir.join("libraries");
     let assets_dir = game_dir.join("assets");
@@ -859,6 +863,14 @@ pub async fn prepare_and_launch_minecraft(
 
     // Clean any leftover `.wvpart.*` temp files from prior cancelled launches
     sweep_orphan_wvpart_files(&game_dir);
+    let _ = app.emit(
+        "logs://line",
+        format!(
+            "[GAME-DIR] WinVisual folder ready: {} — {} structured folders (mods, resourcepacks, shaderpacks, config, logs, screenshots, ...)",
+            game_dir.display(),
+            WINVISUAL_GAME_SUBFOLDERS.len()
+        ),
+    );
     let _ = app.emit(
         "logs://line",
         format!(
@@ -1405,4 +1417,110 @@ pub fn ensure_clean_dir(dir: &Path) -> Result<(), String> {
         std::fs::remove_dir_all(dir).map_err(|e| e.to_string())?;
     }
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())
+}
+
+// ── WinVisual game directory (EvoVisual-style folder structure) ──────────────────────────────
+pub const WINVISUAL_GAME_SUBFOLDERS: &[&str] = &[
+    "mods",
+    "resourcepacks",
+    "shaderpacks",
+    "config",
+    "logs",
+    "screenshots",
+    "saves",
+    "versions",
+    "libraries",
+    "assets",
+    "runtime",
+    "mods_cache",
+    "shader_cache",
+];
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameDirEntry {
+    pub name: String,
+    pub size_bytes: u64,
+    pub files: u32,
+}
+
+fn dir_stats(dir: &Path) -> (u64, u32) {
+    let mut size: u64 = 0;
+    let mut files: u32 = 0;
+    let mut queue: Vec<PathBuf> = vec![dir.to_path_buf()];
+    while let Some(cur) = queue.pop() {
+        let Ok(children) = std::fs::read_dir(&cur) else {
+            continue;
+        };
+        for child in children.flatten() {
+            let p = child.path();
+            if p.is_dir() {
+                queue.push(p);
+            } else if p.is_file() {
+                files += 1;
+                size += p.metadata().map(|m| m.len()).unwrap_or(0);
+            }
+        }
+    }
+    (size, files)
+}
+
+pub fn collect_game_dir_entries(game_dir: &Path) -> Vec<GameDirEntry> {
+    let Ok(dirents) = std::fs::read_dir(game_dir) else {
+        return Vec::new();
+    };
+    let mut entries = Vec::new();
+    for entry in dirents.flatten() {
+        let p = entry.path();
+        if !p.is_dir() {
+            continue;
+        }
+        let (size, files) = dir_stats(&p);
+        entries.push(GameDirEntry {
+            name: entry.file_name().to_string_lossy().to_string(),
+            size_bytes: size,
+            files,
+        });
+    }
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    entries
+}
+
+/// Creates the full WinVisual game folder structure (like EvoVisual):
+/// mods/, resourcepacks/, shaderpacks/, config/, logs/, screenshots/, saves/,
+/// versions/, libraries/, assets/, runtime/, mods_cache/, shader_cache/
+pub fn scaffold_winvisual_game_dir(game_dir: &Path) -> Result<Vec<GameDirEntry>, String> {
+    std::fs::create_dir_all(game_dir).map_err(|e| e.to_string())?;
+    for sub in WINVISUAL_GAME_SUBFOLDERS {
+        std::fs::create_dir_all(game_dir.join(sub)).map_err(|e| e.to_string())?;
+    }
+    Ok(collect_game_dir_entries(game_dir))
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameDirReport {
+    pub ok: bool,
+    pub dir: String,
+    pub display_dir: String,
+    pub folders: Vec<GameDirEntry>,
+}
+
+/// Scaffolds the WinVisual folder and returns a serialisable report for the UI.
+pub fn init_game_directory_report(game_directory: &str) -> Result<GameDirReport, String> {
+    let abs = expand_tilde(game_directory);
+    let folders = scaffold_winvisual_game_dir(&abs)?;
+    let display = if let Some(home) = dirs::home_dir() {
+        abs.strip_prefix(home)
+            .map(|rel| format!("~/{}", rel.to_string_lossy()))
+            .unwrap_or_else(|_| abs.to_string_lossy().to_string())
+    } else {
+        abs.to_string_lossy().to_string()
+    };
+    Ok(GameDirReport {
+        ok: true,
+        dir: abs.to_string_lossy().to_string(),
+        display_dir: display,
+        folders,
+    })
 }

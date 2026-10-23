@@ -95,10 +95,12 @@ export async function installAndVerifyClientBuild(options: {
       simulate_error: simulateNetworkDrop ? '1' : '0',
     });
 
-    const response = await fetch(
-      `/api/download/${encodeURIComponent(versionId)}/${encodeURIComponent(fileId)}?${params.toString()}`,
-      { signal, cache: 'no-store' }
-    );
+    // Real embedded artifacts (e.g. the WinVisual client mod JAR) stream from their own URL
+    const artifactUrl = artifact.url
+      ? `${artifact.url}${artifact.url.includes('?') ? '&' : '?'}${params.toString()}`
+      : `/api/download/${encodeURIComponent(versionId)}/${encodeURIComponent(fileId)}?${params.toString()}`;
+
+    const response = await fetch(artifactUrl, { signal, cache: 'no-store' });
 
     if (!response.ok || !response.body) {
       let detail = `HTTP ${response.status}`;

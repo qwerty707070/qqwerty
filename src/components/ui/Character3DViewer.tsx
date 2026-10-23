@@ -547,10 +547,14 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
           const nextFrac = (i + 1) / segs;
           const wave1 = Math.sin(tSec * 4.0 - frac * 3.0) * (5 + frac * 14);
           const wave2 = Math.sin(tSec * 4.0 - nextFrac * 3.0) * (5 + nextFrac * 14);
-          const y1 = -24 + frac * 84;
-          const y2 = -24 + nextFrac * 84;
-          const z1 = -9.5 - frac * 16 - wave1 * 0.6;
-          const z2 = -9.5 - nextFrac * 16 - wave2 * 0.6;
+          // The cape hangs from the neck — its top edge sits strictly below the hat bottom
+          // (y >= -16.2 > -16.4) and behind the torso back face (z <= -9.2 < -8.5) for the
+          // entire wave cycle, so it can never clip through the head, neck or torso at any
+          // rotation angle.
+          const y1 = -16.2 + frac * 76.2;
+          const y2 = -16.2 + nextFrac * 76.2;
+          const z1 = -10 - frac * 15 - wave1 * (0.16 + frac * 0.62);
+          const z2 = -10 - nextFrac * 15 - wave2 * (0.16 + nextFrac * 0.62);
           const w1 = 19 + frac * 6;
           const w2 = 19 + nextFrac * 6;
 
@@ -561,7 +565,9 @@ export const Character3DViewer: React.FC<Character3DViewerProps> = ({
             [-w2, y2, z2],
           ].map(([x, y, z]) => projectPt(x, y, z, yaw));
 
-          const avgZ = (pts[0].z + pts[1].z + pts[2].z + pts[3].z) * 0.25;
+          // Painter's sort: cape is an attached back layer, so give it a small depth bias
+          // to guarantee body faces always win over it in any residual pixel overlap.
+          const avgZ = (pts[0].z + pts[1].z + pts[2].z + pts[3].z) * 0.25 + 0.6;
           const segIndex = i;
 
           primitives.push({

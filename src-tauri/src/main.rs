@@ -10,9 +10,10 @@ use auth::{
 };
 use base64::Engine;
 use launcher::{
-    build_http_client, cancel_active_launch_and_processes, current_active_client_pid,
-    ensure_clean_dir, expand_tilde, install_embedded_winvisual_client_mod, resolve_java_executable,
-    run_abortable_launch, sync_modrinth_optimization_bundle, terminate_active_client_processes,
+    build_http_client, cancel_active_launch_and_processes, collect_game_dir_entries,
+    current_active_client_pid, ensure_clean_dir, expand_tilde, init_game_directory_report,
+    install_embedded_winvisual_client_mod, resolve_java_executable, run_abortable_launch,
+    sync_modrinth_optimization_bundle, terminate_active_client_processes, GameDirEntry,
     LaunchRequest, ModBundleResult,
 };
 use rfd::AsyncFileDialog;
@@ -336,6 +337,20 @@ fn clear_client_cache(game_directory: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn init_game_directory(game_directory: String) -> Result<launcher::GameDirReport, String> {
+    init_game_directory_report(&game_directory)
+}
+
+#[tauri::command]
+fn get_game_directory_tree(game_directory: String) -> Result<Vec<GameDirEntry>, String> {
+    let abs = expand_tilde(&game_directory);
+    if !abs.exists() {
+        return Ok(Vec::new());
+    }
+    Ok(collect_game_dir_entries(&abs))
+}
+
+#[tauri::command]
 fn open_game_folder(game_directory: String) -> Result<(), String> {
     let target = expand_tilde(&game_directory);
     std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
@@ -368,6 +383,8 @@ fn main() {
             sync_optimization_mods,
             pick_directory_dialog,
             pick_java_binary_dialog,
+            init_game_directory,
+            get_game_directory_tree,
             fetch_minecraft_skin,
             save_hud_config_disk,
             load_hud_config_disk,

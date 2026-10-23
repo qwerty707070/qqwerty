@@ -268,9 +268,28 @@ export const CLIENT_VERSIONS = [
 
 export const NEWS_ARTICLES = [];
 
-export function buildManifest(versionId) {
+export function buildManifest(versionId, rootDir = process.cwd()) {
   const found = CLIENT_VERSIONS.find((v) => v.id === versionId) ?? CLIENT_VERSIONS[0];
   const baseBytes = Math.round(found.sizeMb * 1024 * 1024);
+
+  // First artifact is the REAL embedded WinVisual client mod JAR shipped inside the launcher
+  const modJarFile = `winvisual-client-${found.minecraftVersion}.jar`;
+  const modJarPath = path.join(rootDir, 'public', 'mods', modJarFile);
+  const embeddedArtifact = (() => {
+    if (fs.existsSync(modJarPath)) {
+      const buf = fs.readFileSync(modJarPath);
+      return {
+        id: modJarFile,
+        filename: modJarFile,
+        label: 'WinVisual Client Mod (embedded)',
+        sizeBytes: buf.length,
+        sha256: crypto.createHash('sha256').update(buf).digest('hex'),
+        url: `/api/downloads/mod/${found.minecraftVersion}`,
+      };
+    }
+    return null;
+  })();
+
   const parts = [
     { filename: `${found.id}-rendercore.jar`, ratio: 0.34, label: 'RenderCore Visual Engine' },
     { filename: `${found.id}-shaders-pack.bundle`, ratio: 0.28, label: 'GLSL Atmospheric Shaders' },
@@ -291,7 +310,8 @@ export function buildManifest(versionId) {
     };
   });
 
-  const totalBytes = artifacts.reduce((acc, item) => acc + item.sizeBytes, 0);
+  const allArtifacts = embeddedArtifact ? [embeddedArtifact, ...artifacts] : artifacts;
+  const totalBytes = allArtifacts.reduce((acc, item) => acc + item.sizeBytes, 0);
 
   return {
     versionId: found.id,
@@ -299,8 +319,131 @@ export function buildManifest(versionId) {
     minecraftVersion: found.minecraftVersion,
     totalBytes,
     totalSizeBytes: totalBytes,
-    artifacts,
+    artifacts: allArtifacts,
   };
+}
+
+// ── WinVisual game directory (EvoVisual-style folder structure) ──────────────────────────────
+const WINVISUAL_GAME_SUBFOLDERS = [
+  'mods',
+  'resourcepacks',
+  'shaderpacks',
+  'config',
+  'logs',
+  'screenshots',
+  'saves',
+  'versions',
+  'libraries',
+  'assets',
+  'runtime',
+  'mods_cache',
+  'shader_cache',
+];
+
+function resolveGameDir(rawDir, rootDir = process.cwd()) {
+  const clean = String(rawDir || '').trim();
+  let abs;
+  if (clean.startsWith('~/')) {
+    abs = path.join(os.homedir(), clean.slice(2));
+  } else if (path.isAbsolute(clean)) {
+    abs = clean;
+  } else {
+    abs = path.join(os.homedir(), clean);
+  }
+  // Safety: forbid escaping into system directories
+  const norm = path.normalize(abs);
+  if (!norm.startsWith(os.homedir()) && !norm.startsWith(rootDir)) {
+    return null;
+  }
+  return norm;
+}
+
+function formatGameDirDisplay(absDir) {
+  const home = os.homedir();
+  if (absDir === home) return '~';
+  if (absDir.startsWith(`${home}${path.sep}`)) {
+    return `~${absDir.slice(home.length).split(path.sep).join('/')}`;
+  }
+  return absDir.split(path.sep).join('/');
+}
+
+function collectGameDirEntries(absDir) {
+  const entries = [];
+  let dirents = [];
+  try {
+    dirents = fs.readdirSync(absDir, { withFileTypes: true });
+  } catch {
+    return entries;
+  }
+  for (const d of dirents) {
+    if (!d.isDirectory()) continue;
+    const full = path.join(absDir, d.name);
+    let sizeBytes = 0;
+    let files = 0;
+    const stack = [full];
+    while (stack.length > 0) {
+      const cur = stack.pop();
+      let children = [];
+      try {
+        children = fs.readdirSync(cur, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const c of children) {
+        const cp = path.join(cur, c.name);
+        if (c.isDirectory()) {
+          stack.push(cp);
+        } else if (c.isFile()) {
+          files += 1;
+          try {
+            sizeBytes += fs.statSync(cp).size;
+          } catch {
+            // ignore unreadable file
+          }
+        }
+      }
+    }
+    entries.push({ name: d.name, sizeBytes, files });
+  }
+  return entries.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function scaffoldWinvisualGameDir(absDir, rootDir = process.cwd()) {
+  const createdFolders = [];
+  for (const sub of WINVISUAL_GAME_SUBFOLDERS) {
+    const target = path.join(absDir, sub);
+    if (!fs.existsSync(target)) {
+      fs.mkdirSync(target, { recursive: true });
+      createdFolders.push(sub);
+    }
+  }
+
+  // Copy the real embedded WinVisual client mod JARs into mods/
+  const modsDir = path.join(absDir, 'mods');
+  const modsJars = [];
+  for (const ver of ['1.16.5', '1.21.4', '1.21.11']) {
+    const jarFile = `winvisual-client-${ver}.jar`;
+    const src = path.join(rootDir, 'public', 'mods', jarFile);
+    const dest = path.join(modsDir, jarFile);
+    if (fs.existsSync(src) && !fs.existsSync(dest)) {
+      fs.copyFileSync(src, dest);
+    }
+    if (fs.existsSync(dest)) {
+      modsJars.push(jarFile);
+    }
+  }
+
+  // Real launcher log line inside the real logs/ folder
+  const logDir = path.join(absDir, 'logs');
+  const ts = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, ' UTC');
+  const logLine = `[${ts}] [WINVISUAL] Game directory initialized: ${WINVISUAL_GAME_SUBFOLDERS.length} folders, ${modsJars.length} embedded client mods in mods/\n`;
+  try {
+    fs.appendFileSync(path.join(logDir, 'launcher-preview.log'), logLine);
+  } catch {
+    // ignore
+  }
+
+  return { createdFolders, modsJars };
 }
 
 export function handleApiRequest(req, res, rootDir = process.cwd()) {
@@ -334,7 +477,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.7.3',
+        launcherVersion: '2.7.4',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: cpuCount,
@@ -420,7 +563,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     });
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ version: '2.7.3', mods: entries }));
+    res.end(JSON.stringify({ version: '2.7.4', mods: entries }));
     return true;
   }
 
@@ -572,11 +715,68 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.7.3-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.7.4-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
       }
+    );
+    return true;
+  }
+
+  if (pathname === '/api/game-dir/init') {
+    const rawDir = (parsed.searchParams.get('dir') || '~/WinVisual').trim();
+    const absDir = resolveGameDir(rawDir, rootDir);
+    if (!absDir) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: 'Invalid game directory path' }));
+      return true;
+    }
+    try {
+      fs.mkdirSync(absDir, { recursive: true });
+      const { modsJars } = scaffoldWinvisualGameDir(absDir, rootDir);
+      const folders = collectGameDirEntries(absDir);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(
+        JSON.stringify({
+          ok: true,
+          dir: absDir,
+          displayDir: formatGameDirDisplay(absDir),
+          folders,
+          modsJars,
+        })
+      );
+    } catch (err) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : 'Scaffold failed' }));
+    }
+    return true;
+  }
+
+  if (pathname === '/api/game-dir/tree') {
+    const rawDir = (parsed.searchParams.get('dir') || '~/WinVisual').trim();
+    const absDir = resolveGameDir(rawDir, rootDir);
+    if (!absDir) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: 'Invalid game directory path' }));
+      return true;
+    }
+    const exists = fs.existsSync(absDir);
+    const folders = exists ? collectGameDirEntries(absDir) : [];
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        ok: exists,
+        exists,
+        dir: absDir,
+        displayDir: formatGameDirDisplay(absDir),
+        folders,
+      })
     );
     return true;
   }
@@ -590,7 +790,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     );
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify(buildManifest(versionId)));
+    res.end(JSON.stringify(buildManifest(versionId, rootDir)));
     return true;
   }
 
@@ -643,7 +843,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
-    res.setHeader('X-Launcher-Version', '2.7.3');
+    res.setHeader('X-Launcher-Version', '2.7.4');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;
