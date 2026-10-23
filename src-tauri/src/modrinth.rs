@@ -111,15 +111,14 @@ pub async fn search_modrinth_resources(
     let facets_json = serde_json::to_string(&facets).map_err(|e| e.to_string())?;
 
     let clean_query = query.trim();
-    let mut req = http
-        .get(format!("{MODRINTH_API}/v2/search"))
-        .query(&[
-            ("limit", "24"),
-            ("index", "downloads"),
-            ("facets", facets_json.as_str()),
-        ]);
+    let mut req = http.get(format!("{MODRINTH_API}/v2/search"));
+    let _ = req.query(&[
+        ("limit", "24"),
+        ("index", "downloads"),
+        ("facets", facets_json.as_str()),
+    ]);
     if !clean_query.is_empty() {
-        req = req.query(&[("query", clean_query)]);
+        let _ = req.query(&[("query", clean_query)]);
     }
 
     let body: Vec<ApiSearchResult> = req
@@ -164,11 +163,10 @@ pub async fn download_modrinth_resource(
     );
 
     let game_versions_json = format!("[\"{game_version}\"]");
-    let mut req = http
-        .get(format!("{MODRINTH_API}/v2/project/{slug}/version"))
-        .query(&[("game_versions", &game_versions_json)]);
+    let mut req = http.get(format!("{MODRINTH_API}/v2/project/{slug}/version"));
+    let _ = req.query(&[("game_versions", game_versions_json.as_str())]);
     if !is_pack {
-        req = req.query(&[("loaders", "[\"fabric\"]")]);
+        let _ = req.query(&[("loaders", "[\"fabric\"]")]);
     }
 
     let versions: Vec<ApiVersion> = req
