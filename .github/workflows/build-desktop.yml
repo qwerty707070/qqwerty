@@ -131,6 +131,26 @@ jobs:
           npm ci
           npm run build
 
+      - name: Cargo check with diagnostic issue on failure
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd src-tauri
+          set +e
+          cargo check --release 2>&1 | tail -250 > /tmp/cargo-check.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            BODY="Compiler diagnostics (auto-generated):\n\`\`\`\n$(cat /tmp/cargo-check.log)\n\`\`\`"
+            gh api repos/${GITHUB_REPOSITORY}/issues --method POST \
+              -f "title=Rust diagnostic (auto) — cargo check failed" \
+              -f "body=${BODY}" || true
+            echo "cargo check failed — full compiler output posted as a GitHub issue"
+            exit 1
+          fi
+          echo "cargo check passed"
+
       - name: Build Tauri Desktop Installers & Publish Release Assets
         uses: tauri-apps/tauri-action@v0
         env:
