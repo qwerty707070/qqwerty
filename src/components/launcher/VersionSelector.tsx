@@ -22,7 +22,6 @@ export const VersionSelector: React.FC = () => {
   const versions = useLauncherStore((s) => s.versions);
   const selectedVersionId = useLauncherStore((s) => s.selectedVersionId);
   const selectVersion = useLauncherStore((s) => s.selectVersion);
-  const setCurrentPage = useLauncherStore((s) => s.setCurrentPage);
   const language = useSettingsStore((s) => s.language);
 
   const isRu = language === 'ru';
@@ -98,17 +97,7 @@ export const VersionSelector: React.FC = () => {
           className="rounded-[16px] popover-panel p-2 space-y-1 select-none"
         >
           <div className="px-3 py-2 flex items-center justify-between text-[11px] text-[var(--text-muted)] font-medium border-b border-white/[0.07] mb-1">
-            <span>{isRu ? 'Доступные сборки Fabric' : 'Fabric Builds'}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                setCurrentPage('versions');
-              }}
-              className="text-[var(--accent-secondary)] hover:underline cursor-pointer"
-            >
-              {isRu ? 'Все версии →' : 'All builds →'}
-            </button>
+            <span>{isRu ? 'Доступные сборки Fabric' : 'Available Builds'}</span>
           </div>
 
           {versions.map((ver) => {
@@ -140,7 +129,7 @@ export const VersionSelector: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-[11px] text-[var(--text-muted)] font-mono truncate mt-0.5">
-                      {ver.loader} • {ver.fpsBoost}
+                      {ver.loader}
                     </p>
                   </div>
                 </div>

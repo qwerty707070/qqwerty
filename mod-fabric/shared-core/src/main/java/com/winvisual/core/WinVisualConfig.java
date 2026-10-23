@@ -378,7 +378,7 @@ public final class WinVisualConfig {
         try {
             StringBuilder sb = new StringBuilder(4096);
             sb.append("{\n");
-            sb.append("  \"version\": \"2.7.2\",\n");
+            sb.append("  \"version\": \"2.7.3\",\n");
             sb.append("  \"theme\": \"").append(theme().id).append("\",\n");
             sb.append("  \"equippedCape\": \"").append(escape(equippedCape)).append("\",\n");
             sb.append("  \"crosshair\": {\n");

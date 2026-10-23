@@ -219,7 +219,7 @@ export const CLIENT_VERSIONS = [
     updatedAt: '2026-10-23',
     sizeMb: 31.4,
     loader: 'WinVisual 1.21.11 • Fabric',
-    fpsBoost: '+165% FPS',
+    fpsBoost: '',
     modulesCount: 28,
     summaryEn:
       'Flagship WinVisual 1.21.11 build with embedded client mod: 2D/3D ESP, Rotating Minimap, ChinaHat, Crystal Wings, JumpCircles, 11 HUD 2.0 widgets, and Right-Shift Studio.',
@@ -237,7 +237,7 @@ export const CLIENT_VERSIONS = [
     updatedAt: '2026-10-23',
     sizeMb: 29.9,
     loader: 'WinVisual 1.21.4 • Fabric',
-    fpsBoost: '+148% FPS',
+    fpsBoost: '',
     modulesCount: 28,
     summaryEn:
       'Tournament WinVisual 1.21.4 build with embedded client mod: Player/Item/Pearl ESP, Target HUD 2.0, Keystrokes + CPS, 3D Trails, HitParticles, and live config sync.',
@@ -255,7 +255,7 @@ export const CLIENT_VERSIONS = [
     updatedAt: '2026-10-23',
     sizeMb: 23.8,
     loader: 'WinVisual 1.16.5 • Fabric',
-    fpsBoost: '+125% FPS',
+    fpsBoost: '',
     modulesCount: 28,
     summaryEn:
       'Classic PvP WinVisual 1.16.5 build with embedded client mod: all 28 WinVisual + ESP modules, 6 neon themes, 3D cosmetics, and Right-Shift ClickGUI.',
@@ -334,7 +334,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.7.2',
+        launcherVersion: '2.7.3',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: cpuCount,
@@ -420,7 +420,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     });
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ version: '2.7.2', mods: entries }));
+    res.end(JSON.stringify({ version: '2.7.3', mods: entries }));
     return true;
   }
 
@@ -572,7 +572,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.7.2-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.7.3-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
@@ -643,7 +643,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
-    res.setHeader('X-Launcher-Version', '2.7.2');
+    res.setHeader('X-Launcher-Version', '2.7.3');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;

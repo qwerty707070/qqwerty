@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import {
   ChevronLeft,
@@ -20,36 +20,6 @@ import { useVisualClientStore, type ShaderCapeId } from '../stores/visualClientS
 import { useSettingsStore } from '../stores/settingsStore';
 import { useNotificationStore } from '../stores/notificationStore';
 
-const VISUAL_PROFILES: {
-  id: 'cinematic' | 'competitive' | 'pure-fps';
-  nameRu: string;
-  nameEn: string;
-  descRu: string;
-  descEn: string;
-}[] = [
-  {
-    id: 'cinematic',
-    nameRu: 'Obsidian Atmospheric',
-    nameEn: 'Obsidian Atmospheric',
-    descRu: 'Реалистичная атмосфера и динамическое освещение',
-    descEn: 'Realistic atmosphere & dynamic GLSL lighting',
-  },
-  {
-    id: 'competitive',
-    nameRu: 'Pulse Competitive',
-    nameEn: 'Pulse Competitive',
-    descRu: 'Target HUD 2.0, чёткие контуры и 0% задержки кадра',
-    descEn: 'Target HUD 2.0, crisp silhouettes & zero frame lag',
-  },
-  {
-    id: 'pure-fps',
-    nameRu: 'Feather Ultra FPS',
-    nameEn: 'Feather Ultra FPS',
-    descRu: 'Пакетный рендер чанков и максимальная герцовка',
-    descEn: 'Async chunk batching & peak refresh stability',
-  },
-];
-
 const HERO_CAPES: { id: ShaderCapeId; label: string }[] = [
   { id: 'nebula', label: 'Nebula Starlight' },
   { id: 'pulse', label: 'Pulse Crimson' },
@@ -58,19 +28,15 @@ const HERO_CAPES: { id: ShaderCapeId; label: string }[] = [
 ];
 
 export const HomePage: React.FC = () => {
-  const [presetIdx, setPresetIdx] = useState(0);
-
   const setCurrentPage = useLauncherStore((s) => s.setCurrentPage);
-  const telemetry = useLauncherStore((s) => s.telemetry);
   const { accounts, activeAccountId } = useAccountStore();
-  const { equippedCape, setEquippedCape, applyPresetProfile, modules } = useVisualClientStore();
-  const { language, ramAllocationMb, notificationsEnabled } = useSettingsStore();
+  const { equippedCape, setEquippedCape, modules } = useVisualClientStore();
+  const { language, notificationsEnabled } = useSettingsStore();
   const pushToast = useNotificationStore((s) => s.pushToast);
 
   const isRu = language === 'ru';
   const activeAccount = accounts.find((a) => a.id === activeAccountId) ?? accounts[0];
   const haloEnabled = modules.some((m) => m.id === 'china-hat' && m.enabled);
-  const activePreset = VISUAL_PROFILES[presetIdx];
 
   const currentCapeIndex = Math.max(
     0,
@@ -86,22 +52,6 @@ export const HomePage: React.FC = () => {
       pushToast({
         type: 'info',
         title: isRu ? `Плащ: ${chosen.label}` : `Cape: ${chosen.label}`,
-      });
-    }
-  };
-
-  const cycleVisualProfile = () => {
-    const next = (presetIdx + 1) % VISUAL_PROFILES.length;
-    setPresetIdx(next);
-    const chosen = VISUAL_PROFILES[next];
-    applyPresetProfile(chosen.id);
-    if (notificationsEnabled) {
-      pushToast({
-        type: 'info',
-        title: isRu
-          ? `Визуальный пресет: ${chosen.nameRu}`
-          : `Visual Preset: ${chosen.nameEn}`,
-        description: isRu ? chosen.descRu : chosen.descEn,
       });
     }
   };
@@ -247,12 +197,12 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* Bottom 3 Illustrated Shader & Telemetry Cards matching the WinVisual Concept */}
+      {/* Bottom 3 Illustrated Navigation Cards (exact preserved backgrounds, updated titles) */}
       <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3.5 shrink-0">
-        {/* Card 1: Evo Atmospheric with Purple Clouds Shader Backdrop */}
+        {/* Card 1: Новости (with preserved Purple Clouds Shader Backdrop) */}
         <Card
           interactive
-          onClick={cycleVisualProfile}
+          onClick={() => setCurrentPage('news')}
           className="h-[138px] p-0 cursor-pointer"
         >
           <div
@@ -276,10 +226,12 @@ export const HomePage: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-[15px] font-bold text-[#FFFFFF] truncate">
-                  {isRu ? activePreset.nameRu : activePreset.nameEn}
+                  {isRu ? 'Новости' : 'News'}
                 </p>
                 <p className="text-[11.5px] text-[#B4B6C6] leading-snug line-clamp-2 mt-0.5">
-                  {isRu ? activePreset.descRu : activePreset.descEn}
+                  {isRu
+                    ? 'Официальные новости и обновления проекта'
+                    : 'Official announcements and project updates'}
                 </p>
               </div>
             </div>
@@ -287,7 +239,7 @@ export const HomePage: React.FC = () => {
           </div>
         </Card>
 
-        {/* Card 2: Starlight 144Hz with Moonlit Lake Reflection Backdrop */}
+        {/* Card 2: Аккаунты (with preserved Moonlit Lake Reflection Backdrop) */}
         <Card
           interactive
           onClick={() => setCurrentPage('account')}
@@ -314,12 +266,12 @@ export const HomePage: React.FC = () => {
               </div>
               <div className="min-w-0">
                 <p className="text-[15px] font-bold text-[#FFFFFF] truncate">
-                  Starlight 144Hz
+                  {isRu ? 'Аккаунты' : 'Accounts'}
                 </p>
                 <p className="text-[11.5px] text-[#B4B6C6] leading-snug line-clamp-2 mt-0.5">
                   {isRu
-                    ? 'Плавная графика, максимум FPS и реалистичные шейдеры'
-                    : 'Silky 144Hz frame pacing, peak FPS & realistic shaders'}
+                    ? 'Управление профилями, никами и 3D-скином'
+                    : 'Manage profiles, nicknames & 3D pixel skin'}
                 </p>
               </div>
             </div>
@@ -327,7 +279,7 @@ export const HomePage: React.FC = () => {
           </div>
         </Card>
 
-        {/* Card 3: Runtime & G1GC Telemetry with Live Glowing Neon Waveform */}
+        {/* Card 3: Настройки (with preserved Live Glowing Neon Waveform Backdrop) */}
         <Card
           interactive
           onClick={() => setCurrentPage('settings')}
@@ -339,14 +291,13 @@ export const HomePage: React.FC = () => {
                 <Cpu size={19} strokeWidth={1.85} />
               </div>
               <div className="min-w-0">
-                <p className="text-[15px] font-bold text-[#FFFFFF] truncate font-mono tracking-tight">
-                  {(ramAllocationMb / 1024).toFixed(1)} GB G1GC •{' '}
-                  {telemetry ? `${telemetry.latencyMs}ms` : '9ms'}
+                <p className="text-[15px] font-bold text-[#FFFFFF] truncate">
+                  {isRu ? 'Настройки' : 'Settings'}
                 </p>
                 <p className="text-[11.5px] text-[#B4B6C6] leading-snug line-clamp-2 mt-0.5">
                   {isRu
-                    ? 'Оптимизация под большие миры и высокую стабильность'
-                    : 'Tuned for large worlds & zero-jitter stability'}
+                    ? 'Выделение памяти, Java и параметры запуска'
+                    : 'Memory allocation, Java & launch preferences'}
                 </p>
               </div>
             </div>

@@ -286,7 +286,7 @@ export const VersionsPage: React.FC = () => {
                         {ver.name}
                       </h2>
                       <p className="text-[11.5px] font-mono text-[#B0B2C2] truncate">
-                        {javaTag} • {ver.fpsBoost}
+                        {javaTag} • Fabric
                       </p>
                     </div>
                   </div>

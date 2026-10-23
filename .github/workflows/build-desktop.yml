@@ -47,9 +47,9 @@ jobs:
           /opt/gradle-8.11.1/bin/gradle -p mod-fabric/mc-1.21.4 build --no-daemon --stacktrace
           /opt/gradle-9.1.0/bin/gradle  -p mod-fabric/mc-1.21.11 build --no-daemon --stacktrace
 
-          cp mod-fabric/mc-1.16.5/build/libs/winvisual-client-1.16.5-2.7.2.jar public/mods/winvisual-client-1.16.5.jar
-          cp mod-fabric/mc-1.21.4/build/libs/winvisual-client-1.21.4-2.7.2.jar public/mods/winvisual-client-1.21.4.jar
-          cp mod-fabric/mc-1.21.11/build/libs/winvisual-client-1.21.11-2.7.2.jar public/mods/winvisual-client-1.21.11.jar
+          cp mod-fabric/mc-1.16.5/build/libs/winvisual-client-1.16.5-2.7.3.jar public/mods/winvisual-client-1.16.5.jar
+          cp mod-fabric/mc-1.21.4/build/libs/winvisual-client-1.21.4-2.7.3.jar public/mods/winvisual-client-1.21.4.jar
+          cp mod-fabric/mc-1.21.11/build/libs/winvisual-client-1.21.11-2.7.3.jar public/mods/winvisual-client-1.21.11.jar
 
           python3 - <<'PY'
           import hashlib, zipfile
@@ -136,8 +136,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v2.7.2
-          releaseName: "WinVisual Launcher v2.7.2 — WinVisual 1.16.5 / 1.21.4 / 1.21.11"
+          tagName: v2.7.3
+          releaseName: "WinVisual Launcher v2.7.3 — WinVisual 1.16.5 / 1.21.4 / 1.21.11"
           releaseBody: "Native Tauri v2 Desktop Installers (Windows .exe / .msi, macOS .dmg, Linux .deb / .rpm / .AppImage) with embedded source-compiled client builds WinVisual 1.16.5, WinVisual 1.21.4, and WinVisual 1.21.11 (28 visual & ESP modules, 11 draggable HUD 2.0 widgets, ChinaHat, 3D Crystal Wings, JumpCircles, Trails, Right-Shift Studio, and live config/winvisual-hud.json sync)."
           releaseDraft: false
           prerelease: false
@@ -148,7 +148,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v2.7.2 \
+          gh release upload v2.7.3 \
             public/mods/winvisual-client-1.16.5.jar \
             public/mods/winvisual-client-1.21.4.jar \
             public/mods/winvisual-client-1.21.11.jar \

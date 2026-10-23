@@ -34,7 +34,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.7.2 telemetry + strict 3-version WinVisual catalog
+// 1. Validate live HTTP API endpoints + v2.7.3 telemetry + strict 3-version WinVisual catalog
 const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -46,13 +46,13 @@ const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.7.2' ||
+  status.launcherVersion !== '2.7.3' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
   !status.java?.path
 ) {
-  throw new Error('Invalid /api/status v2.7.2 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.7.3 telemetry schema: ' + JSON.stringify(status));
 }
 
 if (!Array.isArray(embeddedMods.mods) || embeddedMods.mods.length !== 3) {
@@ -119,7 +119,7 @@ for (const mc of expectedMcVersions) {
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.7.2',
+  version: '2.7.3',
   themeId: 'violet',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
@@ -213,8 +213,14 @@ for (const lang of ['ru', 'en']) {
       throw new Error(`Active userXXXXX nick missing from rendered route=${route}`);
     }
     if (route === 'home' && lang === 'ru') {
-      if (!html.includes('С возвращением') || !html.includes(`${activeNick}!`)) {
-        throw new Error(`Missing top-left welcome greeting on home RU route`);
+      if (
+        !html.includes('С возвращением') ||
+        !html.includes(`${activeNick}!`) ||
+        !html.includes('Новости') ||
+        !html.includes('Аккаунты') ||
+        !html.includes('Настройки')
+      ) {
+        throw new Error(`Missing top-left welcome greeting or 3 cards on home RU route`);
       }
     }
     for (const removedVer of [
@@ -230,6 +236,8 @@ for (const lang of ['ru', 'en']) {
       'Fabric 1.21.11',
       'EvoVis',
       'EvoVisual',
+      'Все версии →',
+      '% FPS',
     ]) {
       if (html.includes(removedVer)) {
         throw new Error(`Forbidden string "${removedVer}" leaked into route=${route}`);
@@ -253,7 +261,7 @@ console.log(
 );
 
 console.log(
-  `[ALL CHECKS PASSED] v2.7.2 nick=${activeNick}! + Welcome back + 0..100% Shader Split + Solid 3D Skin + Clean News + WinVisual 1.16.5 / 1.21.4 / 1.21.11 + Cancel Launch + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.7.3 nick=${activeNick}! + Новости/Аккаунты/Настройки cards + Clean VersionSelector (no Все версии / +% FPS) + 0..100% Shader Split + Solid 3D Skin + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`
