@@ -98,6 +98,12 @@ jobs:
           name: winvisual-fabric-mods
           path: public/mods
 
+      - name: Stage compiled JARs copy on Linux runner
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          mkdir -p /tmp/wv-jars
+          cp public/mods/winvisual-client-*.jar /tmp/wv-jars/
+
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
@@ -137,7 +143,7 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
-      - name: Attach standalone compiled Fabric mod JARs to GitHub Release v2.7.0
+      - name: Attach Linux bundles & compiled Fabric mod JARs + sync JARs to branch
         if: matrix.platform == 'ubuntu-22.04'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -146,4 +152,18 @@ jobs:
             public/mods/winvisual-client-1.16.5.jar \
             public/mods/winvisual-client-1.21.4.jar \
             public/mods/winvisual-client-1.21.11.jar \
+            src-tauri/target/release/bundle/deb/*.deb \
+            src-tauri/target/release/bundle/rpm/*.rpm \
+            src-tauri/target/release/bundle/appimage/*.AppImage \
             --clobber
+
+          git config user.name "WinVisual Builder"
+          git config user.email "builder@winvisual.local"
+          git fetch origin "${GITHUB_REF_NAME}"
+          git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+          cp /tmp/wv-jars/winvisual-client-*.jar public/mods/
+          if ! git diff --quiet public/mods/; then
+            git add public/mods/winvisual-client-*.jar
+            git commit -m "chore(mods): embed compiled Fabric bytecode jars for 1.16.5, 1.21.4, 1.21.11 [skip ci]"
+            git push origin "${GITHUB_REF_NAME}"
+          fi
