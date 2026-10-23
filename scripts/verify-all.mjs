@@ -34,24 +34,37 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.6.1 telemetry + strict 3-version Fabric catalog
-const [status, verAll, verStable, newsData, oauth] = await Promise.all([
+// 1. Validate live HTTP API endpoints + v2.7.0 telemetry + strict 3-version Fabric catalog
+const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=stable`).then((r) => r.json()),
   fetch(`${base}/api/news`).then((r) => r.json()),
   fetch(`${base}/api/auth/device-session`).then((r) => r.json()),
+  fetch(`${base}/api/mods/embedded`).then((r) => r.json()),
 ]);
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.6.1' ||
+  status.launcherVersion !== '2.7.0' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
   !status.java?.path
 ) {
-  throw new Error('Invalid /api/status v2.6.1 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.7.0 telemetry schema: ' + JSON.stringify(status));
+}
+
+if (!Array.isArray(embeddedMods.mods) || embeddedMods.mods.length !== 3) {
+  throw new Error('Expected 3 embedded Fabric client mods on /api/mods/embedded');
+}
+for (const entry of embeddedMods.mods) {
+  const jarRes = await fetch(`${base}${entry.downloadUrl}`);
+  const jarBuf = Buffer.from(await jarRes.arrayBuffer());
+  const actualSha = crypto.createHash('sha256').update(jarBuf).digest('hex');
+  if (jarRes.status !== 200 || jarBuf[0] !== 0x50 || jarBuf[1] !== 0x4b || actualSha !== entry.sha256) {
+    throw new Error(`Invalid JAR stream for ${entry.filename}`);
+  }
 }
 
 const expectedMcVersions = ['1.21.11', '1.21.4', '1.16.5'];
@@ -96,21 +109,22 @@ if (
   throw new Error('Generated Minecraft skin PNG is not a valid 64x64 RGBA PNG');
 }
 
-// 3. Verify version-isolated Modrinth bundle endpoint across all 3 Fabric versions
+// 3. Verify version-isolated Modrinth + Embedded WinVisual Client Mod bundle endpoint across all 3 Fabric versions
 for (const mc of expectedMcVersions) {
   const modBundle = await fetch(`${base}/api/mods/bundle?mc=${mc}`).then((r) => r.json());
-  if (!Array.isArray(modBundle.syncedMods) || modBundle.syncedMods.length !== 4) {
+  if (!Array.isArray(modBundle.syncedMods) || modBundle.syncedMods.length !== 5) {
     throw new Error(`Mod bundle sync failed for ${mc}`);
   }
 }
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.6.1',
+  version: '2.7.0',
+  themeId: 'violet',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
   hudPositions: { watermark: { x: 24, y: 20 }, 'target-hud': { x: 340, y: 212 } },
-  modules: [{ id: 'watermark', enabled: true, keybind: 'H' }],
+  modules: [{ id: 'player-esp', enabled: true, modeIndex: 0, amount: 85, keybind: 'X', keybindCode: 88 }],
   savedAt: new Date().toISOString(),
 };
 const postHudRes = await fetch(`${base}/api/config/hud`, {
@@ -221,7 +235,7 @@ console.log(
 );
 
 console.log(
-  `[ALL CHECKS PASSED] v2.6.1 nick=${activeNick} + Cancel Launch (Web + Tauri Native) + 3/3 Fabric versions + 4/4 Modrinth bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.7.0 nick=${activeNick} + Embedded EvoVis+ESP Mods (1.16.5 / 1.21.4 / 1.21.11) + Cancel Launch (Web + Tauri Native) + 5/5 Mod Bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

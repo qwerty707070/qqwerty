@@ -10,7 +10,7 @@ declare global {
 }
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.6.1';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.0';
 
 export function isTauriDesktop(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
@@ -205,6 +205,7 @@ export async function syncOptimizationModsEverywhere(
     return {
       minecraftVersion,
       syncedMods: [
+        `winvisual-client-${minecraftVersion}.jar (Embedded EvoVis + ESP)`,
         `Fabric API (${minecraftVersion})`,
         `Sodium (${minecraftVersion})`,
         `Iris Shaders (${minecraftVersion})`,
@@ -220,6 +221,30 @@ export async function syncOptimizationModsEverywhere(
     throw new Error('Failed to synchronize optimization mod bundle');
   }
   return res.json();
+}
+
+export async function installOrDownloadClientModEverywhere(
+  gameDirectory: string,
+  minecraftVersion: string
+): Promise<{ mode: 'injected' | 'downloaded'; target: string }> {
+  if (isTauriDesktop()) {
+    const dest = await window.__TAURI_INTERNALS__!.invoke<string>('export_embedded_client_mod', {
+      gameDirectory,
+      minecraftVersion,
+    });
+    return { mode: 'injected', target: dest };
+  }
+  const jarName = `winvisual-client-${minecraftVersion}.jar`;
+  const url = `/api/downloads/mod/${encodeURIComponent(minecraftVersion)}`;
+  if (hasBrowserOrigin() && typeof document !== 'undefined') {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = jarName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  return { mode: 'downloaded', target: jarName };
 }
 
 export async function resolveMinecraftSkinEverywhere(

@@ -19,6 +19,71 @@ use tokio::task::AbortHandle;
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+const EMBEDDED_WINVISUAL_MOD_1_16_5: &[u8] =
+    include_bytes!("../../public/mods/winvisual-client-1.16.5.jar");
+const EMBEDDED_WINVISUAL_MOD_1_21_4: &[u8] =
+    include_bytes!("../../public/mods/winvisual-client-1.21.4.jar");
+const EMBEDDED_WINVISUAL_MOD_1_21_11: &[u8] =
+    include_bytes!("../../public/mods/winvisual-client-1.21.11.jar");
+
+pub fn embedded_mod_bytes_for_version(minecraft_version: &str) -> Result<(&'static str, &'static [u8]), String> {
+    match minecraft_version {
+        "1.16.5" => Ok(("winvisual-client-1.16.5.jar", EMBEDDED_WINVISUAL_MOD_1_16_5)),
+        "1.21.4" => Ok(("winvisual-client-1.21.4.jar", EMBEDDED_WINVISUAL_MOD_1_21_4)),
+        "1.21.11" => Ok(("winvisual-client-1.21.11.jar", EMBEDDED_WINVISUAL_MOD_1_21_11)),
+        other => Err(format!(
+            "Unsupported WinVisual client mod target `{other}` (expected 1.16.5, 1.21.4, or 1.21.11)"
+        )),
+    }
+}
+
+/// Injects the embedded compiled `winvisual-client-<mc_version>.jar` directly into `<game_dir>/mods/`
+/// and removes any `winvisual-client-*.jar` belonging to another Minecraft version to prevent loader conflicts.
+pub fn install_embedded_winvisual_client_mod(
+    app: &AppHandle,
+    game_dir: &Path,
+    minecraft_version: &str,
+) -> Result<PathBuf, String> {
+    let (target_filename, jar_bytes) = embedded_mod_bytes_for_version(minecraft_version)?;
+    let mods_dir = game_dir.join("mods");
+    std::fs::create_dir_all(&mods_dir).map_err(|e| e.to_string())?;
+
+    if let Ok(entries) = std::fs::read_dir(&mods_dir) {
+        for entry in entries.flatten() {
+            let fname = entry.file_name().to_string_lossy().to_string();
+            if fname.starts_with("winvisual-client-") && fname.ends_with(".jar") && fname != target_filename {
+                let _ = std::fs::remove_file(entry.path());
+            }
+        }
+    }
+
+    let dest = mods_dir.join(target_filename);
+    let needs_write = match std::fs::metadata(&dest) {
+        Ok(meta) => meta.len() != jar_bytes.len() as u64,
+        Err(_) => true,
+    };
+
+    if needs_write {
+        let tmp = mods_dir.join(format!("{target_filename}.tmp"));
+        std::fs::write(&tmp, jar_bytes).map_err(|e| e.to_string())?;
+        std::fs::rename(&tmp, &dest).map_err(|e| e.to_string())?;
+    }
+
+    let cfg_dir = game_dir.join("config");
+    let _ = std::fs::create_dir_all(&cfg_dir);
+
+    let _ = app.emit(
+        "logs://line",
+        format!(
+            "[WINVISUAL-MOD] Injected embedded {target_filename} ({:.1} KB) into {}",
+            jar_bytes.len() as f64 / 1024.0,
+            mods_dir.display()
+        ),
+    );
+
+    Ok(dest)
+}
+
 fn default_true() -> bool {
     true
 }
@@ -328,30 +393,27 @@ pub async fn sync_modrinth_optimization_bundle(
     if let Ok(entries) = std::fs::read_dir(&mods_dir) {
         for entry in entries.flatten() {
             let file_name = entry.file_name().to_string_lossy().to_string();
-            if file_name.starts_with("wv-opt-") && (!enabled || !file_name.starts_with(&active_prefix))
-            {
+            let keep_entry = if enabled {
+                file_name.starts_with(&active_prefix)
+            } else {
+                file_name.starts_with(&active_prefix) && file_name.contains("fabric-api")
+            };
+            if file_name.starts_with("wv-opt-") && !keep_entry {
                 let _ = std::fs::remove_file(entry.path());
             }
         }
     }
 
-    if !enabled {
-        return Ok(ModBundleResult {
-            minecraft_version: minecraft_version.to_string(),
-            synced_mods: Vec::new(),
-            mods_dir: mods_dir.to_string_lossy().to_string(),
-        });
-    }
-
     let version_cache_dir = game_dir.join("mods_cache").join(minecraft_version);
     std::fs::create_dir_all(&version_cache_dir).map_err(|e| e.to_string())?;
 
-    let bundle_specs: [(&str, &str); 4] = [
+    let all_specs: [(&str, &str); 4] = [
         ("P7dR8mSH", "Fabric API"),
         ("AANobbMI", "Sodium"),
         ("YL57xq9U", "Iris Shaders"),
         ("gvQqBUqZ", "Lithium"),
     ];
+    let bundle_specs: &[(&str, &str)] = if enabled { &all_specs } else { &all_specs[..1] };
 
     let mut synced_mods: Vec<String> = Vec::new();
     let total_mods = bundle_specs.len();
@@ -1082,6 +1144,10 @@ pub async fn prepare_and_launch_minecraft(
         )
         .await?;
     }
+
+    let embedded_mod_path =
+        install_embedded_winvisual_client_mod(&app, &game_dir, &req.minecraft_version)?;
+    let _ = embedded_mod_path;
 
     sync_modrinth_optimization_bundle(
         &http,

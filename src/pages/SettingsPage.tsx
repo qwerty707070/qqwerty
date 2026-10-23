@@ -177,27 +177,35 @@ export const SettingsPage: React.FC = () => {
                   <h2 className="text-[15.5px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
                     <Laptop size={17} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
                     {isRu
-                      ? 'Нативный десктопный лаунчер (WinVisual v2.6.1)'
-                      : 'Native Desktop Installers (WinVisual v2.6.1)'}
+                      ? 'Нативный лаунчер и вшитые моды (WinVisual v2.7.0)'
+                      : 'Native Installers & Embedded Client Mods (WinVisual v2.7.0)'}
                   </h2>
                   <p className="text-[12.5px] text-[var(--text-secondary)]">
                     {isRu
-                      ? 'Собранные пакеты для Windows (.exe / .msi), macOS (.dmg) и Linux (.deb / .AppImage), плюс архив исходников.'
-                      : 'Compiled native binaries for Windows (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage).'}
+                      ? 'Установщики Windows (.exe / .msi), macOS (.dmg) и Linux (.deb / .AppImage) уже содержат вшитые моды EvoVis + ESP (1.16.5, 1.21.4, 1.21.11).'
+                      : 'Native binaries for Windows, macOS, and Linux bundle compiled EvoVis + ESP Fabric mods for 1.16.5, 1.21.4, and 1.21.11.'}
                   </p>
                 </div>
-                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
                   <a href={GITHUB_RELEASE_URL} target="_blank" rel="noopener noreferrer">
                     <Button variant="primary" size="sm" type="button">
                       <Download size={14} strokeWidth={2} />
-                      {isRu ? 'Установщики (.exe / .dmg / .deb)' : 'Installers (.exe / .dmg / .deb)'}
+                      {isRu ? 'Лаунчер (.exe / .dmg / .deb)' : 'Installers (.exe / .dmg / .deb)'}
                       <ExternalLink size={13} strokeWidth={1.75} />
                     </Button>
                   </a>
+                  {(['1.16.5', '1.21.4', '1.21.11'] as const).map((ver) => (
+                    <a key={ver} href={`/api/downloads/mod/${ver}`}>
+                      <Button variant="secondary" size="sm" type="button">
+                        <Download size={13} strokeWidth={1.9} />
+                        {ver}.jar
+                      </Button>
+                    </a>
+                  ))}
                   <a href="/api/export-project">
                     <Button variant="secondary" size="sm" type="button">
                       <FolderArchive size={14} strokeWidth={1.75} />
-                      {isRu ? 'Исходный код (.tar.gz)' : 'Source Archive (.tar.gz)'}
+                      {isRu ? 'Исходники (.tar.gz)' : 'Source (.tar.gz)'}
                     </Button>
                   </a>
                 </div>

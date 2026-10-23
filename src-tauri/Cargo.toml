@@ -1,6 +1,6 @@
 [package]
 name = "winvisual-launcher"
-version = "2.6.1"
+version = "2.7.0"
 description = "WinVisual — Premium Minecraft Visual Client Launcher"
 authors = ["WinVisual Team"]
 edition = "2021"

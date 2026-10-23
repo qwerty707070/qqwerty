@@ -11,9 +11,9 @@ use auth::{
 use base64::Engine;
 use launcher::{
     build_http_client, cancel_active_launch_and_processes, current_active_client_pid,
-    ensure_clean_dir, expand_tilde, resolve_java_executable, run_abortable_launch,
-    sync_modrinth_optimization_bundle, terminate_active_client_processes, LaunchRequest,
-    ModBundleResult,
+    ensure_clean_dir, expand_tilde, install_embedded_winvisual_client_mod, resolve_java_executable,
+    run_abortable_launch, sync_modrinth_optimization_bundle, terminate_active_client_processes,
+    LaunchRequest, ModBundleResult,
 };
 use rfd::AsyncFileDialog;
 use serde::Serialize;
@@ -187,6 +187,17 @@ fn stop_client_process(app: AppHandle) -> Result<usize, String> {
 }
 
 #[tauri::command]
+fn export_embedded_client_mod(
+    app: AppHandle,
+    game_directory: String,
+    minecraft_version: String,
+) -> Result<String, String> {
+    let game_dir = expand_tilde(&game_directory);
+    let dest = install_embedded_winvisual_client_mod(&app, &game_dir, &minecraft_version)?;
+    Ok(dest.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 async fn sync_optimization_mods(
     app: AppHandle,
     game_directory: String,
@@ -353,6 +364,7 @@ fn main() {
             launch_native_client,
             cancel_native_launch,
             stop_client_process,
+            export_embedded_client_mod,
             sync_optimization_mods,
             pick_directory_dialog,
             pick_java_binary_dialog,

@@ -1,4 +1,4 @@
-name: Build Native Desktop Installers
+name: Build Native Desktop Installers & Embedded Fabric Mods
 
 on:
   push:
@@ -11,7 +11,71 @@ permissions:
   contents: write
 
 jobs:
+  build-fabric-mods:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Temurin JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Cache Gradle & Fabric Loom dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: winvisual-fabric-loom-${{ hashFiles('mod-fabric/*/build.gradle') }}
+          restore-keys: |
+            winvisual-fabric-loom-
+
+      - name: Provision Gradle 8.11.1 & Gradle 9.1.0
+        run: |
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.11.1-bin.zip -o /tmp/gradle-8.zip
+          curl -fsSL https://services.gradle.org/distributions/gradle-9.1.0-bin.zip -o /tmp/gradle-9.zip
+          sudo unzip -q /tmp/gradle-8.zip -d /opt/
+          sudo unzip -q /tmp/gradle-9.zip -d /opt/
+
+      - name: Compile WinVisual Fabric Client Mods (1.16.5, 1.21.4, 1.21.11)
+        run: |
+          mkdir -p public/mods
+          /opt/gradle-8.11.1/bin/gradle -p mod-fabric/mc-1.16.5 build --no-daemon --stacktrace
+          /opt/gradle-8.11.1/bin/gradle -p mod-fabric/mc-1.21.4 build --no-daemon --stacktrace
+          /opt/gradle-9.1.0/bin/gradle  -p mod-fabric/mc-1.21.11 build --no-daemon --stacktrace
+
+          cp mod-fabric/mc-1.16.5/build/libs/winvisual-client-1.16.5-2.7.0.jar public/mods/winvisual-client-1.16.5.jar
+          cp mod-fabric/mc-1.21.4/build/libs/winvisual-client-1.21.4-2.7.0.jar public/mods/winvisual-client-1.21.4.jar
+          cp mod-fabric/mc-1.21.11/build/libs/winvisual-client-1.21.11-2.7.0.jar public/mods/winvisual-client-1.21.11.jar
+
+          python3 - <<'PY'
+          import hashlib, zipfile
+          for ver, entry_cls in [
+              ("1.16.5", "com/winvisual/mc1165/WinVisualMod1165.class"),
+              ("1.21.4", "com/winvisual/mc1214/WinVisualMod1214.class"),
+              ("1.21.11", "com/winvisual/mc12111/WinVisualMod12111.class"),
+          ]:
+              p = f"public/mods/winvisual-client-{ver}.jar"
+              with zipfile.ZipFile(p, "r") as zf:
+                  names = set(zf.namelist())
+                  for req in ["fabric.mod.json", "assets/winvisual/icon.png", "com/winvisual/core/WinVisualEngine.class", entry_cls]:
+                      assert req in names, f"Missing {req} in {p}: {sorted(names)[:20]}"
+              data = open(p, "rb").read()
+              print(f"VERIFIED {p}: {len(data)} bytes | sha256={hashlib.sha256(data).hexdigest()}")
+          PY
+
+      - name: Upload compiled Fabric client mod jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: winvisual-fabric-mods
+          path: public/mods/winvisual-client-*.jar
+          if-no-files-found: error
+
   build-tauri:
+    needs: build-fabric-mods
     strategy:
       fail-fast: false
       matrix:
@@ -27,6 +91,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Download compiled WinVisual Fabric mod jars into public/mods
+        uses: actions/download-artifact@v4
+        with:
+          name: winvisual-fabric-mods
+          path: public/mods
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -60,9 +130,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v2.6.1
-          releaseName: "WinVisual Launcher v2.6.1"
-          releaseBody: "Native Tauri v2 Desktop Installers for Windows x64 (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage) — instant atomic Cancel Launch (Tokio AbortHandle + .wvpart atomic writes), full-bleed shell, javaw PID lifecycle, Modrinth Sodium/Iris sync, 3D PNG skin loader & disk HUD sync."
+          tagName: v2.7.0
+          releaseName: "WinVisual Launcher v2.7.0 — Embedded EvoVisual & ESP Client Suite"
+          releaseBody: "Native Tauri v2 Desktop Installers (Windows .exe / .msi, macOS .dmg, Linux .deb / .rpm / .AppImage) with embedded source-compiled WinVisual × EvoVisual + ESP Fabric mods for Minecraft 1.16.5, 1.21.4, and 1.21.11 (28 modules, 11 draggable HUD 2.0 widgets, ChinaHat, 3D Crystal Wings, JumpCircles, Trails, Right-Shift Studio, and live config/winvisual-hud.json sync)."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Attach standalone compiled Fabric mod JARs to GitHub Release v2.7.0
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload v2.7.0 \
+            public/mods/winvisual-client-1.16.5.jar \
+            public/mods/winvisual-client-1.21.4.jar \
+            public/mods/winvisual-client-1.21.11.jar \
+            --clobber

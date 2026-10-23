@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Check, MoveHorizontal, RefreshCw } from 'lucide-react';
+import { AlertCircle, Check, Download, MoveHorizontal, PackageCheck, RefreshCw } from 'lucide-react';
 import { useLauncherStore } from '../stores/launcherStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useNotificationStore } from '../stores/notificationStore';
+import { installOrDownloadClientModEverywhere } from '../services/tauriBridge';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { MinecraftBlockIcon } from '../components/ui/MinecraftBlockIcon';
@@ -65,9 +67,36 @@ export const VersionsPage: React.FC = () => {
   const loadInitialData = useLauncherStore((s) => s.loadInitialData);
   const selectVersion = useLauncherStore((s) => s.selectVersion);
   const language = useSettingsStore((s) => s.language);
+  const gameDirectory = useSettingsStore((s) => s.gameDirectory);
+  const pushToast = useNotificationStore((s) => s.pushToast);
 
   const isRu = language === 'ru';
   const atm = ATMOSPHERE_OVERLAYS[atmosphere];
+
+  const handleModJarAction = async (mcVer: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await installOrDownloadClientModEverywhere(gameDirectory, mcVer);
+      pushToast({
+        type: 'success',
+        title:
+          res.mode === 'injected'
+            ? isRu
+              ? `Мод ${mcVer} установлен в mods/`
+              : `Installed ${mcVer} client mod`
+            : isRu
+              ? `Скачивание ${res.target}`
+              : `Downloading ${res.target}`,
+        description: res.target,
+      });
+    } catch (err) {
+      pushToast({
+        type: 'error',
+        title: isRu ? 'Ошибка выгрузки .jar' : 'Mod export failed',
+        description: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
 
   const updateSplitFromClientX = (clientX: number) => {
     const el = compareRef.current;
@@ -259,21 +288,27 @@ export const VersionsPage: React.FC = () => {
                   }}
                 />
 
-                {/* Top Card Header: 3D Block Icon + Build Name + Java/FPS Telemetry */}
-                <div className="relative z-10 px-4 pt-4 flex items-center gap-3">
-                  <MinecraftBlockIcon size={36} className="shrink-0" />
-                  <div className="min-w-0">
-                    <h2 className="text-[16.5px] font-bold tracking-tight text-[#FFFFFF] truncate">
-                      {ver.name}
-                    </h2>
-                    <p className="text-[11.5px] font-mono text-[#B0B2C2] truncate">
-                      {javaTag} • {ver.fpsBoost}
-                    </p>
+                {/* Top Card Header: 3D Block Icon + Build Name + Embedded Mod Badge */}
+                <div className="relative z-10 px-4 pt-4 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <MinecraftBlockIcon size={36} className="shrink-0" />
+                    <div className="min-w-0">
+                      <h2 className="text-[16.5px] font-bold tracking-tight text-[#FFFFFF] truncate">
+                        {ver.name}
+                      </h2>
+                      <p className="text-[11.5px] font-mono text-[#B0B2C2] truncate">
+                        {javaTag} • {ver.fpsBoost}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#111322]/90 border border-white/15 text-[10.5px] font-mono text-[#D6CEFF]">
+                    <PackageCheck size={11} strokeWidth={2.2} />
+                    <span>EvoVis + ESP .jar {isRu ? 'вшит' : 'embedded'}</span>
                   </div>
                 </div>
 
-                {/* Bottom Action Pill: ВЫБРАНА ✓ vs ВЫБРАТЬ */}
-                <div className="relative z-10 p-3.5 flex justify-center">
+                {/* Bottom Action Row: ВЫБРАНА ✓ / ВЫБРАТЬ + .JAR Export */}
+                <div className="relative z-10 p-3.5 flex items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -281,7 +316,7 @@ export const VersionsPage: React.FC = () => {
                       selectVersion(ver.id);
                     }}
                     className={cn(
-                      'h-[38px] w-full max-w-[205px] rounded-[11px] inline-flex items-center justify-center gap-2 text-[12px] font-bold tracking-[0.06em] uppercase transition-all cursor-pointer',
+                      'h-[38px] flex-1 max-w-[176px] rounded-[11px] inline-flex items-center justify-center gap-2 text-[12px] font-bold tracking-[0.06em] uppercase transition-all cursor-pointer',
                       isSelected
                         ? 'bg-[#251E4D]/95 text-white border border-[#C4B5FD]/85 shadow-[0_0_22px_rgba(139,124,255,0.55)]'
                         : 'bg-[#090B13]/85 hover:bg-[#151829]/95 text-[#E4E4EC] border border-white/[0.14] hover:border-[rgba(var(--accent-rgb),0.55)]'
@@ -295,6 +330,15 @@ export const VersionsPage: React.FC = () => {
                     ) : (
                       <span>{isRu ? 'ВЫБРАТЬ' : 'SELECT'}</span>
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleModJarAction(ver.minecraftVersion, e)}
+                    title={`winvisual-client-${ver.minecraftVersion}.jar`}
+                    className="h-[38px] px-3 rounded-[11px] bg-[#090B13]/90 hover:bg-[#1A1638] text-[#E4E4EC] border border-white/[0.16] hover:border-[#C4B5FD]/70 inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold transition-all cursor-pointer shrink-0"
+                  >
+                    <Download size={13} strokeWidth={2.1} />
+                    <span>.jar</span>
                   </button>
                 </div>
               </Card>

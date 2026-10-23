@@ -213,17 +213,17 @@ export const CLIENT_VERSIONS = [
     minecraftVersion: '1.21.11',
     channel: 'stable',
     recommended: true,
-    updatedAt: '2026-10-22',
-    sizeMb: 30.8,
-    loader: 'Fabric • RenderCore 2.6',
+    updatedAt: '2026-10-23',
+    sizeMb: 31.4,
+    loader: 'Fabric • EvoVis + ESP 2.7',
     fpsBoost: '+165% FPS',
-    modulesCount: 40,
+    modulesCount: 28,
     summaryEn:
-      'Latest Minecraft 1.21.11 Fabric visual client build with auto-synced Sodium + Iris Shaders, 144Hz GLSL cloth physics, draggable HUD 2.0, and instant disk config sync.',
+      'Flagship Minecraft 1.21.11 build with embedded winvisual-client-1.21.11.jar: EvoVis 2D/3D ESP, Rotating Minimap, ChinaHat, Crystal Wings, JumpCircles, 11 HUD 2.0 widgets, and Right-Shift Studio.',
     summaryRu:
-      'Актуальная сборка Fabric 1.21.11 с авто-синхронизацией Sodium + Iris Shaders, GLSL-плащами 144 Гц, адаптивным HUD 2.0 и сохранением конфигов на диск.',
-    highlightsRu: ['Minecraft 1.21.11 Fabric', 'Sodium + Iris & HUD 2.0'],
-    highlightsEn: ['Minecraft 1.21.11 Fabric', 'Sodium + Iris & HUD 2.0'],
+      'Флагманская сборка 1.21.11 со вшитым модом winvisual-client-1.21.11.jar: полный пакет EvoVis + ESP, миникарта-радар, ChinaHat, 3D-крылья, JumpCircles, 11 виджетов HUD 2.0 и меню Right Shift.',
+    highlightsRu: ['Вшитый EvoVis + ESP .jar', 'HUD 2.0 + ChinaHat + Крылья'],
+    highlightsEn: ['Embedded EvoVis + ESP .jar', 'HUD 2.0 + ChinaHat + Wings'],
   },
   {
     id: 'winvisual-1.21.4',
@@ -231,17 +231,17 @@ export const CLIENT_VERSIONS = [
     minecraftVersion: '1.21.4',
     channel: 'stable',
     recommended: false,
-    updatedAt: '2026-10-22',
-    sizeMb: 29.3,
-    loader: 'Fabric • RenderCore 2.6',
+    updatedAt: '2026-10-23',
+    sizeMb: 29.9,
+    loader: 'Fabric • EvoVis + ESP 2.7',
     fpsBoost: '+148% FPS',
-    modulesCount: 38,
+    modulesCount: 28,
     summaryEn:
-      'Flagship Minecraft 1.21.4 Fabric build featuring physically shaded HUD panels, custom GLSL hand & cape shaders, 3D pixel skin layers, and zero-stutter chunk batching.',
+      'Tournament Minecraft 1.21.4 build with embedded winvisual-client-1.21.4.jar: Player/Item/Pearl ESP, Target HUD 2.0, Keystrokes + CPS, 3D Trails, HitParticles, and live config sync.',
     summaryRu:
-      'Стабильная сборка Fabric 1.21.4: пакетный рендер HUD 2.0, кастомные GLSL-шейдеры рук и плащей, пиксельные 3D-слои скинов и буферизация чанков без микрофризов.',
-    highlightsRu: ['Minecraft 1.21.4 Fabric', 'GLSL шейдеры плащей 144 Гц'],
-    highlightsEn: ['Minecraft 1.21.4 Fabric', '144Hz GLSL Cape Physics'],
+      'Турнирная сборка 1.21.4 со вшитым модом winvisual-client-1.21.4.jar: Player/Item/Pearl ESP, Target HUD 2.0, Keystrokes + CPS, 3D-шлейфы, HitParticles и живая синхронизация конфигов.',
+    highlightsRu: ['Вшитый EvoVis + ESP .jar', 'Target HUD 2.0 + Pearl ESP'],
+    highlightsEn: ['Embedded EvoVis + ESP .jar', 'Target HUD 2.0 + Pearl ESP'],
   },
   {
     id: 'winvisual-1.16.5',
@@ -249,15 +249,15 @@ export const CLIENT_VERSIONS = [
     minecraftVersion: '1.16.5',
     channel: 'stable',
     recommended: false,
-    updatedAt: '2026-10-22',
-    sizeMb: 23.1,
-    loader: 'Fabric • LegacyBridge',
+    updatedAt: '2026-10-23',
+    sizeMb: 23.8,
+    loader: 'Fabric • EvoVis + ESP 2.7',
     fpsBoost: '+125% FPS',
-    modulesCount: 32,
+    modulesCount: 28,
     summaryEn:
-      'Dedicated Minecraft 1.16.5 Fabric build with backported RenderCore lighting pipeline, isolated legacy mod cache, crisp HUD motion blur, Target HUD, and animated cloaks.',
+      'Classic PvP Minecraft 1.16.5 build with embedded winvisual-client-1.16.5.jar: full parity 28 EvoVisual + ESP modules, 6 neon themes, 3D cosmetics, and Right-Shift ClickGUI.',
     summaryRu:
-      'Специальная сборка Fabric 1.16.5 с бэкпортом конвейера освещения RenderCore, изолированным кэшем модов, плавным Motion Blur, Target HUD и плащами.',
+      'Классическая PvP-сборка 1.16.5 со вшитым модом winvisual-client-1.16.5.jar: все 28 модулей EvoVisual + ESP, 6 тем оформления, 3D-косметика и внутриигровой ClickGUI.',
     highlightsRu: ['Minecraft 1.16.5 Fabric', 'Бэкпорт RenderCore + Motion Blur'],
     highlightsEn: ['Minecraft 1.16.5 Fabric', 'RenderCore Backport + Motion Blur'],
   },
@@ -270,25 +270,25 @@ export const NEWS_ARTICLES = [
     image: '/images/news-release.jpg',
     categoryEn: 'MAJOR UPDATE',
     categoryRu: 'КРУПНЫЙ РЕЛИЗ',
-    dateEn: 'October 22, 2026',
-    dateRu: '22 октября 2026',
+    dateEn: 'October 23, 2026',
+    dateRu: '23 октября 2026',
     readTimeEn: '3 min read',
     readTimeRu: '3 мин чтения',
-    titleEn: 'WinVisual 2.6 — Native Modrinth Bundle, 3D Pixel Skin Studio & Disk HUD Sync',
-    titleRu: 'WinVisual 2.6 — авто-пакет Sodium + Iris, 3D-студия PNG скинов и HUD на диске',
+    titleEn: 'WinVisual 2.7 — Embedded EvoVisual & ESP Client Mod for Fabric 1.16.5 / 1.21.4 / 1.21.11',
+    titleRu: 'WinVisual 2.7 — вшитый визуальный мод EvoVisual + ESP на 1.16.5, 1.21.4 и 1.21.11',
     excerptEn:
-      'Automatic per-version Modrinth optimization bundle (Fabric API + Sodium + Iris), real javaw PID lifecycle & instant Stop, custom .png / nickname 3D skin rendering, and automatic winvisual-hud.json disk persistence.',
+      'Compiled Fabric client jars embedded directly in WinVisual Launcher: 28 EvoVisual + ESP modules, 11 draggable HUD 2.0 widgets, ChinaHat, 3D Crystal Wings, JumpCircles, Trails, and Right-Shift Studio.',
     excerptRu:
-      'Автоматическая установка Fabric API + Sodium + Iris под каждую версию, контроль процесса javaw с мгновенной остановкой, загрузка своих .png скинов в 3D и запись winvisual-hud.json на диск.',
+      'Вшитые прямо в лаунчер Fabric-моды для 1.16.5, 1.21.4 и 1.21.11: 28 модулей EvoVisual + ESP, 11 перетаскиваемых виджетов HUD 2.0, ChinaHat, 3D-крылья, JumpCircles, шлейфы и меню Right Shift.',
     bodyEn: [
-      'WinVisual 2.6 upgrades both the native Rust launcher core and visual studio specifically around Fabric 1.21.11, 1.21.4, and 1.16.5.',
-      'Version-isolated Modrinth caching automatically provisions compatible Fabric API, Sodium, Iris Shaders, and Lithium jars without version conflicts when switching builds.',
-      'Upload any 64x64 Minecraft skin PNG or load by nickname to preview crisp 3D pixel layers with 144Hz GLSL capes directly on the Home hero stage.',
+      'WinVisual 2.7 ships real compiled Fabric client jars embedded inside every native desktop installer across Minecraft 1.16.5, 1.21.4, and 1.21.11.',
+      'Includes full Player/Item/Pearl ESP, Rotating Minimap radar, Target HUD 2.0, ChinaHat 3D halo, Crystal Wings, JumpCircles, 3D Trails, and two-way winvisual-hud.json sync.',
+      'Press Right Shift anywhere in-game to open the interactive WinVisual × EvoVisual ClickGUI and drag HUD widgets directly across your screen.',
     ],
     bodyRu: [
-      'В WinVisual 2.6 обновлены как нативное ядро Tauri/Rust, так и визуальная студия для трёх сборок Fabric: 1.21.11, 1.21.4 и 1.16.5.',
-      'Изолированный кэш модов автоматически подтягивает совместимые Fabric API, Sodium, Iris Shaders и Lithium без конфликтов при переключении версий.',
-      'Загружайте любой скин 64x64 .png с диска или по нику игрока — пиксельные 3D-слои мгновенно отображаются в профиле и на главном экране.',
+      'В WinVisual 2.7 прямо внутрь бинарника лаунчера вшиты скомпилированные Fabric-моды winvisual-client для версий 1.16.5, 1.21.4 и 1.21.11.',
+      'Доступны все 28 модулей в стиле EvoVisual + ESP: Player/Item/Pearl ESP, вращающийся радар-миникарта, Target HUD 2.0, 3D ChinaHat, крылья, JumpCircles, 3D-шлейфы и живая синхронизация winvisual-hud.json.',
+      'В самой игре нажмите Right Shift, чтобы открыть интерактивное меню WinVisual × EvoVisual и свободно перетаскивать элементы HUD мышкой.',
     ],
   },
   {
@@ -434,7 +434,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.6.1',
+        launcherVersion: '2.7.0',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: cpuCount,
@@ -498,12 +498,67 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     return true;
   }
 
+  if (pathname === '/api/mods/embedded') {
+    const supported = ['1.16.5', '1.21.4', '1.21.11'];
+    const entries = supported.map((ver) => {
+      const jarFile = `winvisual-client-${ver}.jar`;
+      const jarPath = path.join(rootDir, 'public', 'mods', jarFile);
+      let sizeBytes = 0;
+      let sha256 = '';
+      if (fs.existsSync(jarPath)) {
+        const buf = fs.readFileSync(jarPath);
+        sizeBytes = buf.length;
+        sha256 = crypto.createHash('sha256').update(buf).digest('hex');
+      }
+      return {
+        minecraftVersion: ver,
+        filename: jarFile,
+        sizeBytes,
+        sha256,
+        downloadUrl: `/api/downloads/mod/${ver}`,
+      };
+    });
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ version: '2.7.0', mods: entries }));
+    return true;
+  }
+
+  const modDownloadMatch = pathname.match(/^\/api\/downloads\/mod\/([^/]+)$/);
+  if (modDownloadMatch) {
+    const ver = decodeURIComponent(modDownloadMatch[1]).replace(/\.jar$/i, '');
+    if (!['1.16.5', '1.21.4', '1.21.11'].includes(ver)) {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: `Unsupported mod version: ${ver}` }));
+      return true;
+    }
+    const jarFile = `winvisual-client-${ver}.jar`;
+    const jarPath = path.join(rootDir, 'public', 'mods', jarFile);
+    if (!fs.existsSync(jarPath)) {
+      res.statusCode = 404;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: `${jarFile} missing` }));
+      return true;
+    }
+    const buf = fs.readFileSync(jarPath);
+    const sha256 = crypto.createHash('sha256').update(buf).digest('hex');
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/java-archive');
+    res.setHeader('Content-Disposition', `attachment; filename="${jarFile}"`);
+    res.setHeader('Content-Length', String(buf.length));
+    res.setHeader('X-Artifact-Sha256', sha256);
+    res.end(buf);
+    return true;
+  }
+
   if (pathname === '/api/mods/bundle') {
     const mc = (parsed.searchParams.get('mc') || '1.21.11').trim();
     const dir = (parsed.searchParams.get('dir') || '~/.minecraft/winvisual').trim();
     const modsCacheDir = path.join(rootDir, '.winvisual-runtime', 'mods_cache', mc);
     fs.mkdirSync(modsCacheDir, { recursive: true });
     const syncedMods = [
+      `WinVisual Client EvoVis+ESP (winvisual-client-${mc}.jar)`,
       `Fabric API (wv-opt-${mc}-fabric-api.jar)`,
       `Sodium (wv-opt-${mc}-sodium-fabric.jar)`,
       `Iris Shaders (wv-opt-${mc}-iris-fabric.jar)`,
@@ -617,7 +672,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.6.1-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.7.0-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
@@ -688,7 +743,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
-    res.setHeader('X-Launcher-Version', '2.6.1');
+    res.setHeader('X-Launcher-Version', '2.7.0');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;
