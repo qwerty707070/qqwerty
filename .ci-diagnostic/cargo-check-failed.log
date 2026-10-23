@@ -1,0 +1,300 @@
+[1m[92m    Checking[0m typenum v1.20.1
+[1m[92m    Checking[0m icu_properties v2.4.0
+[1m[92m    Checking[0m generic-array v0.14.7
+[1m[92m    Checking[0m gio v0.18.4
+[1m[92m    Checking[0m errno v0.3.14
+[1m[92m    Checking[0m log v0.4.34
+[1m[92m    Checking[0m signal-hook-registry v1.4.8
+[1m[92m    Checking[0m cairo-rs v0.18.5
+[1m[92m    Checking[0m crossbeam-utils v0.8.23
+[1m[92m    Checking[0m form_urlencoded v1.2.2
+[1m[92m   Compiling[0m embed-resource v3.0.12
+[1m[92m    Checking[0m socket2 v0.6.5
+[1m[92m    Checking[0m mio v1.2.4
+[1m[92m    Checking[0m tokio v1.54.1
+[1m[92m    Checking[0m zmij v1.0.23
+[1m[92m   Compiling[0m tauri-winres v0.3.7
+[1m[92m    Checking[0m memoffset v0.9.1
+[1m[92m   Compiling[0m soup3-sys v0.5.0
+[1m[92m   Compiling[0m javascriptcore-rs-sys v1.1.1
+[1m[92m   Compiling[0m gtk v0.18.2
+[1m[92m    Checking[0m field-offset v0.3.6
+[1m[92m    Checking[0m serde_json v1.0.154
+[1m[92m   Compiling[0m tauri-build v2.7.4
+[1m[92m    Checking[0m atk v0.18.2
+[1m[92m   Compiling[0m webkit2gtk-sys v2.0.2
+[1m[92m    Checking[0m deranged v0.5.9
+[1m[92m    Checking[0m powerfmt v0.2.1
+[1m[92m    Checking[0m base64 v0.23.1
+[1m[92m    Checking[0m num-conv v0.2.2
+[1m[92m    Checking[0m subtle v2.6.1
+[1m[92m    Checking[0m time-core v0.1.9
+[1m[92m    Checking[0m thiserror v2.0.21
+[1m[92m   Compiling[0m tauri-plugin v2.7.2
+[1m[92m    Checking[0m time v0.3.55
+[1m[92m    Checking[0m crypto-common v0.1.7
+[1m[92m   Compiling[0m gdkx11-sys v0.18.2
+[1m[92m    Checking[0m aho-corasick v1.1.5
+[1m[92m    Checking[0m regex-syntax v0.8.11
+[1m[92m    Checking[0m hashbrown v0.17.1
+[1m[92m    Checking[0m bitflags v1.3.2
+[1m[92m    Checking[0m equivalent v1.0.3
+[1m[92m    Checking[0m option-ext v0.2.0
+[1m[92m    Checking[0m alloc-no-stdlib v3.0.0
+[1m[92m    Checking[0m alloc-stdlib v0.3.0
+[1m[92m    Checking[0m indexmap v2.14.2
+[1m[92m    Checking[0m pango v0.18.3
+[1m[92m    Checking[0m gdk-pixbuf v0.18.5
+[1m[92m    Checking[0m regex-automata v0.4.18
+[1m[92m    Checking[0m zeroize v1.9.1
+[1m[92m    Checking[0m typeid v1.0.3
+[1m[92m   Compiling[0m tauri v2.12.5
+[1m[92m    Checking[0m x11 v2.21.0
+[1m[92m    Checking[0m gdk v0.18.2
+[1m[92m    Checking[0m libdbus-sys v0.2.7
+[1m[92m    Checking[0m dpi v0.1.2
+[1m[92m    Checking[0m siphasher v1.0.4
+[1m[92m    Checking[0m raw-window-handle v0.6.2
+[1m[92m    Checking[0m fnv v1.0.7
+[1m[92m    Checking[0m web-time v1.1.0
+[1m[92m    Checking[0m winnow v1.0.4
+[1m[92m    Checking[0m regex v1.13.1
+[1m[92m    Checking[0m toml_parser v1.1.5+spec-1.1.0
+[1m[92m    Checking[0m phf_shared v0.13.1
+[1m[92m    Checking[0m erased-serde v0.4.10
+[1m[92m    Checking[0m dbus v0.9.12
+[1m[92m    Checking[0m num-traits v0.2.19
+[1m[92m    Checking[0m soup3 v0.5.0
+[1m[92m    Checking[0m brotli-decompressor v6.0.1
+[1m[92m    Checking[0m javascriptcore-rs v1.1.2
+[1m[92m    Checking[0m jsonptr v0.7.1
+[1m[92m   Compiling[0m ring v0.17.14
+[1m[92m    Checking[0m toml_datetime v1.1.2+spec-1.1.0
+[1m[92m    Checking[0m serde_spanned v1.1.2
+[1m[92m    Checking[0m quick-xml v0.42.0
+[1m[92m    Checking[0m toml_writer v1.1.3+spec-1.1.0
+[1m[92m    Checking[0m same-file v1.0.6
+[1m[92m    Checking[0m walkdir v2.5.0
+[1m[92m    Checking[0m toml v1.1.8+spec-1.1.0
+[1m[92m    Checking[0m plist v1.10.3
+[1m[92m    Checking[0m json-patch v4.2.0
+[1m[92m    Checking[0m anyhow v1.0.104
+[1m[92m    Checking[0m brotli v9.0.0
+[1m[92m    Checking[0m serde-untagged v0.1.9
+[1m[92m    Checking[0m phf v0.13.1
+[1m[92m    Checking[0m cookie v0.18.2
+[1m[92m    Checking[0m x11-dl v2.21.0
+[1m[92m    Checking[0m dirs-sys v0.5.0
+[1m[92m    Checking[0m crossbeam-channel v0.5.17
+[1m[92m    Checking[0m block-buffer v0.10.4
+[1m[92m    Checking[0m serde_with v3.24.0
+[1m[92m    Checking[0m semver v1.0.28
+[1m[92m    Checking[0m glob v0.3.4
+[1m[92m    Checking[0m dunce v1.0.5
+[1m[92m    Checking[0m ctor v1.0.13
+[1m[92m   Compiling[0m wry v0.57.1
+[1m[92m    Checking[0m dlopen2 v0.8.2
+[1m[92m    Checking[0m digest v0.10.7
+[1m[92m    Checking[0m dirs v7.0.0
+[1m[92m    Checking[0m gdkx11 v0.18.2
+[1m[92m    Checking[0m num-integer v0.1.47
+[1m[92m    Checking[0m rustls-pki-types v1.15.1
+[1m[92m    Checking[0m block-padding v0.3.3
+[1m[92m    Checking[0m http-body v1.1.0
+[1m[92m    Checking[0m gdkwayland-sys v0.18.2
+[1m[92m    Checking[0m getrandom v0.2.17
+[1m[92m    Checking[0m untrusted v0.9.0
+[1m[92m    Checking[0m inout v0.1.4
+[1m[92m   Compiling[0m tauri-codegen v2.7.4
+[1m[92m    Checking[0m keyboard-types v0.8.3
+[1m[92m    Checking[0m try-lock v0.2.5
+[1m[92m    Checking[0m tower-service v0.3.3
+[1m[92m    Checking[0m cpufeatures v0.2.17
+[1m[92m    Checking[0m want v0.3.2
+[1m[92m   Compiling[0m rustls v0.23.46
+[1m[92m    Checking[0m serialize-to-javascript v0.1.2
+[1m[92m    Checking[0m rustls-webpki v0.103.16
+[1m[92m   Compiling[0m tauri-macros v2.7.4
+[1m[92m    Checking[0m cipher v0.4.4
+[1m[92m    Checking[0m httparse v1.10.1
+[1m[92m    Checking[0m crossbeam-epoch v0.9.21
+[1m[92m    Checking[0m getrandom v0.3.4
+[1m[92m    Checking[0m num-bigint v0.4.8
+[1m[92m    Checking[0m tracing-core v0.1.36
+[1m[92m    Checking[0m heck v0.5.0
+[1m[92m    Checking[0m simd-adler32 v0.3.10
+[1m[92m    Checking[0m atomic-waker v1.1.2
+[1m[92m    Checking[0m mime v0.3.17
+[1m[92m    Checking[0m hyper v1.12.0
+[1m[92m    Checking[0m tracing v0.1.44
+[1m[92m    Checking[0m crc32fast v1.5.3
+[1m[92m    Checking[0m crossbeam-deque v0.8.8
+[1m[92m    Checking[0m num-iter v0.1.46
+[1m[92m    Checking[0m hmac v0.12.1
+[1m[92m    Checking[0m num-rational v0.4.2
+[1m[92m    Checking[0m num-complex v0.4.6
+[1m[92m   Compiling[0m tauri-plugin-shell v2.5.0
+[1m[92m   Compiling[0m tauri-plugin-os v2.4.0
+[1m[92m   Compiling[0m tauri-plugin-fs v2.7.1
+[1m[92m    Checking[0m sync_wrapper v1.0.2
+[1m[92m    Checking[0m is-docker v0.2.0
+[1m[92m    Checking[0m linux-raw-sys v0.12.1
+[1m[92m    Checking[0m adler2 v2.0.1
+[1m[92m    Checking[0m ipnet v2.12.2
+[1m[92m    Checking[0m tower-layer v0.3.3
+[1m[92m    Checking[0m tower v0.5.3
+[1m[92m    Checking[0m hyper-util v0.1.21
+[1m[92m    Checking[0m miniz_oxide v0.9.1
+[1m[92m    Checking[0m rustix v1.1.5
+[1m[92m    Checking[0m is-wsl v0.4.0
+[1m[92m    Checking[0m num v0.4.3
+[1m[92m    Checking[0m hkdf v0.12.4
+[1m[92m    Checking[0m nix v0.31.3
+[1m[92m    Checking[0m rayon-core v1.13.0
+[1m[92m    Checking[0m aes v0.8.4
+[1m[92m    Checking[0m tokio-rustls v0.26.6
+[1m[92m    Checking[0m cbc v0.1.2
+[1m[92m    Checking[0m sha2 v0.10.9
+[1m[92m    Checking[0m webpki-roots v1.0.11
+[1m[92m    Checking[0m bumpalo v3.20.3
+[1m[92m    Checking[0m simdutf8 v0.1.5
+[1m[92m    Checking[0m ryu v1.0.23
+[1m[92m    Checking[0m either v1.19.0
+[1m[92m    Checking[0m core_detect v1.0.0
+[1m[92m    Checking[0m fastrand v2.5.0
+[1m[92m    Checking[0m futures-sink v0.3.34
+[1m[92m    Checking[0m encoding_rs v0.8.42
+[1m[92m    Checking[0m dbus-secret-service v4.1.0
+[1m[92m    Checking[0m tokio-util v0.7.20
+[1m[92m    Checking[0m rayon v1.12.0
+[1m[92m    Checking[0m serde_urlencoded v0.7.1
+[1m[92m    Checking[0m zopfli v0.8.4
+[1m[92m   Compiling[0m rfd v0.15.4
+[1m[92m    Checking[0m hyper-rustls v0.27.10
+[1m[92m    Checking[0m os_info v3.15.0
+[1m[92m    Checking[0m gethostname v1.1.0
+[1m[92m    Checking[0m open v5.4.5
+[1m[92m    Checking[0m flate2 v1.1.10
+[1m[92m    Checking[0m tower-http v0.6.11
+[1m[92m    Checking[0m webkit2gtk v2.0.2
+[1m[92m    Checking[0m tao v0.37.2
+[1m[92m    Checking[0m muda v0.20.0
+[1m[92m    Checking[0m http-body-util v0.1.5
+[1m[92m   Compiling[0m winvisual-launcher v2.7.5 (/home/runner/work/qqwerty/qqwerty/src-tauri)
+[1m[92m    Checking[0m dirs-sys v0.4.1
+[1m[92m    Checking[0m shared_child v1.1.2
+[1m[92m    Checking[0m os_pipe v1.2.3
+[1m[92m    Checking[0m base64 v0.22.1
+[1m[92m    Checking[0m sys-locale v0.3.2
+[1m[92m    Checking[0m dirs v5.0.1
+[1m[92m    Checking[0m sysinfo v0.32.1
+[1m[92m    Checking[0m zip v2.6.1
+[1m[92m    Checking[0m reqwest v0.12.28
+[1m[92m    Checking[0m keyring v3.6.3
+[1m[92m    Checking[0m sha1 v0.10.7
+[1m[92m    Checking[0m hex v0.4.3
+[1m[92m    Checking[0m tauri-runtime v2.12.2
+[1m[92m    Checking[0m tauri-runtime-wry v2.12.3
+[1m[33mwarning[0m[1m: variable does not need to be mutable[0m
+   [1m[94m--> [0msrc/modrinth.rs:114:9
+    [1m[94m|[0m
+[1m[94m114[0m [1m[94m|[0m     let mut req = http.get(format!("{MODRINTH_API}/v2/search"));
+    [1m[94m|[0m         [1m[94m----[0m[1m[33m^^^[0m
+    [1m[94m|[0m         [1m[94m|[0m
+    [1m[94m|[0m         [1m[94mhelp: remove this `mut`[0m
+    [1m[94m|[0m
+    [1m[94m= [0m[1mnote[0m: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+[1m[91merror[E0382][0m[1m: use of moved value: `req`[0m
+   [1m[94m--> [0msrc/modrinth.rs:121:17
+    [1m[94m|[0m
+[1m[94m114[0m [1m[94m|[0m     let mut req = http.get(format!("{MODRINTH_API}/v2/search"));
+    [1m[94m|[0m         [1m[94m-------[0m [1m[94mmove occurs because `req` has type `RequestBuilder`, which does not implement the `Copy` trait[0m
+[1m[94m115[0m [1m[94m|[0m     let _ = req.query(&[
+    [1m[94m|[0m             [1m[94m---[0m [1m[94mvalue moved here[0m
+[1m[94m...[0m
+[1m[94m121[0m [1m[94m|[0m         let _ = req.query(&[("query", clean_query)]);
+    [1m[94m|[0m                 [1m[91m^^^[0m [1m[91mvalue used here after move[0m
+
+[1m[91merror[E0382][0m[1m: use of moved value: `req`[0m
+   [1m[94m--> [0msrc/modrinth.rs:124:38
+    [1m[94m|[0m
+[1m[94m114[0m [1m[94m|[0m     let mut req = http.get(format!("{MODRINTH_API}/v2/search"));
+    [1m[94m|[0m         [1m[94m-------[0m [1m[94mmove occurs because `req` has type `RequestBuilder`, which does not implement the `Copy` trait[0m
+[1m[94m115[0m [1m[94m|[0m     let _ = req.query(&[
+    [1m[94m|[0m             [1m[94m---[0m [1m[94mvalue moved here[0m
+[1m[94m...[0m
+[1m[94m121[0m [1m[94m|[0m         let _ = req.query(&[("query", clean_query)]);
+    [1m[94m|[0m                     [1m[94m--------------------------------[0m [1m[94m`req` moved due to this method call[0m
+[1m[94m...[0m
+[1m[94m124[0m [1m[94m|[0m     let body: Vec<ApiSearchResult> = req
+    [1m[94m|[0m                                      [1m[91m^^^[0m [1m[91mvalue used here after move[0m
+    [1m[94m|[0m
+[1m[92mnote[0m: `reqwest::RequestBuilder::query` takes ownership of the receiver `self`, which moves `req`
+   [1m[94m--> [0m/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/async_impl/request.rs:357:45
+    [1m[94m|[0m
+[1m[94m357[0m [1m[94m|[0m     pub fn query<T: Serialize + ?Sized>(mut self, query: &T) -> RequestBuilder {
+    [1m[94m|[0m                                             [1m[92m^^^^[0m
+
+[1m[33mwarning[0m[1m: variable does not need to be mutable[0m
+   [1m[94m--> [0msrc/modrinth.rs:166:9
+    [1m[94m|[0m
+[1m[94m166[0m [1m[94m|[0m     let mut req = http.get(format!("{MODRINTH_API}/v2/project/{slug}/version"));
+    [1m[94m|[0m         [1m[94m----[0m[1m[33m^^^[0m
+    [1m[94m|[0m         [1m[94m|[0m
+    [1m[94m|[0m         [1m[94mhelp: remove this `mut`[0m
+
+[1m[91merror[E0382][0m[1m: use of moved value: `req`[0m
+   [1m[94m--> [0msrc/modrinth.rs:169:17
+    [1m[94m|[0m
+[1m[94m166[0m [1m[94m|[0m     let mut req = http.get(format!("{MODRINTH_API}/v2/project/{slug}/version"));
+    [1m[94m|[0m         [1m[94m-------[0m [1m[94mmove occurs because `req` has type `RequestBuilder`, which does not implement the `Copy` trait[0m
+[1m[94m167[0m [1m[94m|[0m     let _ = req.query(&[("game_versions", game_versions_json.as_str())]);
+    [1m[94m|[0m             [1m[94m---[0m [1m[94mvalue moved here[0m
+[1m[94m168[0m [1m[94m|[0m     if !is_pack {
+[1m[94m169[0m [1m[94m|[0m         let _ = req.query(&[("loaders", "[\"fabric\"]")]);
+    [1m[94m|[0m                 [1m[91m^^^[0m [1m[91mvalue used here after move[0m
+
+[1m[91merror[E0382][0m[1m: use of moved value: `req`[0m
+   [1m[94m--> [0msrc/modrinth.rs:172:37
+    [1m[94m|[0m
+[1m[94m166[0m [1m[94m|[0m     let mut req = http.get(format!("{MODRINTH_API}/v2/project/{slug}/version"));
+    [1m[94m|[0m         [1m[94m-------[0m [1m[94mmove occurs because `req` has type `RequestBuilder`, which does not implement the `Copy` trait[0m
+[1m[94m167[0m [1m[94m|[0m     let _ = req.query(&[("game_versions", game_versions_json.as_str())]);
+    [1m[94m|[0m             [1m[94m---[0m [1m[94mvalue moved here[0m
+[1m[94m168[0m [1m[94m|[0m     if !is_pack {
+[1m[94m169[0m [1m[94m|[0m         let _ = req.query(&[("loaders", "[\"fabric\"]")]);
+    [1m[94m|[0m                     [1m[94m-------------------------------------[0m [1m[94m`req` moved due to this method call[0m
+[1m[94m...[0m
+[1m[94m172[0m [1m[94m|[0m     let versions: Vec<ApiVersion> = req
+    [1m[94m|[0m                                     [1m[91m^^^[0m [1m[91mvalue used here after move[0m
+    [1m[94m|[0m
+[1m[92mnote[0m: `reqwest::RequestBuilder::query` takes ownership of the receiver `self`, which moves `req`
+   [1m[94m--> [0m/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/reqwest-0.12.28/src/async_impl/request.rs:357:45
+    [1m[94m|[0m
+[1m[94m357[0m [1m[94m|[0m     pub fn query<T: Serialize + ?Sized>(mut self, query: &T) -> RequestBuilder {
+    [1m[94m|[0m                                             [1m[92m^^^^[0m
+
+[1m[91merror[E0596][0m[1m: cannot borrow `resp` as mutable, as it is not declared as mutable[0m
+   [1m[94m--> [0msrc/modrinth.rs:246:29
+    [1m[94m|[0m
+[1m[94m246[0m [1m[94m|[0m     while let Some(chunk) = resp
+    [1m[94m|[0m                             [1m[91m^^^^[0m [1m[91mcannot borrow as mutable[0m
+    [1m[94m|[0m
+[1m[96mhelp[0m: consider changing this to be mutable
+    [1m[94m|[0m
+[1m[94m229[0m [1m[94m| [0m    let [92mmut [0mresp = http
+    [1m[94m|[0m         [92m+++[0m
+
+[1m[33mwarning[0m[1m: variable does not need to be mutable[0m
+  [1m[94m--> [0msrc/main.rs:67:9
+   [1m[94m|[0m
+[1m[94m67[0m [1m[94m|[0m     let mut cmd = Command::new(program);
+   [1m[94m|[0m         [1m[94m----[0m[1m[33m^^^[0m
+   [1m[94m|[0m         [1m[94m|[0m
+   [1m[94m|[0m         [1m[94mhelp: remove this `mut`[0m
+
+[1mSome errors have detailed explanations: E0382, E0596.[0m
+[1mFor more information about an error, try `rustc --explain E0382`.[0m
+[1m[33mwarning[0m: `winvisual-launcher` (bin "winvisual-launcher") generated 3 warnings
+[1m[91merror[0m: could not compile `winvisual-launcher` (bin "winvisual-launcher") due to 5 previous errors; 3 warnings emitted
