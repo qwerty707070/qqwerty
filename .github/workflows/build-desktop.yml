@@ -131,22 +131,28 @@ jobs:
           npm ci
           npm run build
 
-      - name: Cargo check with diagnostic issue on failure
+      - name: Cargo check with diagnostic commit on failure
         if: matrix.platform == 'ubuntu-22.04'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd src-tauri
           set +e
-          cargo check --release 2>&1 | tail -250 > /tmp/cargo-check.log
+          cargo check --release 2>&1 | tail -300 > /tmp/cargo-check.log
           status=${PIPESTATUS[0]}
           set -e
           if [ "$status" -ne 0 ]; then
-            BODY="Compiler diagnostics (auto-generated):\n\`\`\`\n$(cat /tmp/cargo-check.log)\n\`\`\`"
-            gh api repos/${GITHUB_REPOSITORY}/issues --method POST \
-              -f "title=Rust diagnostic (auto) — cargo check failed" \
-              -f "body=${BODY}" || true
-            echo "cargo check failed — full compiler output posted as a GitHub issue"
+            cd ..
+            git config user.name "WinVisual Builder"
+            git config user.email "builder@winvisual.local"
+            git fetch origin "${GITHUB_REF_NAME}"
+            git checkout -f -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+            mkdir -p .ci-diagnostic
+            cp /tmp/cargo-check.log .ci-diagnostic/cargo-check-failed.log
+            git add .ci-diagnostic/cargo-check-failed.log
+            git commit -m "ci: cargo check diagnostics [skip ci]"
+            git push origin "${GITHUB_REF_NAME}"
+            echo "cargo check failed — full compiler output committed to .ci-diagnostic/cargo-check-failed.log"
             exit 1
           fi
           echo "cargo check passed"
