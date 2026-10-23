@@ -53,7 +53,7 @@ public abstract class Canvas2D {
     }
 
     /**
-     * Signature EvoVisual x WinVisual dark obsidian HUD card with outer glow border & top accent strip.
+     * Signature WinVisual dark obsidian HUD card with outer glow border & top accent strip.
      */
     public final void evoCard(int x, int y, int w, int h, int bgArgb, int borderArgb, int topAccentLeft, int topAccentRight) {
         // Subtle soft shadow

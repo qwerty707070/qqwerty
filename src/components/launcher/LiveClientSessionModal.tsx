@@ -162,7 +162,7 @@ export const LiveClientSessionModal: React.FC = () => {
                     <Sparkles size={14} style={{ color: activeTheme.primaryHex }} />
                     <span className="font-bold text-white">WINVISUAL 2.7</span>
                     <span className="text-white/25">|</span>
-                    <span className="text-white/90">{activeVer?.name ?? 'Fabric 1.21.11'}</span>
+                    <span className="text-white/90">{activeVer?.name ?? 'WinVisual 1.21.11'}</span>
                     <span className="text-white/25">|</span>
                     <span className="text-emerald-300">438 FPS</span>
                     <span className="text-white/25">|</span>
@@ -181,7 +181,7 @@ export const LiveClientSessionModal: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Button variant="secondary" size="sm" onClick={() => setClickGuiOpen((o) => !o)}>
                   <SlidersHorizontal size={14} strokeWidth={1.75} />
-                  EvoGUI [Right Shift]
+                  WinVisual [Right Shift]
                 </Button>
                 <Button
                   variant="danger"
@@ -508,7 +508,7 @@ export const LiveClientSessionModal: React.FC = () => {
               )}
             </div>
 
-            {/* Right-Shift In-Game EvoVisual ClickGUI Overlay */}
+            {/* Right-Shift In-Game WinVisual Studio ClickGUI Overlay */}
             <AnimatePresence>
               {clickGuiOpen && (
                 <motion.div
@@ -526,7 +526,7 @@ export const LiveClientSessionModal: React.FC = () => {
                           className="text-[15px] font-bold tracking-tight"
                           style={{ color: activeTheme.primaryHex }}
                         >
-                          WINVISUAL × EVOVISUAL
+                          WINVISUAL {activeVer?.minecraftVersion ?? '1.21.11'}
                         </span>
                         {(
                           [

@@ -134,7 +134,7 @@ export const ModulesPage: React.FC = () => {
     navigator.clipboard?.writeText(code).catch(() => {});
     pushToast({
       type: 'success',
-      title: isRu ? 'Код пресета EvoVisual скопирован' : 'EvoVisual Preset Code Copied',
+      title: isRu ? 'Код пресета WinVisual скопирован' : 'WinVisual Preset Code Copied',
       description: `${code.slice(0, 34)}…`,
     });
   };
@@ -208,12 +208,12 @@ export const ModulesPage: React.FC = () => {
             <PackageCheck size={13} strokeWidth={2} />
             <span>
               {isRu
-                ? 'ВШИТО В ЛАУНЧЕР • FABRIC 1.16.5 / 1.21.4 / 1.21.11 • 28 МОДУЛЕЙ EVOVIS + ESP'
-                : 'EMBEDDED IN LAUNCHER • FABRIC 1.16.5 / 1.21.4 / 1.21.11 • 28 EVOVIS + ESP MODULES'}
+                ? 'ВШИТО В ЛАУНЧЕР • WINVISUAL 1.16.5 / 1.21.4 / 1.21.11 • 28 МОДУЛЕЙ'
+                : 'EMBEDDED IN LAUNCHER • WINVISUAL 1.16.5 / 1.21.4 / 1.21.11 • 28 MODULES'}
             </span>
           </div>
           <h1 className="text-[26px] font-bold tracking-tight text-[var(--text-primary)]">
-            {isRu ? 'Студия WinVisual × EvoVisual + ESP' : 'WinVisual × EvoVisual + ESP Studio'}
+            {isRu ? 'Студия модулей WinVisual' : 'WinVisual Module Studio'}
           </h1>
           <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
             {isRu
@@ -250,7 +250,7 @@ export const ModulesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Embedded JAR Quick Bar + Live EvoVisual Theme & Preset Bar */}
+      {/* Embedded JAR Quick Bar + Live WinVisual Theme & Preset Bar */}
       <Card className="p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--text-secondary)]">
@@ -314,7 +314,7 @@ export const ModulesPage: React.FC = () => {
           />
           <div className="absolute inset-0 bg-black/30" />
 
-          {/* Simulated In-World Player Model with Live EvoVis ESP + ChinaHat + Crystal Wings + JumpCircle */}
+          {/* Simulated In-World Player Model with Live WinVisual ESP + ChinaHat + Crystal Wings + JumpCircle */}
           <div className="pointer-events-none absolute right-[108px] top-[62px] w-[96px] h-[156px] flex flex-col items-center justify-between">
             {/* Evo Nametag */}
             {isEnabled('nametags') && (
@@ -613,7 +613,7 @@ export const ModulesPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Crosshair size={16} strokeWidth={1.75} style={{ color: activeTheme.primaryHex }} />
               <h2 className="text-[14.5px] font-semibold text-[var(--text-primary)]">
-                {isRu ? 'Векторный прицел и профили' : 'Crosshair & Evo Profiles'}
+                {isRu ? 'Векторный прицел и профили' : 'Crosshair & Profiles'}
               </h2>
             </div>
 
@@ -664,7 +664,7 @@ export const ModulesPage: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
-                  { id: 'evovis-esp', ru: 'EvoVis + ESP', en: 'EvoVis + ESP' },
+                  { id: 'winvisual-esp', ru: 'WinVisual + ESP', en: 'WinVisual + ESP' },
                   { id: 'competitive', ru: 'PvP Турнир', en: 'Competitive' },
                   { id: 'cinematic', ru: 'Кинематик', en: 'Cinematic' },
                   { id: 'pure-fps', ru: 'Макс. FPS', en: 'Pure FPS' },
@@ -702,7 +702,7 @@ export const ModulesPage: React.FC = () => {
         />
       </div>
 
-      {/* EvoVisual Expandable Module Cards Grid */}
+      {/* WinVisual Expandable Module Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         {visibleModules.map((mod) => {
           const isExpanded = Boolean(expandedIds[mod.id]);
@@ -808,7 +808,7 @@ export const ModulesPage: React.FC = () => {
       <Modal
         open={importModalOpen}
         onOpenChange={setImportModalOpen}
-        title={isRu ? 'Импорт пресета WinVisual / EvoVis' : 'Import WinVisual / EvoVis Preset'}
+        title={isRu ? 'Импорт пресета WinVisual' : 'Import WinVisual Preset'}
       >
         <form onSubmit={handleApplyImport} className="space-y-4">
           <input

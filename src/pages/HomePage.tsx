@@ -29,8 +29,8 @@ const VISUAL_PROFILES: {
 }[] = [
   {
     id: 'cinematic',
-    nameRu: 'Evo Atmospheric',
-    nameEn: 'Evo Atmospheric',
+    nameRu: 'Obsidian Atmospheric',
+    nameEn: 'Obsidian Atmospheric',
     descRu: 'Реалистичная атмосфера и динамическое освещение',
     descEn: 'Realistic atmosphere & dynamic GLSL lighting',
   },

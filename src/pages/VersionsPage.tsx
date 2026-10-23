@@ -231,7 +231,7 @@ export const VersionsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Lower Row: 3 Collector Fabric Build Cards (`Fabric 1.21.11`, `Fabric 1.21.4`, `Fabric 1.16.5`) */}
+      {/* Lower Row: 3 Collector WinVisual Build Cards (`WinVisual 1.21.11`, `WinVisual 1.21.4`, `WinVisual 1.16.5`) */}
       {versionsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Skeleton className="h-[212px] w-full rounded-[18px]" />
@@ -303,7 +303,7 @@ export const VersionsPage: React.FC = () => {
                   </div>
                   <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#111322]/90 border border-white/15 text-[10.5px] font-mono text-[#D6CEFF]">
                     <PackageCheck size={11} strokeWidth={2.2} />
-                    <span>EvoVis + ESP .jar {isRu ? 'вшит' : 'embedded'}</span>
+                    <span>WinVisual {ver.minecraftVersion} .jar {isRu ? 'вшит' : 'embedded'}</span>
                   </div>
                 </div>
 

@@ -177,13 +177,13 @@ export const SettingsPage: React.FC = () => {
                   <h2 className="text-[15.5px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
                     <Laptop size={17} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
                     {isRu
-                      ? 'Нативный лаунчер и вшитые моды (WinVisual v2.7.0)'
-                      : 'Native Installers & Embedded Client Mods (WinVisual v2.7.0)'}
+                      ? 'Нативный лаунчер и вшитые моды (WinVisual v2.7.1)'
+                      : 'Native Installers & Embedded Client Mods (WinVisual v2.7.1)'}
                   </h2>
                   <p className="text-[12.5px] text-[var(--text-secondary)]">
                     {isRu
-                      ? 'Установщики Windows (.exe / .msi), macOS (.dmg) и Linux (.deb / .AppImage) уже содержат вшитые моды EvoVis + ESP (1.16.5, 1.21.4, 1.21.11).'
-                      : 'Native binaries for Windows, macOS, and Linux bundle compiled EvoVis + ESP Fabric mods for 1.16.5, 1.21.4, and 1.21.11.'}
+                      ? 'Установщики Windows (.exe / .msi), macOS (.dmg) и Linux (.deb / .AppImage) уже содержат вшитые сборки WinVisual 1.16.5, WinVisual 1.21.4 и WinVisual 1.21.11.'
+                      : 'Native binaries for Windows, macOS, and Linux bundle compiled client mods for WinVisual 1.16.5, WinVisual 1.21.4, and WinVisual 1.21.11.'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 flex-wrap">

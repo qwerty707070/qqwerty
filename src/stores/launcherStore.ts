@@ -77,7 +77,7 @@ let currentLaunchRunId = 0;
 const INITIAL_PROGRESS: DownloadProgressState = {
   active: false,
   versionId: 'winvisual-1.21.11',
-  versionName: 'Fabric 1.21.11',
+  versionName: 'WinVisual 1.21.11',
   currentFile: '',
   stageLabel: '',
   downloadedBytes: 0,
@@ -118,7 +118,7 @@ export const useLauncherStore = create<LauncherState>()(
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.7.0 initialized (Embedded EvoVis+ESP 1.16.5 / 1.21.4 / 1.21.11)`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.7.1 initialized (WinVisual 1.16.5 / 1.21.4 / 1.21.11)`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 
@@ -212,13 +212,14 @@ export const useLauncherStore = create<LauncherState>()(
         const found = get().versions.find((v) => v.id === versionId);
         const settings = useSettingsStore.getState();
         if (found && settings.notificationsEnabled) {
+          const cleanName = `WinVisual ${found.minecraftVersion}`;
           useNotificationStore.getState().pushToast({
             type: 'info',
             title:
               settings.language === 'ru'
-                ? `Выбрана сборка ${found.name}`
-                : `Selected ${found.name}`,
-            description: `Minecraft ${found.minecraftVersion} • ${found.loader}`,
+                ? `Выбрана сборка ${cleanName}`
+                : `Selected ${cleanName}`,
+            description: cleanName,
           });
         }
       },

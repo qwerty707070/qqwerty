@@ -34,7 +34,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.7.0 telemetry + strict 3-version Fabric catalog
+// 1. Validate live HTTP API endpoints + v2.7.1 telemetry + strict 3-version WinVisual catalog
 const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -46,13 +46,13 @@ const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.7.0' ||
+  status.launcherVersion !== '2.7.1' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
   !status.java?.path
 ) {
-  throw new Error('Invalid /api/status v2.7.0 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.7.1 telemetry schema: ' + JSON.stringify(status));
 }
 
 if (!Array.isArray(embeddedMods.mods) || embeddedMods.mods.length !== 3) {
@@ -78,8 +78,13 @@ if (
 }
 
 for (const v of verAll.versions) {
-  if (!v.loader.includes('Fabric') || !Array.isArray(v.highlightsRu) || !Array.isArray(v.highlightsEn)) {
-    throw new Error(`Invalid Fabric version schema on ${v.id}`);
+  if (
+    v.name !== `WinVisual ${v.minecraftVersion}` ||
+    !v.loader.startsWith(`WinVisual ${v.minecraftVersion}`) ||
+    !Array.isArray(v.highlightsRu) ||
+    !Array.isArray(v.highlightsEn)
+  ) {
+    throw new Error(`Invalid WinVisual version schema on ${v.id}: ${JSON.stringify(v)}`);
   }
 }
 
@@ -119,7 +124,7 @@ for (const mc of expectedMcVersions) {
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.7.0',
+  version: '2.7.1',
   themeId: 'violet',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
@@ -212,9 +217,22 @@ for (const lang of ['ru', 'en']) {
     if (!html.includes(activeNick)) {
       throw new Error(`Active userXXXXX nick missing from rendered route=${route}`);
     }
-    for (const removedVer of ['1.21.5', '1.21.1"', '1.20.4', 'WinVisual 2.5.0', 'WinVisual 2.3.4', 'WinVisual 2.1.9', 'WinVisual Classic']) {
+    for (const removedVer of [
+      '1.21.5',
+      '1.21.1"',
+      '1.20.4',
+      'WinVisual 2.5.0',
+      'WinVisual 2.3.4',
+      'WinVisual 2.1.9',
+      'WinVisual Classic',
+      'Fabric 1.16.5',
+      'Fabric 1.21.4',
+      'Fabric 1.21.11',
+      'EvoVis',
+      'EvoVisual',
+    ]) {
       if (html.includes(removedVer)) {
-        throw new Error(`Removed version "${removedVer}" leaked into route=${route}`);
+        throw new Error(`Forbidden string "${removedVer}" leaked into route=${route}`);
       }
     }
     console.log(`[RENDER OK] route=${route.padEnd(9)} lang=${lang} html=${html.length} chars`);
@@ -235,7 +253,7 @@ console.log(
 );
 
 console.log(
-  `[ALL CHECKS PASSED] v2.7.0 nick=${activeNick} + Embedded EvoVis+ESP Mods (1.16.5 / 1.21.4 / 1.21.11) + Cancel Launch (Web + Tauri Native) + 5/5 Mod Bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.7.1 nick=${activeNick} + WinVisual 1.16.5 / WinVisual 1.21.4 / WinVisual 1.21.11 + Cancel Launch (Web + Tauri Native) + 5/5 Mod Bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

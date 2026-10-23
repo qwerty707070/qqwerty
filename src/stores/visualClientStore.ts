@@ -68,7 +68,7 @@ interface PersistedHudDiskSchema {
   savedAt: string;
 }
 
-export type PresetProfileId = 'evovis-esp' | 'cinematic' | 'competitive' | 'pure-fps';
+export type PresetProfileId = 'winvisual-esp' | 'cinematic' | 'competitive' | 'pure-fps';
 
 interface VisualClientState {
   modules: VisualModule[];
@@ -112,7 +112,7 @@ const DEFAULT_HUD_POSITIONS: Record<string, HudWidgetPosition> = {
 };
 
 const INITIAL_MODULES: VisualModule[] = [
-  // === 1. ESP & ENTITY VISUALS (EvoVis ESP Suite) ===
+  // === 1. ESP & ENTITY VISUALS (WinVisual ESP Suite) ===
   {
     id: 'player-esp',
     name: 'Player ESP',
@@ -141,7 +141,7 @@ const INITIAL_MODULES: VisualModule[] = [
   },
   {
     id: 'nametags',
-    name: 'Evo Nametags',
+    name: 'WinVisual Nametags',
     category: 'esp',
     keybind: 'N',
     keybindCode: 78,
@@ -205,10 +205,10 @@ const INITIAL_MODULES: VisualModule[] = [
     descriptionEn: '3D trajectory trail and marker for thrown ender pearls, arrows, and tridents.',
   },
 
-  // === 2. HUD 2.0 ELEMENTS (11 Draggable EvoVisual Widgets) ===
+  // === 2. HUD 2.0 ELEMENTS (11 Draggable WinVisual Widgets) ===
   {
     id: 'watermark',
-    name: 'Evo Watermark',
+    name: 'WinVisual Watermark',
     category: 'hud',
     keybind: 'H',
     keybindCode: 72,
@@ -226,7 +226,7 @@ const INITIAL_MODULES: VisualModule[] = [
     keybind: 'T',
     keybindCode: 84,
     enabled: true,
-    modes: ['Evo Card', 'Pulse Compact', 'Neon Duel'],
+    modes: ['WinVisual Card', 'Obsidian Compact', 'Neon Duel'],
     modeIndex: 0,
     amount: 100,
     descriptionRu: 'Карточка цели в дуэлях: аватар, плавная полоса HP, дистанция и расчёт преимущества WIN/LOSE.',
@@ -242,7 +242,7 @@ const INITIAL_MODULES: VisualModule[] = [
     modes: ['Radar Circle', 'Square Map', 'Compact'],
     modeIndex: 0,
     amount: 75,
-    descriptionRu: 'Вращающийся радар EvoVisual со сторонами света N/E/S/W, игроками, мобами и лутом.',
+    descriptionRu: 'Вращающийся радар WinVisual со сторонами света N/E/S/W, игроками, мобами и лутом.',
     descriptionEn: 'Rotating radar map with cardinal compass, players, mobs, and item markers.',
   },
   {
@@ -252,7 +252,7 @@ const INITIAL_MODULES: VisualModule[] = [
     keybind: 'NONE',
     keybindCode: 0,
     enabled: true,
-    modes: ['Evo List', 'Compact', 'Badges'],
+    modes: ['WinVisual List', 'Compact', 'Badges'],
     modeIndex: 0,
     amount: 90,
     descriptionRu: 'Список активных эффектов зелий с уровнем усиления и точным обратным отсчётом.',
@@ -330,11 +330,11 @@ const INITIAL_MODULES: VisualModule[] = [
     keybind: 'NONE',
     keybindCode: 0,
     enabled: true,
-    modes: ['Evo Synth', 'Compact Bar'],
+    modes: ['WinVisual Synth', 'Compact Bar'],
     modeIndex: 0,
     amount: 70,
-    descriptionRu: 'Анимированный виджет плеера EvoVisual с эквалайзером и полосой воспроизведения.',
-    descriptionEn: 'Animated EvoVisual media bar with live spectrum bars and progress track.',
+    descriptionRu: 'Анимированный виджет плеера WinVisual с эквалайзером и полосой воспроизведения.',
+    descriptionEn: 'Animated WinVisual media bar with live spectrum bars and progress track.',
   },
   {
     id: 'arraylist',
@@ -374,7 +374,7 @@ const INITIAL_MODULES: VisualModule[] = [
     modes: ['Neon Glow', 'Soft Gold', 'Aurora'],
     modeIndex: 0,
     amount: 55,
-    descriptionRu: 'Парящие в 3D-пространстве светящиеся частицы вокруг игрока в духе EvoVisual.',
+    descriptionRu: 'Парящие в 3D-пространстве светящиеся частицы вокруг игрока в стиле WinVisual.',
     descriptionEn: 'Atmospheric 3D floating firefly orbs drifting gently around the player.',
   },
   {
@@ -443,7 +443,7 @@ const INITIAL_MODULES: VisualModule[] = [
     descriptionEn: 'Dynamic vector crosshair with hit expansion, outline, and sub-pixel tuning.',
   },
 
-  // === 4. 3D COSMETICS & PHYSICS (EvoVisual Signature) ===
+  // === 4. 3D COSMETICS & PHYSICS (WinVisual Signature) ===
   {
     id: 'china-hat',
     name: 'ChinaHat 3D Halo',
@@ -454,7 +454,7 @@ const INITIAL_MODULES: VisualModule[] = [
     modes: ['Neon Cone', 'Crown Halo', 'Dual Ring'],
     modeIndex: 0,
     amount: 85,
-    descriptionRu: 'Вращающаяся 3D-коническая шляпа EvoVisual над головой игрока с градиентным свечением.',
+    descriptionRu: 'Вращающаяся 3D-коническая шляпа WinVisual над головой игрока с градиентным свечением.',
     descriptionEn: 'Rotating 3D translucent gradient cone halo rendered above the player head.',
   },
   {
@@ -611,7 +611,7 @@ export const useVisualClientStore = create<VisualClientState>()(
       applyPresetProfile: (preset) => {
         set((state) => ({
           themeId:
-            preset === 'evovis-esp'
+            preset === 'winvisual-esp'
               ? 'violet'
               : preset === 'competitive'
                 ? 'crimson'
@@ -652,7 +652,7 @@ export const useVisualClientStore = create<VisualClientState>()(
                 ].includes(m.id),
               };
             }
-            if (preset === 'evovis-esp') {
+            if (preset === 'winvisual-esp') {
               return { ...m, enabled: true };
             }
             return { ...m, enabled: m.id !== 'tracers' && m.id !== 'mob-esp' };
@@ -716,7 +716,7 @@ export const useVisualClientStore = create<VisualClientState>()(
         const s = get();
         const gameDir = useSettingsStore.getState().gameDirectory;
         const payload: PersistedHudDiskSchema = {
-          version: '2.7.0',
+          version: '2.7.1',
           themeId: s.themeId,
           equippedCape: s.equippedCape,
           crosshair: s.crosshair,

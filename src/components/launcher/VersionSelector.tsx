@@ -172,7 +172,7 @@ export const VersionSelector: React.FC = () => {
           </p>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[15px] font-bold tracking-tight text-[#FFFFFF] truncate">
-              {activeVersion ? activeVersion.name : 'Fabric 1.21.11'}
+              {activeVersion ? activeVersion.name : 'WinVisual 1.21.11'}
             </span>
           </div>
         </div>

@@ -142,15 +142,15 @@ public final class WinVisualEngine {
     private boolean mediaPlaying = true;
     private int mediaTrackIdx = 0;
     private static final String[] MEDIA_TRACKS = new String[] {
-        "EvoVisual • Nightfall Synth",
+        "WinVisual • Nightfall Synth",
         "WinVisual • Nebula Drift",
-        "Crystal Core • 144Hz Pulse"
+        "WinVisual • 144Hz Pulse"
     };
     private final SimpleDateFormat clockFmt = new SimpleDateFormat("HH:mm", Locale.US);
 
     public void init(File gameDirectory) {
         config.bindConfigFile(gameDirectory);
-        pushToast("WinVisual x Evo v2.7 loaded [RShift]", true);
+        pushToast("WinVisual loaded [Right Shift]", true);
     }
 
     public double getEffectiveFov(double baseFov, GameSnapshot snap) {
@@ -363,7 +363,7 @@ public final class WinVisualEngine {
         }
 
         if (snap.keyLookup != null) {
-            // Right Shift or Insert toggles the in-game EvoVisual Menu
+            // Right Shift or Insert toggles the in-game WinVisual Studio Menu
             boolean menuKey = snap.keyLookup.isKeyDown(GLFW_KEY_RIGHT_SHIFT)
                     || snap.keyLookup.isKeyDown(GLFW_KEY_INSERT);
             if (menuKey && !prevMenuKeyDown && bindingModule == null) {
@@ -834,7 +834,7 @@ public final class WinVisualEngine {
         WinVisualModule wm = config.get("watermark");
         if (wm != null && wm.enabled) {
             String clock = wm.subToggle ? ("  •  " + clockFmt.format(new Date(nowMs))) : "";
-            String text = "WINVISUAL 2.7  •  " + snap.username + "  •  " + liveFps + " FPS  •  " + snap.pingMs + "ms" + clock;
+            String text = "WinVisual " + snap.mcVersion + "  •  " + snap.username + "  •  " + liveFps + " FPS  •  " + snap.pingMs + "ms" + clock;
             int w = g.textWidth(text) + 28;
             wm.hudW = w;
             wm.hudH = 22;
@@ -1277,8 +1277,8 @@ public final class WinVisualEngine {
         // Header Bar
         g.roundedRect(px + 12, py + 10, 18, 18, 4, 0xFF000000 | theme.primary);
         g.drawText("W", px + 18, py + 15, 0xFFFFFFFF);
-        g.drawText("WINVISUAL × EVO", px + 36, py + 11, 0xFFFFFFFF);
-        g.drawText("v2.7 • MC " + snap.mcVersion, px + 36, py + 21, 0xFF94A3B8);
+        g.drawText("WinVisual " + snap.mcVersion, px + 36, py + 11, 0xFFFFFFFF);
+        g.drawText("Visual Studio • Right Shift", px + 36, py + 21, 0xFF94A3B8);
 
         String[] topTabs = new String[] { "Modules", "HUD Studio", "Themes", "Presets" };
         int tabStartX = px + 166;
@@ -1491,7 +1491,7 @@ public final class WinVisualEngine {
             boolean clickLeft,
             WinVisualConfig.ThemePalette activeTheme
     ) {
-        g.drawText("Select Global EvoVisual × WinVisual Color Theme (Synced with Launcher)", px + 16, bodyY + 4, 0xFFE2E8F0);
+        g.drawText("Select Global WinVisual Color Theme (Synced with Launcher)", px + 16, bodyY + 4, 0xFFE2E8F0);
         int cardW = (panelW - 44) / 3;
         for (int i = 0; i < WinVisualConfig.THEMES.length; i++) {
             WinVisualConfig.ThemePalette tp = WinVisualConfig.THEMES[i];
@@ -1528,7 +1528,7 @@ public final class WinVisualEngine {
     ) {
         g.drawText("One-Click Visual Profiles & Bidirectional WinVisual Launcher Sync", px + 16, bodyY + 4, 0xFFE2E8F0);
         String[][] presets = new String[][] {
-            { "Evo Full Suite (ESP + HUD 2.0 + Cosmetics)", "Enables full EvoVis ESP, all flagship HUD widgets, ChinaHat & Particles" },
+            { "WinVisual Full Suite (ESP + HUD 2.0 + Cosmetics)", "Enables full WinVisual ESP, all flagship HUD widgets, ChinaHat & Particles" },
             { "Competitive PvP Clean (High FPS)", "Enables Player ESP, TargetHUD, Keystrokes, Potions, Armor & HitParticles" },
             { "Cinematic Showcase (Shaders + Aura)", "Enables ChinaHat, Crystal Wings, JumpCircles, 3D Trails & Sunset Ambience" },
             { "Sync Reload from WinVisual Launcher", "Reloads latest HUD layout, cloak & module switches from winvisual-hud.json" }

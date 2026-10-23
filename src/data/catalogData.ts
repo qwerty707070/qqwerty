@@ -1,62 +1,62 @@
 import type { ClientVersion, NewsArticle } from '../types/launcher';
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.0';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.1';
 
 export const CANONICAL_VERSIONS: ClientVersion[] = [
   {
     id: 'winvisual-1.21.11',
-    name: 'Fabric 1.21.11',
+    name: 'WinVisual 1.21.11',
     minecraftVersion: '1.21.11',
     channel: 'stable',
     recommended: true,
     updatedAt: '2026-10-23',
     sizeMb: 31.4,
-    loader: 'Fabric • EvoVis + ESP 2.7',
+    loader: 'WinVisual 1.21.11 • Fabric',
     fpsBoost: '+165% FPS',
     modulesCount: 28,
     summaryEn:
-      'Flagship Minecraft 1.21.11 build with embedded winvisual-client-1.21.11.jar: EvoVis 2D/3D ESP, Rotating Minimap, ChinaHat, Crystal Wings, JumpCircles, 11 HUD 2.0 widgets, and Right-Shift Studio.',
+      'Flagship WinVisual 1.21.11 build with embedded client mod: 2D/3D ESP, Rotating Minimap, ChinaHat, Crystal Wings, JumpCircles, 11 HUD 2.0 widgets, and Right-Shift Studio.',
     summaryRu:
-      'Флагманская сборка 1.21.11 со вшитым модом winvisual-client-1.21.11.jar: полный пакет EvoVis + ESP, миникарта-радар, ChinaHat, 3D-крылья, JumpCircles, 11 виджетов HUD 2.0 и меню Right Shift.',
-    highlightsRu: ['Вшитый EvoVis + ESP .jar', 'HUD 2.0 + ChinaHat + Крылья'],
-    highlightsEn: ['Embedded EvoVis + ESP .jar', 'HUD 2.0 + ChinaHat + Wings'],
+      'Флагманская сборка WinVisual 1.21.11 со вшитым клиент-модом: ESP, вращающийся радар, ChinaHat, 3D-крылья, JumpCircles, 11 виджетов HUD 2.0 и меню Right Shift.',
+    highlightsRu: ['WinVisual 1.21.11', 'HUD 2.0 + ChinaHat + Крылья'],
+    highlightsEn: ['WinVisual 1.21.11', 'HUD 2.0 + ChinaHat + Wings'],
   },
   {
     id: 'winvisual-1.21.4',
-    name: 'Fabric 1.21.4',
+    name: 'WinVisual 1.21.4',
     minecraftVersion: '1.21.4',
     channel: 'stable',
     recommended: false,
     updatedAt: '2026-10-23',
     sizeMb: 29.9,
-    loader: 'Fabric • EvoVis + ESP 2.7',
+    loader: 'WinVisual 1.21.4 • Fabric',
     fpsBoost: '+148% FPS',
     modulesCount: 28,
     summaryEn:
-      'Tournament Minecraft 1.21.4 build with embedded winvisual-client-1.21.4.jar: Player/Item/Pearl ESP, Target HUD 2.0, Keystrokes + CPS, 3D Trails, HitParticles, and live config sync.',
+      'Tournament WinVisual 1.21.4 build with embedded client mod: Player/Item/Pearl ESP, Target HUD 2.0, Keystrokes + CPS, 3D Trails, HitParticles, and live config sync.',
     summaryRu:
-      'Турнирная сборка 1.21.4 со вшитым модом winvisual-client-1.21.4.jar: Player/Item/Pearl ESP, Target HUD 2.0, Keystrokes + CPS, 3D-шлейфы, HitParticles и живая синхронизация конфигов.',
-    highlightsRu: ['Вшитый EvoVis + ESP .jar', 'Target HUD 2.0 + Pearl ESP'],
-    highlightsEn: ['Embedded EvoVis + ESP .jar', 'Target HUD 2.0 + Pearl ESP'],
+      'Турнирная сборка WinVisual 1.21.4 со вшитым клиент-модом: Player/Item/Pearl ESP, Target HUD 2.0, Keystrokes + CPS, 3D-шлейфы, HitParticles и живая синхронизация конфигов.',
+    highlightsRu: ['WinVisual 1.21.4', 'Target HUD 2.0 + Pearl ESP'],
+    highlightsEn: ['WinVisual 1.21.4', 'Target HUD 2.0 + Pearl ESP'],
   },
   {
     id: 'winvisual-1.16.5',
-    name: 'Fabric 1.16.5',
+    name: 'WinVisual 1.16.5',
     minecraftVersion: '1.16.5',
     channel: 'stable',
     recommended: false,
     updatedAt: '2026-10-23',
     sizeMb: 23.8,
-    loader: 'Fabric • EvoVis + ESP 2.7',
+    loader: 'WinVisual 1.16.5 • Fabric',
     fpsBoost: '+125% FPS',
     modulesCount: 28,
     summaryEn:
-      'Classic PvP Minecraft 1.16.5 build with embedded winvisual-client-1.16.5.jar: full parity 28 EvoVisual + ESP modules, 6 neon themes, 3D cosmetics, and Right-Shift ClickGUI.',
+      'Classic PvP WinVisual 1.16.5 build with embedded client mod: all 28 WinVisual + ESP modules, 6 neon themes, 3D cosmetics, and Right-Shift ClickGUI.',
     summaryRu:
-      'Классическая PvP-сборка 1.16.5 со вшитым модом winvisual-client-1.16.5.jar: все 28 модулей EvoVisual + ESP, 6 тем оформления, 3D-косметика и внутриигровой ClickGUI.',
-    highlightsRu: ['Вшитый EvoVis + ESP .jar', 'Полный паритет 28 модулей'],
-    highlightsEn: ['Embedded EvoVis + ESP .jar', 'Full 28-Module Parity'],
+      'Классическая PvP-сборка WinVisual 1.16.5 со вшитым клиент-модом: все 28 модулей WinVisual + ESP, 6 тем оформления, 3D-косметика и внутриигровой ClickGUI.',
+    highlightsRu: ['WinVisual 1.16.5', 'Полный паритет 28 модулей'],
+    highlightsEn: ['WinVisual 1.16.5', 'Full 28-Module Parity'],
   },
 ];
 
@@ -71,21 +71,21 @@ export const CANONICAL_NEWS: NewsArticle[] = [
     dateRu: '23 октября 2026',
     readTimeEn: '3 min read',
     readTimeRu: '3 мин чтения',
-    titleEn: 'WinVisual 2.7 — Embedded EvoVisual & ESP Client Mod for Fabric 1.16.5 / 1.21.4 / 1.21.11',
-    titleRu: 'WinVisual 2.7 — вшитый визуальный мод EvoVisual + ESP на 1.16.5, 1.21.4 и 1.21.11',
+    titleEn: 'WinVisual 2.7.1 — Embedded Client Mod for WinVisual 1.16.5 / 1.21.4 / 1.21.11',
+    titleRu: 'WinVisual 2.7.1 — вшитый визуальный мод для WinVisual 1.16.5, 1.21.4 и 1.21.11',
     excerptEn:
-      'Compiled Fabric client jars embedded directly in WinVisual Launcher: 28 EvoVisual + ESP modules, 11 draggable HUD 2.0 widgets, ChinaHat, 3D Crystal Wings, JumpCircles, Trails, and Right-Shift Studio.',
+      'Compiled client jars embedded directly in WinVisual Launcher: 28 ESP & visual modules, 11 draggable HUD 2.0 widgets, ChinaHat, 3D Crystal Wings, JumpCircles, Trails, and Right-Shift Studio.',
     excerptRu:
-      'Вшитые прямо в лаунчер Fabric-моды для 1.16.5, 1.21.4 и 1.21.11: 28 модулей EvoVisual + ESP, 11 перетаскиваемых виджетов HUD 2.0, ChinaHat, 3D-крылья, JumpCircles, шлейфы и меню Right Shift.',
+      'Вшитые прямо в лаунчер клиент-моды WinVisual 1.16.5, WinVisual 1.21.4 и WinVisual 1.21.11: 28 модулей, 11 перетаскиваемых виджетов HUD 2.0, ChinaHat, 3D-крылья, JumpCircles, шлейфы и меню Right Shift.',
     bodyEn: [
-      'WinVisual 2.7 ships real compiled Fabric client jars embedded inside every native desktop installer across Minecraft 1.16.5, 1.21.4, and 1.21.11.',
+      'WinVisual 2.7.1 ships compiled Fabric client jars embedded inside every native desktop installer across WinVisual 1.16.5, WinVisual 1.21.4, and WinVisual 1.21.11.',
       'Includes full Player/Item/Pearl ESP, Rotating Minimap radar, Target HUD 2.0, ChinaHat 3D halo, Crystal Wings, JumpCircles, 3D Trails, and two-way winvisual-hud.json sync.',
-      'Press Right Shift anywhere in-game to open the interactive WinVisual × EvoVisual ClickGUI and drag HUD widgets directly across your screen.',
+      'Press Right Shift anywhere in-game to open the interactive WinVisual Studio ClickGUI and drag HUD widgets directly across your screen.',
     ],
     bodyRu: [
-      'В WinVisual 2.7 прямо внутрь бинарника лаунчера вшиты скомпилированные Fabric-моды winvisual-client для версий 1.16.5, 1.21.4 и 1.21.11.',
-      'Доступны все 28 модулей в стиле EvoVisual + ESP: Player/Item/Pearl ESP, вращающийся радар-миникарта, Target HUD 2.0, 3D ChinaHat, крылья, JumpCircles, 3D-шлейфы и живая синхронизация winvisual-hud.json.',
-      'В самой игре нажмите Right Shift, чтобы открыть интерактивное меню WinVisual × EvoVisual и свободно перетаскивать элементы HUD мышкой.',
+      'В WinVisual 2.7.1 прямо внутрь бинарника лаунчера вшиты скомпилированные клиент-моды WinVisual 1.16.5, WinVisual 1.21.4 и WinVisual 1.21.11.',
+      'Доступны все 28 модулей: Player/Item/Pearl ESP, вращающийся радар-миникарта, Target HUD 2.0, 3D ChinaHat, крылья, JumpCircles, 3D-шлейфы и живая синхронизация winvisual-hud.json.',
+      'В самой игре нажмите Right Shift, чтобы открыть интерактивное меню WinVisual Studio и свободно перетаскивать элементы HUD мышкой.',
     ],
   },
   {
@@ -106,11 +106,11 @@ export const CANONICAL_NEWS: NewsArticle[] = [
       'Как мы реализовали двухпроходное свечение Kawase и биомную цветокоррекцию горизонта с частотой свыше 360 FPS.',
     bodyEn: [
       'Traditional shader packs sacrifice competitive visibility and input latency. WinVisual solves both with native post-processing passes integrated directly into Fabric.',
-      'Switch seamlessly between Evo Atmospheric, Pulse Competitive, or Feather Ultra FPS directly from the Home deck or in-game Right-Shift ClickGUI.',
+      'Switch seamlessly between Obsidian Atmospheric, Neon Competitive, or Ultra FPS directly from the Home deck or in-game Right-Shift ClickGUI.',
     ],
     bodyRu: [
       'Тяжёлые шейдер-паки часто ухудшают читаемость сцены и увеличивают задержку ввода. В WinVisual постобработка встроена напрямую в конвейер рендера Fabric.',
-      'Переключайтесь между профилями Evo Atmospheric, Pulse Competitive и Feather Ultra FPS прямо на главном экране или в игре по правому Shift.',
+      'Переключайтесь между профилями Obsidian Atmospheric, Neon Competitive и Ultra FPS прямо на главном экране или в игре по правому Shift.',
     ],
   },
   {

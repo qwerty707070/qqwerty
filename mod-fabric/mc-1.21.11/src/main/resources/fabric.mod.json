@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "winvisual",
-  "version": "2.7.0",
-  "name": "WinVisual Client (EvoVisual Suite)",
-  "description": "Next-generation pure visual client mod for Minecraft 1.21.11: EvoVis 2D/3D ESP, 15 draggable HUD 2.0 widgets, ChinaHat, Crystal Wings, JumpCircles, 3D Trails, HitParticles & interactive Right-Shift Studio.",
+  "version": "2.7.1",
+  "name": "WinVisual 1.21.11",
+  "description": "WinVisual 1.21.11 client mod: 2D/3D ESP, HUD 2.0 widgets, ChinaHat, Crystal Wings, JumpCircles, 3D Trails, HitParticles & interactive Right-Shift Studio.",
   "authors": ["WinVisual"],
   "environment": "client",
   "icon": "assets/winvisual/icon.png",

@@ -58,8 +58,8 @@ pub fn install_embedded_winvisual_client_mod(
     }
 
     let dest = mods_dir.join(target_filename);
-    let needs_write = match std::fs::metadata(&dest) {
-        Ok(meta) => meta.len() != jar_bytes.len() as u64,
+    let needs_write = match std::fs::read(&dest) {
+        Ok(existing) => existing.as_slice() != jar_bytes,
         Err(_) => true,
     };
 
@@ -75,7 +75,7 @@ pub fn install_embedded_winvisual_client_mod(
     let _ = app.emit(
         "logs://line",
         format!(
-            "[WINVISUAL-MOD] Injected embedded {target_filename} ({:.1} KB) into {}",
+            "[WINVISUAL] Synced WinVisual {minecraft_version} ({target_filename}, {:.1} KB) -> {}",
             jar_bytes.len() as f64 / 1024.0,
             mods_dir.display()
         ),

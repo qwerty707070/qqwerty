@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Complete EvoVisual x WinVisual 36-module registry, 6 color themes, crosshair config,
+ * Complete WinVisual 36-module registry, 6 color themes, crosshair config,
  * friend list, and zero-dependency bidirectional sync with <gameDir>/config/winvisual-hud.json.
  */
 public final class WinVisualConfig {
@@ -36,12 +36,12 @@ public final class WinVisualConfig {
     }
 
     public static final ThemePalette[] THEMES = new ThemePalette[] {
-        new ThemePalette("evo-violet", "Evo Violet", 0x8B7CFF, 0xC4B5FD, 0xDF0B0D16, 0x558B7CFF),
+        new ThemePalette("violet", "Royal Violet", 0x8B7CFF, 0xC4B5FD, 0xDF0B0D16, 0x558B7CFF),
         new ThemePalette("pulse-neon", "Pulse Neon", 0xA855F7, 0x38BDF8, 0xDF0A0C16, 0x55A855F7),
-        new ThemePalette("crimson-esp", "Crimson ESP", 0xF43F5E, 0xFDA4AF, 0xDF110A10, 0x55F43F5E),
-        new ThemePalette("cyber-cyan", "Cyber Cyan", 0x22D3EE, 0x818CF8, 0xDF081118, 0x5522D3EE),
-        new ThemePalette("emerald-matrix", "Emerald Glow", 0x10B981, 0x6EE7B7, 0xDF081310, 0x5510B981),
-        new ThemePalette("obsidian-snow", "Obsidian Pure", 0xF8FAFC, 0x94A3B8, 0xE6090A0F, 0x45FFFFFF)
+        new ThemePalette("crimson", "Pulse Crimson", 0xF43F5E, 0xFDA4AF, 0xDF110A10, 0x55F43F5E),
+        new ThemePalette("cyber", "Cyber Cyan", 0x22D3EE, 0x818CF8, 0xDF081118, 0x5522D3EE),
+        new ThemePalette("emerald", "Emerald Glow", 0x10B981, 0x6EE7B7, 0xDF081310, 0x5510B981),
+        new ThemePalette("arctic", "Obsidian Pure", 0xF8FAFC, 0x94A3B8, 0xE6090A0F, 0x45FFFFFF)
     };
 
     public final List<WinVisualModule> modules = new ArrayList<WinVisualModule>();
@@ -79,7 +79,7 @@ public final class WinVisualConfig {
     }
 
     private void registerDefaults() {
-        // === 1. ESP & RENDER (EvoVis-26.2-ESP core visual suite) ===
+        // === 1. ESP & RENDER (WinVisual core visual suite) ===
         add(new WinVisualModule("player-esp", "Player ESP", "2D projected bounding boxes around players", WinVisualModule.Category.ESP, true, 0, "NONE")
                 .withModes("Style", 0, "Corners", "Full Box", "Filled Glow")
                 .withSlider("Max Range", 24f, 160f, 96f)
@@ -90,8 +90,8 @@ public final class WinVisualConfig {
                 .withSlider("Thickness", 1f, 4f, 2f)
                 .withSubToggle("Numeric HP", true));
 
-        add(new WinVisualModule("nametags", "Evo Nametags", "Floating distance-scaled player name, HP & ping badge", WinVisualModule.Category.ESP, true, 0, "NONE")
-                .withModes("Style", 0, "Evo Pill", "Minimal", "Compact")
+        add(new WinVisualModule("nametags", "Nametags", "Floating distance-scaled player name, HP & ping badge", WinVisualModule.Category.ESP, true, 0, "NONE")
+                .withModes("Style", 0, "Glass Pill", "Minimal", "Compact")
                 .withSlider("Scale", 0.7f, 1.6f, 1.0f)
                 .withSubToggle("Show Held Item", true));
 
@@ -116,19 +116,19 @@ public final class WinVisualConfig {
                 .withSubToggle("Landing Tag", true));
 
         add(new WinVisualModule("hitbox-outline", "Target Outline", "Crisp frame around focused entity in crosshair", WinVisualModule.Category.ESP, true, 0, "NONE")
-                .withModes("Style", 0, "Evo Glow", "Sharp")
+                .withModes("Style", 0, "Neon Glow", "Sharp")
                 .withSlider("Width", 1f, 3f, 2f)
                 .withSubToggle("Hurt Flash", true));
 
-        // === 2. DRAGGABLE HUD 2.0 (All EvoVisuals widgets) ===
-        add(new WinVisualModule("watermark", "Watermark", "WinVisual x Evo pill header with FPS, ping & clock", WinVisualModule.Category.HUD, true, 0, "NONE")
-                .withModes("Style", 0, "Evo Pill", "Neon Line", "Minimal")
+        // === 2. DRAGGABLE HUD 2.0 ===
+        add(new WinVisualModule("watermark", "Watermark", "WinVisual pill header with FPS, ping & clock", WinVisualModule.Category.HUD, true, 0, "NONE")
+                .withModes("Style", 0, "Glass Pill", "Neon Line", "Minimal")
                 .withSlider("Opacity", 0.5f, 1.0f, 0.92f)
                 .withSubToggle("Show Clock", true)
                 .withHudBox(14, 14, 246, 24));
 
         add(new WinVisualModule("target-hud", "Target HUD", "Animated combat target card with smooth HP & WIN diff", WinVisualModule.Category.HUD, true, 0, "NONE")
-                .withModes("Style", 0, "Evo Card", "Pulse Bar", "Compact")
+                .withModes("Style", 0, "Neon Card", "Pulse Bar", "Compact")
                 .withSlider("Hold Sec", 1f, 8f, 3.5f)
                 .withSubToggle("Hurt Pulse", true)
                 .withHudBox(330, 178, 174, 54));
@@ -175,7 +175,7 @@ public final class WinVisualConfig {
                 .withSubToggle("Show Speed", true)
                 .withHudBox(128, 376, 168, 24));
 
-        add(new WinVisualModule("media-player", "Media Player", "Evo Now Playing widget with animated spectrum bars", WinVisualModule.Category.HUD, true, 0, "NONE")
+        add(new WinVisualModule("media-player", "Media Player", "WinVisual Now Playing widget with animated spectrum bars", WinVisualModule.Category.HUD, true, 0, "NONE")
                 .withModes("Preset", 0, "Synthwave", "Night Drive", "Lo-Fi Rain")
                 .withSlider("Bars", 4f, 10f, 7f)
                 .withSubToggle("Animate EQ", true)
@@ -208,14 +208,14 @@ public final class WinVisualConfig {
                 .withSlider("Radius", 3f, 10f, 6f)
                 .withSubToggle("Pulse Alpha", true));
 
-        // === 4. COSMETICS (EvoVisuals hats, wings, capes) ===
+        // === 4. COSMETICS ===
         add(new WinVisualModule("china-hat", "ChinaHat Halo", "24-segment rotating 3D gradient cone hat above head", WinVisualModule.Category.COSMETICS, true, 0, "NONE")
-                .withModes("Model", 0, "Evo Cone", "Crown Halo", "Sakura Ring")
+                .withModes("Model", 0, "Neon Cone", "Crown Halo", "Sakura Ring")
                 .withSlider("Radius", 0.45f, 0.9f, 0.65f)
                 .withSubToggle("Show FirstPerson", false));
 
         add(new WinVisualModule("crystal-wings", "Crystal Wings", "Articulated flapping 3D geometric wings in F5 view", WinVisualModule.Category.COSMETICS, true, 0, "NONE")
-                .withModes("Design", 0, "Evo Crystal", "Seraphim", "Cyber Blade")
+                .withModes("Design", 0, "Crystal", "Seraphim", "Cyber Blade")
                 .withSlider("Span", 0.7f, 1.6f, 1.1f)
                 .withSubToggle("Chroma Edge", true));
 
@@ -231,7 +231,7 @@ public final class WinVisualConfig {
 
         // === 5. WORLD, CAMERA & HAND ===
         add(new WinVisualModule("custom-crosshair", "Custom Crosshair", "Dynamic movement & attack-reactive neon crosshair", WinVisualModule.Category.WORLD, true, 0, "NONE")
-                .withModes("Shape", 0, "Evo Cross", "Circle + Dot", "T-Cross")
+                .withModes("Shape", 0, "Dynamic Cross", "Circle + Dot", "T-Cross")
                 .withSlider("Gap", 2f, 10f, 4f)
                 .withSubToggle("Center Dot", true));
 
@@ -251,7 +251,7 @@ public final class WinVisualConfig {
                 .withSubToggle("Sky Vignette", true));
 
         add(new WinVisualModule("viewmodel", "ViewModel Tint", "Subtle theme aura vignette & hand shader accent", WinVisualModule.Category.WORLD, false, 0, "NONE")
-                .withModes("Tint", 0, "Evo Glow", "Cyber")
+                .withModes("Tint", 0, "Neon Glow", "Cyber")
                 .withSlider("Intensity", 0.05f, 0.35f, 0.14f)
                 .withSubToggle("Pulse", true));
 
@@ -378,7 +378,7 @@ public final class WinVisualConfig {
         try {
             StringBuilder sb = new StringBuilder(4096);
             sb.append("{\n");
-            sb.append("  \"version\": \"2.7.0\",\n");
+            sb.append("  \"version\": \"2.7.1\",\n");
             sb.append("  \"theme\": \"").append(theme().id).append("\",\n");
             sb.append("  \"equippedCape\": \"").append(escape(equippedCape)).append("\",\n");
             sb.append("  \"crosshair\": {\n");

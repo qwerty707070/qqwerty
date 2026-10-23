@@ -1,7 +1,7 @@
 package com.winvisual.core;
 
 /**
- * EvoVisual x WinVisual module descriptor with per-module modes, sliders, sub-toggles,
+ * WinVisual module descriptor with per-module modes, sliders, sub-toggles,
  * keybinds, and draggable HUD coordinates.
  */
 public final class WinVisualModule {

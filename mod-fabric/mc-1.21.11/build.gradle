@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'com.winvisual'
-version = '2.7.0'
+version = '2.7.1'
 
 base {
     archivesName = 'winvisual-client-1.21.11'
