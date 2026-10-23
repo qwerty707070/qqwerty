@@ -7,6 +7,7 @@ globalThis.Element = Element;
 globalThis.HTMLElement = class HTMLElement extends Element {};
 globalThis.SVGElement = class SVGElement extends Element {};
 globalThis.window = globalThis;
+globalThis.window.getComputedStyle = () => ({ paddingRight: '0px', marginRight: '0px' });
 globalThis.addEventListener = () => {};
 globalThis.removeEventListener = () => {};
 globalThis.localStorage = {
@@ -33,7 +34,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.6.0 telemetry + strict 3-version Fabric catalog
+// 1. Validate live HTTP API endpoints + v2.6.1 telemetry + strict 3-version Fabric catalog
 const [status, verAll, verStable, newsData, oauth] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -44,13 +45,13 @@ const [status, verAll, verStable, newsData, oauth] = await Promise.all([
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.6.0' ||
+  status.launcherVersion !== '2.6.1' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
   !status.java?.path
 ) {
-  throw new Error('Invalid /api/status v2.6.0 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.6.1 telemetry schema: ' + JSON.stringify(status));
 }
 
 const expectedMcVersions = ['1.21.11', '1.21.4', '1.16.5'];
@@ -105,7 +106,7 @@ for (const mc of expectedMcVersions) {
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.6.0',
+  version: '2.6.1',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
   hudPositions: { watermark: { x: 24, y: 20 }, 'target-hud': { x: 340, y: 212 } },
@@ -210,8 +211,17 @@ const sessionHtml = ssrEntry.renderLiveSessionSnapshot();
 if (!sessionHtml || sessionHtml.length < 1000 || !sessionHtml.includes(activeNick)) {
   throw new Error('LiveClientSessionModal render failed');
 }
+
+// 7. End-to-End Real Streaming Cancel Launch + Native Tauri Abort Verification
+const cancelProof = await ssrEntry.verifyCancelLaunchFlows(base);
 console.log(
-  `[ALL CHECKS PASSED] v2.6.0 nick=${activeNick} + 3/3 Fabric versions + 4/4 Modrinth bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
+  `[CANCEL LAUNCH OK] Web stream aborted mid-flight at ${(
+    cancelProof.webBytesBeforeCancel / 1024
+  ).toFixed(0)} KB -> instant 0ms idle + Native Tauri cancel_native_launch=${cancelProof.nativeCancelInvoked}`
+);
+
+console.log(
+  `[ALL CHECKS PASSED] v2.6.1 nick=${activeNick} + Cancel Launch (Web + Tauri Native) + 3/3 Fabric versions + 4/4 Modrinth bundle + 64x64 PNG skin + HUD disk sync + 12/12 SHA-256 bundles + 12/12 SSR pages + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

@@ -291,7 +291,7 @@ export const useVisualClientStore = create<VisualClientState>()(
         const s = get();
         const gameDir = useSettingsStore.getState().gameDirectory;
         const payload: PersistedHudDiskSchema = {
-          version: '2.6.0',
+          version: '2.6.1',
           equippedCape: s.equippedCape,
           crosshair: s.crosshair,
           hudPositions: s.hudPositions,

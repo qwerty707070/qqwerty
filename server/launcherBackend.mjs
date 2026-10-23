@@ -382,6 +382,7 @@ export function buildManifest(versionId) {
     const sizeBytes = Math.max(524288, Math.round(baseBytes * p.ratio));
     const { sha256 } = getArtifactPayload(found.id, p.filename, sizeBytes);
     return {
+      id: p.filename,
       filename: p.filename,
       label: p.label,
       sizeBytes,
@@ -390,11 +391,14 @@ export function buildManifest(versionId) {
     };
   });
 
+  const totalBytes = artifacts.reduce((acc, item) => acc + item.sizeBytes, 0);
+
   return {
     versionId: found.id,
     versionName: found.name,
     minecraftVersion: found.minecraftVersion,
-    totalSizeBytes: artifacts.reduce((acc, item) => acc + item.sizeBytes, 0),
+    totalBytes,
+    totalSizeBytes: totalBytes,
     artifacts,
   };
 }
@@ -430,7 +434,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.6.0',
+        launcherVersion: '2.6.1',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: cpuCount,
@@ -613,7 +617,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.6.0-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.6.1-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
@@ -622,20 +626,28 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     return true;
   }
 
-  const manifestMatch = pathname.match(/^\/api\/(?:download\/([^/]+)\/manifest|manifest\/([^/]+))$/);
+  const manifestMatch = pathname.match(
+    /^\/api\/(?:download\/manifest\/([^/]+)|download\/([^/]+)\/manifest|manifest\/([^/]+))$/
+  );
   if (manifestMatch) {
-    const versionId = decodeURIComponent(manifestMatch[1] ?? manifestMatch[2]);
+    const versionId = decodeURIComponent(
+      manifestMatch[1] ?? manifestMatch[2] ?? manifestMatch[3]
+    );
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify(buildManifest(versionId)));
     return true;
   }
 
-  const downloadMatch = pathname.match(/^\/api\/download\/([^/]+)\/([^/]+)$/);
+  const downloadMatch = pathname.match(
+    /^\/api\/download\/(?:artifact\/([^/]+)\/([^/]+)|([^/]+)\/([^/]+))$/
+  );
   if (downloadMatch) {
-    const versionId = decodeURIComponent(downloadMatch[1]);
-    const filename = decodeURIComponent(downloadMatch[2]);
-    const simulateError = parsed.searchParams.get('simulate_error') === '1';
+    const versionId = decodeURIComponent(downloadMatch[1] ?? downloadMatch[3]);
+    const filename = decodeURIComponent(downloadMatch[2] ?? downloadMatch[4]);
+    const simulateError =
+      parsed.searchParams.get('simulate_error') === '1' ||
+      parsed.searchParams.get('simulate_error') === 'true';
 
     if (simulateError) {
       res.statusCode = 503;
@@ -650,7 +662,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     }
 
     const manifest = buildManifest(versionId);
-    const item = manifest.artifacts.find((a) => a.filename === filename);
+    const item = manifest.artifacts.find((a) => a.filename === filename || a.id === filename);
     if (!item) {
       res.statusCode = 404;
       res.setHeader('Content-Type', 'application/json');
@@ -659,7 +671,11 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     }
 
     const { buffer, sha256 } = getArtifactPayload(versionId, item.filename, item.sizeBytes);
-    const speedMbps = Number(parsed.searchParams.get('speed_mbps') || '0');
+    const speedMbps = Number(
+      parsed.searchParams.get('speed_mbps') ||
+        parsed.searchParams.get('speed_limit_mbps') ||
+        '0'
+    );
     const effectiveRateBytesPerSec =
       speedMbps > 0 ? speedMbps * 1024 * 1024 : 18 * 1024 * 1024;
     const chunkSize = 131072;
@@ -672,7 +688,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
-    res.setHeader('X-Launcher-Version', '2.6.0');
+    res.setHeader('X-Launcher-Version', '2.6.1');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;

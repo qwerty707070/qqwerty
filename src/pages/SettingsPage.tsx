@@ -177,8 +177,8 @@ export const SettingsPage: React.FC = () => {
                   <h2 className="text-[15.5px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
                     <Laptop size={17} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
                     {isRu
-                      ? 'Нативный десктопный лаунчер (WinVisual v2.6.0)'
-                      : 'Native Desktop Installers (WinVisual v2.6.0)'}
+                      ? 'Нативный десктопный лаунчер (WinVisual v2.6.1)'
+                      : 'Native Desktop Installers (WinVisual v2.6.1)'}
                   </h2>
                   <p className="text-[12.5px] text-[var(--text-secondary)]">
                     {isRu

@@ -36,14 +36,24 @@ export const App: React.FC = () => {
     });
 
     tauriListenEvent<Partial<DownloadProgressState>>('download://progress', (prog) => {
-      useLauncherStore.setState((prev) => ({
-        launchPhase: 'downloading',
-        downloadProgress: {
-          ...prev.downloadProgress,
-          ...prog,
-          active: true,
-        },
-      }));
+      useLauncherStore.setState((prev) => {
+        // Ignore stale in-flight IPC events once user cancelled, errored, or already entered running state
+        if (
+          prev.launchPhase === 'idle' ||
+          prev.launchPhase === 'error' ||
+          prev.launchPhase === 'running'
+        ) {
+          return prev;
+        }
+        return {
+          launchPhase: 'downloading',
+          downloadProgress: {
+            ...prev.downloadProgress,
+            ...prog,
+            active: true,
+          },
+        };
+      });
     }).then((fn) => {
       unlistenProgress = fn;
     });

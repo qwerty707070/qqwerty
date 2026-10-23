@@ -28,6 +28,13 @@ export const DownloadProgressModal: React.FC = () => {
   const language = useSettingsStore((s) => s.language);
 
   const isRu = language === 'ru';
+  const isBusy =
+    progress.active ||
+    launchPhase === 'preparing' ||
+    launchPhase === 'downloading' ||
+    launchPhase === 'verifying' ||
+    launchPhase === 'launching';
+
   const pct =
     progress.totalBytes > 0
       ? Math.min(100, (progress.downloadedBytes / progress.totalBytes) * 100)
@@ -89,7 +96,7 @@ export const DownloadProgressModal: React.FC = () => {
                 {isRu ? 'Объём' : 'Transferred'}
               </p>
               <p className="font-mono font-medium text-[var(--text-primary)] mt-0.5">
-                {progress.totalBytes > 0 ? `${dlMb} / ${totalMb} MB` : '0.0 / 28.0 MB'}
+                {progress.totalBytes > 0 ? `${dlMb} / ${totalMb} MB` : '0.0 / 30.8 MB'}
               </p>
             </div>
 
@@ -107,7 +114,7 @@ export const DownloadProgressModal: React.FC = () => {
                 {isRu ? 'Осталось' : 'Remaining'}
               </p>
               <p className="font-mono font-medium text-[var(--text-primary)] mt-0.5">
-                {progress.etaSeconds !== null && progress.active
+                {progress.etaSeconds !== null && isBusy
                   ? `${progress.etaSeconds.toFixed(1)}s`
                   : launchPhase === 'running'
                     ? isRu
@@ -164,14 +171,20 @@ export const DownloadProgressModal: React.FC = () => {
 
         {/* Controls */}
         <div className="flex items-center justify-end gap-2.5">
-          {progress.active ? (
-            <Button variant="danger" onClick={cancelDownload}>
-              <XCircle size={15} strokeWidth={1.75} />
-              {isRu ? 'Отменить загрузку' : 'Cancel Transfer'}
-            </Button>
+          {isBusy ? (
+            <>
+              <Button variant="secondary" type="button" onClick={() => setOpen(false)}>
+                {isRu ? 'Свернуть окно' : 'Hide Window'}
+              </Button>
+              <Button variant="danger" type="button" onClick={() => cancelDownload()}>
+                <XCircle size={15} strokeWidth={1.85} />
+                {isRu ? 'Отменить запуск' : 'Cancel Launch'}
+              </Button>
+            </>
           ) : launchPhase === 'error' ? (
             <Button
               variant="primary"
+              type="button"
               onClick={() => {
                 setSimulateNetworkDrop(false);
                 startLaunchSequence();
@@ -181,7 +194,7 @@ export const DownloadProgressModal: React.FC = () => {
               {isRu ? 'Исправить и повторить' : 'Disable Fault & Retry'}
             </Button>
           ) : (
-            <Button variant="primary" onClick={() => startLaunchSequence()}>
+            <Button variant="primary" type="button" onClick={() => startLaunchSequence()}>
               <DownloadCloud size={15} strokeWidth={1.75} />
               {launchPhase === 'running'
                 ? isRu
@@ -236,9 +249,11 @@ export const LogsViewerModal: React.FC = () => {
               className={
                 entry.includes('[ERROR]')
                   ? 'text-rose-400'
-                  : entry.includes('[SHA-256]')
-                    ? 'text-emerald-300'
-                    : ''
+                  : entry.includes('[ABORT]')
+                    ? 'text-amber-300'
+                    : entry.includes('[SHA-256]')
+                      ? 'text-emerald-300'
+                      : ''
               }
             >
               {entry}

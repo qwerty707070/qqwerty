@@ -10,7 +10,7 @@ declare global {
 }
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.6.0';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.6.1';
 
 export function isTauriDesktop(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
@@ -171,6 +171,15 @@ export interface ModBundleSyncResult {
 
 export async function tauriLaunchMinecraft(request: NativeLaunchPayload): Promise<number> {
   return window.__TAURI_INTERNALS__!.invoke<number>('launch_native_client', { request });
+}
+
+export async function tauriCancelNativeLaunch(): Promise<boolean> {
+  if (!isTauriDesktop()) return false;
+  try {
+    return await window.__TAURI_INTERNALS__!.invoke<boolean>('cancel_native_launch');
+  } catch {
+    return false;
+  }
 }
 
 export async function tauriStopClientProcess(): Promise<number> {

@@ -13,6 +13,13 @@ interface ModalProps {
   maxWidthClass?: string;
 }
 
+const ModalPortalWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+  typeof document === 'undefined' || !document.body ? (
+    <>{children}</>
+  ) : (
+    <DialogPrimitive.Portal forceMount>{children}</DialogPrimitive.Portal>
+  );
+
 export const Modal: React.FC<ModalProps> = ({
   open,
   onOpenChange,
@@ -25,8 +32,8 @@ export const Modal: React.FC<ModalProps> = ({
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <AnimatePresence>
         {open && (
-          <DialogPrimitive.Portal forceMount>
-            <DialogPrimitive.Overlay asChild>
+          <ModalPortalWrapper>
+            <DialogPrimitive.Overlay forceMount asChild>
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -36,7 +43,7 @@ export const Modal: React.FC<ModalProps> = ({
               />
             </DialogPrimitive.Overlay>
 
-            <DialogPrimitive.Content asChild>
+            <DialogPrimitive.Content forceMount asChild>
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.96, y: 8 }}
@@ -70,7 +77,7 @@ export const Modal: React.FC<ModalProps> = ({
                 </motion.div>
               </div>
             </DialogPrimitive.Content>
-          </DialogPrimitive.Portal>
+          </ModalPortalWrapper>
         )}
       </AnimatePresence>
     </DialogPrimitive.Root>

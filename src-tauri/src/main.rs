@@ -10,9 +10,10 @@ use auth::{
 };
 use base64::Engine;
 use launcher::{
-    build_http_client, current_active_client_pid, ensure_clean_dir, expand_tilde,
-    prepare_and_launch_minecraft, resolve_java_executable, sync_modrinth_optimization_bundle,
-    terminate_active_client_processes, LaunchRequest, ModBundleResult,
+    build_http_client, cancel_active_launch_and_processes, current_active_client_pid,
+    ensure_clean_dir, expand_tilde, resolve_java_executable, run_abortable_launch,
+    sync_modrinth_optimization_bundle, terminate_active_client_processes, LaunchRequest,
+    ModBundleResult,
 };
 use rfd::AsyncFileDialog;
 use serde::Serialize;
@@ -172,7 +173,12 @@ fn sign_out_keychain_account(uuid: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn launch_native_client(app: AppHandle, request: LaunchRequest) -> Result<u32, String> {
-    prepare_and_launch_minecraft(app, request).await
+    run_abortable_launch(app, request).await
+}
+
+#[tauri::command]
+fn cancel_native_launch(app: AppHandle) -> Result<bool, String> {
+    Ok(cancel_active_launch_and_processes(&app))
 }
 
 #[tauri::command]
@@ -188,7 +194,7 @@ async fn sync_optimization_mods(
 ) -> Result<ModBundleResult, String> {
     let http = build_http_client()?;
     let game_dir = expand_tilde(&game_directory);
-    sync_modrinth_optimization_bundle(&http, &app, &game_dir, &minecraft_version, true).await
+    sync_modrinth_optimization_bundle(&http, &app, 0, &game_dir, &minecraft_version, true).await
 }
 
 #[tauri::command]
@@ -345,6 +351,7 @@ fn main() {
             complete_ms_device_flow,
             sign_out_keychain_account,
             launch_native_client,
+            cancel_native_launch,
             stop_client_process,
             sync_optimization_mods,
             pick_directory_dialog,

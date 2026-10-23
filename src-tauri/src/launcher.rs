@@ -7,13 +7,14 @@ use sha1::{Digest, Sha1};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::oneshot;
+use tokio::task::AbortHandle;
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -59,9 +60,22 @@ struct ActiveClientEntry {
 }
 
 static ACTIVE_CLIENTS: OnceLock<Mutex<Vec<ActiveClientEntry>>> = OnceLock::new();
+static ACTIVE_LAUNCH_ABORT: OnceLock<Mutex<Option<AbortHandle>>> = OnceLock::new();
+static LAUNCH_GENERATION: AtomicU64 = AtomicU64::new(0);
+static LAUNCH_CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 
 fn active_clients_slot() -> &'static Mutex<Vec<ActiveClientEntry>> {
     ACTIVE_CLIENTS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+fn active_launch_abort_slot() -> &'static Mutex<Option<AbortHandle>> {
+    ACTIVE_LAUNCH_ABORT.get_or_init(|| Mutex::new(None))
+}
+
+pub fn is_launch_cancelled_or_stale(gen_id: u64) -> bool {
+    gen_id != 0
+        && (LAUNCH_CANCEL_FLAG.load(Ordering::SeqCst)
+            || LAUNCH_GENERATION.load(Ordering::SeqCst) != gen_id)
 }
 
 pub fn current_active_client_pid() -> Option<u32> {
@@ -69,6 +83,27 @@ pub fn current_active_client_pid() -> Option<u32> {
         .lock()
         .ok()
         .and_then(|list| list.last().map(|e| e.pid))
+}
+
+/// Immediately aborts any in-flight native download/prepare task AND kills any spawned `javaw` child.
+pub fn cancel_active_launch_and_processes(app: &AppHandle) -> bool {
+    LAUNCH_GENERATION.fetch_add(1, Ordering::SeqCst);
+    LAUNCH_CANCEL_FLAG.store(true, Ordering::SeqCst);
+
+    let mut aborted_task = false;
+    if let Ok(mut guard) = active_launch_abort_slot().lock() {
+        if let Some(abort_handle) = guard.take() {
+            abort_handle.abort();
+            aborted_task = true;
+        }
+    }
+
+    let killed_procs = terminate_active_client_processes(app);
+    let _ = app.emit(
+        "logs://line",
+        "[ABORT] Launch sequence aborted immediately by user.".to_string(),
+    );
+    aborted_task || killed_procs > 0
 }
 
 /// Cleanly terminates all active `javaw.exe` / `java` client processes without spawning any console window.
@@ -102,6 +137,30 @@ pub fn terminate_active_client_processes(app: &AppHandle) -> usize {
     }
 
     count
+}
+
+async fn atomic_write_bytes(dest: &Path, bytes: &[u8], gen_id: u64) -> Result<(), String> {
+    if let Some(parent) = dest.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    let fname = dest
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("file.tmp");
+    let part = dest.with_file_name(format!("{fname}.wvpart.{gen_id}"));
+    if let Err(e) = tokio::fs::write(&part, bytes).await {
+        let _ = tokio::fs::remove_file(&part).await;
+        return Err(e.to_string());
+    }
+    if is_launch_cancelled_or_stale(gen_id) {
+        let _ = tokio::fs::remove_file(&part).await;
+        return Err("LAUNCH_CANCELLED".to_string());
+    }
+    tokio::fs::rename(&part, dest)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 pub fn expand_tilde(path_str: &str) -> PathBuf {
@@ -252,11 +311,11 @@ fn maven_coord_key(coord: &str) -> Option<String> {
 }
 
 /// Resolves and synchronizes version-matched Fabric optimization & shader mods from official Modrinth API v2
-/// (`Fabric API`, `Sodium`, `Iris Shaders`, `Lithium`) into `<game_dir>/mods_cache/<mc_ver>/` and `<game_dir>/mods/`
-/// while cleaning stale `wv-opt-*` jars from other Minecraft versions so switching 1.21.11 <-> 1.21.4 <-> 1.16.5 never conflicts.
+/// (`Fabric API`, `Sodium`, `Iris Shaders`, `Lithium`) into `<game_dir>/mods_cache/<mc_ver>/` and `<game_dir>/mods/`.
 pub async fn sync_modrinth_optimization_bundle(
     http: &Client,
     app: &AppHandle,
+    launch_gen: u64,
     game_dir: &Path,
     minecraft_version: &str,
     enabled: bool,
@@ -266,7 +325,6 @@ pub async fn sync_modrinth_optimization_bundle(
 
     let active_prefix = format!("wv-opt-{minecraft_version}-");
 
-    // Clean any managed optimization jars belonging to other MC versions (or all managed jars if disabled)
     if let Ok(entries) = std::fs::read_dir(&mods_dir) {
         for entry in entries.flatten() {
             let file_name = entry.file_name().to_string_lossy().to_string();
@@ -301,6 +359,10 @@ pub async fn sync_modrinth_optimization_bundle(
     let mut cumulative_bytes: u64 = 0;
 
     for (idx, (project_id, label)) in bundle_specs.iter().enumerate() {
+        if is_launch_cancelled_or_stale(launch_gen) {
+            return Err("LAUNCH_CANCELLED".to_string());
+        }
+
         let query_url = format!(
             "https://api.modrinth.com/v2/project/{project_id}/version?loaders=%5B%22fabric%22%5D&game_versions=%5B%22{minecraft_version}%22%5D"
         );
@@ -311,18 +373,10 @@ pub async fn sync_modrinth_optimization_bundle(
         };
 
         let Some(arr) = versions_resp.and_then(|v| v.as_array().cloned()) else {
-            let _ = app.emit(
-                "logs://line",
-                format!("[MODS] {label}: skipped online check for {minecraft_version}"),
-            );
             continue;
         };
 
         let Some(first_ver) = arr.first() else {
-            let _ = app.emit(
-                "logs://line",
-                format!("[MODS] {label}: no published build yet for {minecraft_version}"),
-            );
             continue;
         };
 
@@ -352,12 +406,11 @@ pub async fn sync_modrinth_optimization_bundle(
         let active_jar = mods_dir.join(format!("{active_prefix}{raw_filename}"));
 
         if !cached_jar.exists() {
-            let _ = app.emit(
-                "logs://line",
-                format!("[MODS] Downloading {label} ({raw_filename}) from Modrinth CDN..."),
-            );
             if let Ok(resp) = http.get(dl_url).send().await {
                 if let Ok(bytes) = resp.bytes().await {
+                    if is_launch_cancelled_or_stale(launch_gen) {
+                        return Err("LAUNCH_CANCELLED".to_string());
+                    }
                     let sha_valid = if let Some(ref exp) = expected_sha1 {
                         let mut hasher = Sha1::new();
                         hasher.update(&bytes);
@@ -366,28 +419,30 @@ pub async fn sync_modrinth_optimization_bundle(
                         true
                     };
 
-                    if sha_valid {
-                        let _ = tokio::fs::write(&cached_jar, &bytes).await;
+                    if sha_valid && atomic_write_bytes(&cached_jar, &bytes, launch_gen).await.is_ok()
+                    {
                         cumulative_bytes += bytes.len() as u64;
                         let elapsed = started.elapsed().as_secs_f64().max(0.05);
                         let speed = (cumulative_bytes as f64 / (1024.0 * 1024.0)) / elapsed;
-                        let _ = app.emit(
-                            "download://progress",
-                            NativeDownloadEvent {
-                                current_file: raw_filename.clone(),
-                                stage_label: format!(
-                                    "Syncing Render Mods ({}/{total_mods}: {label})",
-                                    idx + 1
-                                ),
-                                downloaded_bytes: (idx + 1) as u64 * 100,
-                                total_bytes: total_mods as u64 * 100,
-                                speed_mbps: speed.max(4.5),
-                                eta_seconds: None,
-                                verified_files: idx + 1,
-                                total_files: total_mods,
-                                last_sha256: expected_sha1.unwrap_or_default(),
-                            },
-                        );
+                        if !is_launch_cancelled_or_stale(launch_gen) {
+                            let _ = app.emit(
+                                "download://progress",
+                                NativeDownloadEvent {
+                                    current_file: raw_filename.clone(),
+                                    stage_label: format!(
+                                        "Syncing Render Mods ({}/{total_mods}: {label})",
+                                        idx + 1
+                                    ),
+                                    downloaded_bytes: (idx + 1) as u64 * 100,
+                                    total_bytes: total_mods as u64 * 100,
+                                    speed_mbps: speed.max(4.5),
+                                    eta_seconds: None,
+                                    verified_files: idx + 1,
+                                    total_files: total_mods,
+                                    last_sha256: expected_sha1.unwrap_or_default(),
+                                },
+                            );
+                        }
                     }
                 }
             }
@@ -401,7 +456,7 @@ pub async fn sync_modrinth_optimization_bundle(
         }
     }
 
-    if !synced_mods.is_empty() {
+    if !synced_mods.is_empty() && !is_launch_cancelled_or_stale(launch_gen) {
         let _ = app.emit(
             "logs://line",
             format!(
@@ -421,15 +476,19 @@ pub async fn sync_modrinth_optimization_bundle(
 }
 
 /// Ensures the exact Mojang-signed Java runtime component required by `mc_meta["javaVersion"]`
-/// (`jre-legacy` for 1.16.5, `java-runtime-delta` for 1.21.4 & 1.21.11) exists on disk,
-/// automatically downloading it into `<game_dir>/runtime/<component>` if missing.
+/// exists on disk, downloading atomically with instant cancellation support if missing.
 async fn ensure_mojang_java_runtime(
     http: &Client,
     app: &AppHandle,
+    launch_gen: u64,
     game_dir: &Path,
     requested_java: &str,
     component: &str,
 ) -> Result<String, String> {
+    if is_launch_cancelled_or_stale(launch_gen) {
+        return Err("LAUNCH_CANCELLED".to_string());
+    }
+
     let trimmed = requested_java.trim();
     if !trimmed.is_empty() && trimmed != "java" && Path::new(trimmed).exists() {
         return Ok(resolve_java_executable(trimmed));
@@ -441,7 +500,6 @@ async fn ensure_mojang_java_runtime(
         "java"
     };
 
-    // 1. Check our managed portable runtime folder inside game_dir
     let managed_root = game_dir.join("runtime").join(component);
     let managed_bin = if cfg!(target_os = "macos") {
         let bundle_bin = managed_root
@@ -462,7 +520,6 @@ async fn ensure_mojang_java_runtime(
         return Ok(managed_bin.to_string_lossy().to_string());
     }
 
-    // 2. Check official Minecraft Launcher runtime slots on Windows for this exact component
     #[cfg(target_os = "windows")]
     {
         if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
@@ -496,7 +553,6 @@ async fn ensure_mojang_java_runtime(
         }
     }
 
-    // 3. Download signed portable Mojang JRE component automatically
     let _ = app.emit(
         "logs://line",
         format!("[JAVA] Auto-provisioning official Mojang runtime `{component}`..."),
@@ -562,10 +618,8 @@ async fn ensure_mojang_java_runtime(
                 let dc = Arc::clone(&done_count);
                 let db = Arc::clone(&done_bytes);
                 async move {
-                    if let Some(p) = dest.parent() {
-                        tokio::fs::create_dir_all(p)
-                            .await
-                            .map_err(|e| e.to_string())?;
+                    if is_launch_cancelled_or_stale(launch_gen) {
+                        return Err("LAUNCH_CANCELLED".to_string());
                     }
                     let resp = http_c
                         .get(&url)
@@ -573,9 +627,7 @@ async fn ensure_mojang_java_runtime(
                         .await
                         .map_err(|e| e.to_string())?;
                     let bytes = resp.bytes().await.map_err(|e| e.to_string())?;
-                    tokio::fs::write(&dest, &bytes)
-                        .await
-                        .map_err(|e| e.to_string())?;
+                    atomic_write_bytes(&dest, &bytes, launch_gen).await?;
 
                     #[cfg(unix)]
                     if executable {
@@ -590,7 +642,9 @@ async fn ensure_mojang_java_runtime(
 
                     let cur_b = db.fetch_add(bytes.len(), Ordering::Relaxed) + bytes.len();
                     let cur_f = dc.fetch_add(1, Ordering::Relaxed) + 1;
-                    if cur_f % 8 == 0 || cur_f == total_count {
+                    if (cur_f % 8 == 0 || cur_f == total_count)
+                        && !is_launch_cancelled_or_stale(launch_gen)
+                    {
                         let elapsed = started.elapsed().as_secs_f64().max(0.05);
                         let speed = (cur_b as f64 / (1024.0 * 1024.0)) / elapsed;
                         let _ = app_c.emit(
@@ -673,14 +727,65 @@ fn extract_native_jar(jar_path: &Path, natives_dir: &Path) {
 
 pub fn build_http_client() -> Result<Client, String> {
     Client::builder()
-        .user_agent("WinVisual-Launcher/2.6.0 (https://github.com/qwerty707070/qqwerty)")
+        .user_agent("WinVisual-Launcher/2.6.1 (https://github.com/qwerty707070/qqwerty)")
         .build()
         .map_err(|e| e.to_string())
+}
+
+/// Runs `prepare_and_launch_minecraft` inside an abortable Tokio task so `cancel_native_launch`
+/// aborts every active socket/stream instantaneously without waiting for timeouts.
+pub async fn run_abortable_launch(app: AppHandle, req: LaunchRequest) -> Result<u32, String> {
+    if let Ok(mut prev) = active_launch_abort_slot().lock() {
+        if let Some(old_handle) = prev.take() {
+            old_handle.abort();
+        }
+    }
+
+    let launch_gen = LAUNCH_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    LAUNCH_CANCEL_FLAG.store(false, Ordering::SeqCst);
+
+    let app_for_task = app.clone();
+    let join_handle = tokio::spawn(async move {
+        prepare_and_launch_minecraft(app_for_task, req, launch_gen).await
+    });
+
+    if let Ok(mut slot) = active_launch_abort_slot().lock() {
+        *slot = Some(join_handle.abort_handle());
+    }
+
+    let outcome = join_handle.await;
+
+    if let Ok(mut slot) = active_launch_abort_slot().lock() {
+        *slot = None;
+    }
+
+    match outcome {
+        Ok(res) => res,
+        Err(join_err) if join_err.is_cancelled() => Err("LAUNCH_CANCELLED".to_string()),
+        Err(join_err) => Err(format!("Launch task failed: {join_err}")),
+    }
+}
+
+fn sweep_orphan_wvpart_files(root: &Path) {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if p.is_dir() {
+            sweep_orphan_wvpart_files(&p);
+        } else if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
+            if name.contains(".wvpart.") {
+                let _ = std::fs::remove_file(&p);
+            }
+        }
+    }
 }
 
 pub async fn prepare_and_launch_minecraft(
     app: AppHandle,
     req: LaunchRequest,
+    launch_gen: u64,
 ) -> Result<u32, String> {
     let http = build_http_client()?;
     let game_dir = expand_tilde(&req.game_directory);
@@ -690,6 +795,8 @@ pub async fn prepare_and_launch_minecraft(
     let natives_dir = versions_dir.join(&req.minecraft_version).join("natives");
     std::fs::create_dir_all(&natives_dir).map_err(|e| e.to_string())?;
 
+    // Clean any leftover `.wvpart.*` temp files from prior cancelled launches
+    sweep_orphan_wvpart_files(&game_dir);
     let _ = app.emit(
         "logs://line",
         format!(
@@ -707,6 +814,10 @@ pub async fn prepare_and_launch_minecraft(
         .json()
         .await
         .map_err(|e| e.to_string())?;
+
+    if is_launch_cancelled_or_stale(launch_gen) {
+        return Err("LAUNCH_CANCELLED".to_string());
+    }
 
     let version_entry = manifest_index["versions"]
         .as_array()
@@ -734,14 +845,23 @@ pub async fn prepare_and_launch_minecraft(
         .await
         .map_err(|e| e.to_string())?;
 
-    // Auto-resolve compatible Mojang Java runtime (`jre-legacy` for 1.16.5, `java-runtime-delta` for 1.21.4/1.21.11)
     let java_component = mc_meta["javaVersion"]["component"]
         .as_str()
         .unwrap_or("java-runtime-delta");
-    let java_bin =
-        ensure_mojang_java_runtime(&http, &app, &game_dir, &req.java_path, java_component).await?;
+    let java_bin = ensure_mojang_java_runtime(
+        &http,
+        &app,
+        launch_gen,
+        &game_dir,
+        &req.java_path,
+        java_component,
+    )
+    .await?;
 
-    // Resolve latest compatible Fabric Loader version dynamically for 1.16.5 / 1.21.4 / 1.21.11
+    if is_launch_cancelled_or_stale(launch_gen) {
+        return Err("LAUNCH_CANCELLED".to_string());
+    }
+
     let resolved_loader = if req.fabric_loader_version.is_empty()
         || req.fabric_loader_version == "latest"
         || !req
@@ -802,7 +922,6 @@ pub async fn prepare_and_launch_minecraft(
     let mut native_jars_to_extract: Vec<PathBuf> = Vec::new();
     let mut seen_coords: HashSet<String> = HashSet::new();
 
-    // 1. Place Fabric libraries FIRST on classpath so newer ASM / Mixin classes always win
     if let Some(flibs) = fabric_meta["libraries"].as_array() {
         for flib in flibs {
             if let (Some(name), Some(base_url)) = (flib["name"].as_str(), flib["url"].as_str()) {
@@ -834,7 +953,6 @@ pub async fn prepare_and_launch_minecraft(
         }
     }
 
-    // 2. Mojang libraries + native classifiers (`natives-windows` for 1.16.5 & `-natives-windows` jars for 1.21+)
     let native_classifier_key = match current_mojang_os() {
         "windows" => "natives-windows",
         "osx" => "natives-osx",
@@ -901,7 +1019,6 @@ pub async fn prepare_and_launch_minecraft(
         }
     }
 
-    // 3. Official Minecraft client JAR
     let client_dl = &mc_meta["downloads"]["client"];
     let client_jar_path = versions_dir
         .join(&req.minecraft_version)
@@ -917,7 +1034,6 @@ pub async fn prepare_and_launch_minecraft(
         });
     }
 
-    // 4. Asset index
     let mut asset_index_dest: Option<PathBuf> = None;
     if let Some(asset_idx) = mc_meta.get("assetIndex") {
         if let (Some(idx_id), Some(idx_url)) = (
@@ -953,6 +1069,7 @@ pub async fn prepare_and_launch_minecraft(
         download_and_verify_file(
             &http,
             &app,
+            launch_gen,
             &item.url,
             &item.dest,
             item.sha1.as_deref(),
@@ -966,17 +1083,16 @@ pub async fn prepare_and_launch_minecraft(
         .await?;
     }
 
-    // 5. Sync version-isolated Fabric optimization & shader mods (Fabric API + Sodium + Iris + Lithium)
-    let _ = sync_modrinth_optimization_bundle(
+    sync_modrinth_optimization_bundle(
         &http,
         &app,
+        launch_gen,
         &game_dir,
         &req.minecraft_version,
         req.optimize_mods_bundle,
     )
-    .await;
+    .await?;
 
-    // 6. Parallel asset objects sync (`assets/objects/<prefix>/<hash>`) so sounds, fonts & icons load cleanly
     if let Some(idx_path) = asset_index_dest {
         if let Ok(raw_idx) = tokio::fs::read_to_string(&idx_path).await {
             if let Ok(parsed_idx) = serde_json::from_str::<serde_json::Value>(&raw_idx) {
@@ -1006,23 +1122,25 @@ pub async fn prepare_and_launch_minecraft(
                         let done_bytes = Arc::new(AtomicUsize::new(0));
                         let asset_start = Instant::now();
 
-                        let _ = stream::iter(missing_assets)
+                        let asset_results: Vec<Result<(), String>> = stream::iter(missing_assets)
                             .map(|(url, dest, _sz)| {
                                 let http_c = http.clone();
                                 let app_c = app.clone();
                                 let dc = Arc::clone(&done_count);
                                 let db = Arc::clone(&done_bytes);
                                 async move {
-                                    if let Some(p) = dest.parent() {
-                                        let _ = tokio::fs::create_dir_all(p).await;
+                                    if is_launch_cancelled_or_stale(launch_gen) {
+                                        return Err("LAUNCH_CANCELLED".to_string());
                                     }
                                     if let Ok(resp) = http_c.get(&url).send().await {
                                         if let Ok(bytes) = resp.bytes().await {
-                                            let _ = tokio::fs::write(&dest, &bytes).await;
+                                            atomic_write_bytes(&dest, &bytes, launch_gen).await?;
                                             let cur_b = db.fetch_add(bytes.len(), Ordering::Relaxed)
                                                 + bytes.len();
                                             let cur_f = dc.fetch_add(1, Ordering::Relaxed) + 1;
-                                            if cur_f % 25 == 0 || cur_f == count_total {
+                                            if (cur_f % 25 == 0 || cur_f == count_total)
+                                                && !is_launch_cancelled_or_stale(launch_gen)
+                                            {
                                                 let elapsed =
                                                     asset_start.elapsed().as_secs_f64().max(0.05);
                                                 let speed =
@@ -1048,18 +1166,30 @@ pub async fn prepare_and_launch_minecraft(
                                             }
                                         }
                                     }
+                                    Ok(())
                                 }
                             })
                             .buffer_unordered(28)
-                            .collect::<Vec<()>>()
+                            .collect()
                             .await;
+
+                        for res in asset_results {
+                            if let Err(e) = res {
+                                if e == "LAUNCH_CANCELLED" {
+                                    return Err(e);
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    // 7. Unpack native DLL/SO/DYLIB binaries into `natives_dir`
+    if is_launch_cancelled_or_stale(launch_gen) {
+        return Err("LAUNCH_CANCELLED".to_string());
+    }
+
     for njar in &native_jars_to_extract {
         extract_native_jar(njar, &natives_dir);
     }
@@ -1080,6 +1210,10 @@ pub async fn prepare_and_launch_minecraft(
     let asset_index_id = mc_meta["assetIndex"]["id"]
         .as_str()
         .unwrap_or(&req.minecraft_version);
+
+    if is_launch_cancelled_or_stale(launch_gen) {
+        return Err("LAUNCH_CANCELLED".to_string());
+    }
 
     let mut cmd = Command::new(&java_bin);
 
@@ -1127,6 +1261,12 @@ pub async fn prepare_and_launch_minecraft(
         .spawn()
         .map_err(|e| format!("Unable to spawn Java runtime ({java_bin}): {e}"))?;
 
+    // Guard against race where user clicked Cancel during the exact millisecond `cmd.spawn()` executed
+    if is_launch_cancelled_or_stale(launch_gen) {
+        let _ = child.kill().await;
+        return Err("LAUNCH_CANCELLED".to_string());
+    }
+
     let pid = child.id().unwrap_or(0);
     let _ = app.emit(
         "logs://line",
@@ -1164,7 +1304,6 @@ pub async fn prepare_and_launch_minecraft(
         });
     }
 
-    // Background lifecycle watcher: awaits natural game exit OR clean Stop request without blocking UI
     let app_exit = app.clone();
     tokio::spawn(async move {
         let exit_code = tokio::select! {

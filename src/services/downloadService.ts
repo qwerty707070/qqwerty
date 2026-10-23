@@ -2,16 +2,19 @@ import { computeSha256Hex } from '../utils/sha256';
 
 export interface ArtifactSpec {
   id: string;
+  filename?: string;
   label: string;
   sizeBytes: number;
   sha256: string;
+  url?: string;
 }
 
 export interface DownloadManifest {
   versionId: string;
   versionName: string;
   minecraftVersion: string;
-  totalBytes: number;
+  totalBytes?: number;
+  totalSizeBytes?: number;
   artifacts: ArtifactSpec[];
 }
 
@@ -27,6 +30,12 @@ export interface StreamProgressCallbackPayload {
   lastSha256: string;
 }
 
+function makeAbortError(): Error {
+  const err = new Error('LAUNCH_CANCELLED');
+  err.name = 'AbortError';
+  return err;
+}
+
 export async function installAndVerifyClientBuild(options: {
   versionId: string;
   speedLimitMbps: number;
@@ -39,10 +48,14 @@ export async function installAndVerifyClientBuild(options: {
   const { versionId, speedLimitMbps, simulateNetworkDrop, signal, onLog, onPhaseChange, onProgress } =
     options;
 
+  if (signal.aborted) {
+    throw makeAbortError();
+  }
+
   onPhaseChange('preparing');
   onLog(`[INIT] Resolving signed build manifest for ${versionId}...`);
 
-  const manifestRes = await fetch(`/api/download/manifest/${encodeURIComponent(versionId)}`, {
+  const manifestRes = await fetch(`/api/download/${encodeURIComponent(versionId)}/manifest`, {
     signal,
     cache: 'no-store',
   });
@@ -50,9 +63,14 @@ export async function installAndVerifyClientBuild(options: {
     throw new Error(`Manifest request failed (HTTP ${manifestRes.status})`);
   }
   const manifest = (await manifestRes.json()) as DownloadManifest;
+  const manifestTotalBytes =
+    manifest.totalBytes ??
+    manifest.totalSizeBytes ??
+    manifest.artifacts.reduce((acc, item) => acc + item.sizeBytes, 0);
+
   onLog(
     `[MANIFEST] Resolved ${manifest.artifacts.length} signed packages (${(
-      manifest.totalBytes /
+      manifestTotalBytes /
       (1024 * 1024)
     ).toFixed(1)} MB total)`
   );
@@ -64,19 +82,21 @@ export async function installAndVerifyClientBuild(options: {
 
   for (const artifact of manifest.artifacts) {
     if (signal.aborted) {
-      throw new DOMException('Installation cancelled by user', 'AbortError');
+      throw makeAbortError();
     }
 
+    const fileId = artifact.filename ?? artifact.id;
+
     onPhaseChange('downloading');
-    onLog(`[STREAM] Downloading ${artifact.id} (${(artifact.sizeBytes / (1024 * 1024)).toFixed(2)} MB)...`);
+    onLog(`[STREAM] Downloading ${fileId} (${(artifact.sizeBytes / (1024 * 1024)).toFixed(2)} MB)...`);
 
     const params = new URLSearchParams({
-      speed_limit_mbps: String(speedLimitMbps),
-      simulate_error: simulateNetworkDrop ? 'true' : 'false',
+      speed_mbps: String(speedLimitMbps),
+      simulate_error: simulateNetworkDrop ? '1' : '0',
     });
 
     const response = await fetch(
-      `/api/download/artifact/${encodeURIComponent(versionId)}/${encodeURIComponent(artifact.id)}?${params.toString()}`,
+      `/api/download/${encodeURIComponent(versionId)}/${encodeURIComponent(fileId)}?${params.toString()}`,
       { signal, cache: 'no-store' }
     );
 
@@ -84,7 +104,8 @@ export async function installAndVerifyClientBuild(options: {
       let detail = `HTTP ${response.status}`;
       try {
         const errJson = await response.json();
-        if (errJson?.detail) detail = errJson.detail;
+        if (errJson?.error) detail = errJson.error;
+        else if (errJson?.detail) detail = errJson.detail;
       } catch {
         // ignore JSON parse fallback
       }
@@ -92,54 +113,76 @@ export async function installAndVerifyClientBuild(options: {
     }
 
     const reader = response.body.getReader();
+    const cancelReader = () => {
+      reader.cancel().catch(() => {});
+    };
+    signal.addEventListener('abort', cancelReader, { once: true });
+
     const received = new Uint8Array(artifact.sizeBytes);
     let fileOffset = 0;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (value) {
-        if (fileOffset + value.byteLength <= received.byteLength) {
-          received.set(value, fileOffset);
+    try {
+      while (true) {
+        if (signal.aborted) {
+          throw makeAbortError();
         }
-        fileOffset += value.byteLength;
-        cumulativeDownloaded += value.byteLength;
+        const { done, value } = await reader.read();
+        if (signal.aborted) {
+          throw makeAbortError();
+        }
+        if (done) break;
+        if (value) {
+          if (fileOffset + value.byteLength <= received.byteLength) {
+            received.set(value, fileOffset);
+          }
+          fileOffset += value.byteLength;
+          cumulativeDownloaded += value.byteLength;
 
-        const elapsedSec = Math.max(0.05, (performance.now() - overallStart) / 1000);
-        const speedMbps = cumulativeDownloaded / (1024 * 1024) / elapsedSec;
-        const remainingMb = Math.max(0, (manifest.totalBytes - cumulativeDownloaded) / (1024 * 1024));
-        const etaSeconds = speedMbps > 0.05 ? Math.max(0, remainingMb / speedMbps) : null;
+          const elapsedSec = Math.max(0.05, (performance.now() - overallStart) / 1000);
+          const speedMbps = cumulativeDownloaded / (1024 * 1024) / elapsedSec;
+          const remainingMb = Math.max(
+            0,
+            (manifestTotalBytes - cumulativeDownloaded) / (1024 * 1024)
+          );
+          const etaSeconds = speedMbps > 0.05 ? Math.max(0, remainingMb / speedMbps) : null;
 
-        onProgress({
-          currentFile: artifact.id,
-          stageLabel: artifact.label,
-          downloadedBytes: cumulativeDownloaded,
-          totalBytes: manifest.totalBytes,
-          speedMbps,
-          etaSeconds,
-          verifiedFiles: verifiedCount,
-          totalFiles: manifest.artifacts.length,
-          lastSha256: lastDigest,
-        });
+          onProgress({
+            currentFile: fileId,
+            stageLabel: artifact.label,
+            downloadedBytes: cumulativeDownloaded,
+            totalBytes: manifestTotalBytes,
+            speedMbps,
+            etaSeconds,
+            verifiedFiles: verifiedCount,
+            totalFiles: manifest.artifacts.length,
+            lastSha256: lastDigest,
+          });
+        }
       }
+    } finally {
+      signal.removeEventListener('abort', cancelReader);
+    }
+
+    if (signal.aborted) {
+      throw makeAbortError();
     }
 
     onPhaseChange('verifying');
     const actualSha256 = await computeSha256Hex(received.subarray(0, fileOffset));
     if (actualSha256 !== artifact.sha256) {
       throw new Error(
-        `SHA-256 integrity mismatch on ${artifact.id}: expected ${artifact.sha256.slice(0, 12)}…, got ${actualSha256.slice(0, 12)}…`
+        `SHA-256 integrity mismatch on ${fileId}: expected ${artifact.sha256.slice(0, 12)}…, got ${actualSha256.slice(0, 12)}…`
       );
     }
     verifiedCount += 1;
     lastDigest = actualSha256;
-    onLog(`[SHA-256] Verified ${artifact.id} (${actualSha256.slice(0, 16)}…)`);
+    onLog(`[SHA-256] Verified ${fileId} (${actualSha256.slice(0, 16)}…)`);
 
     onProgress({
-      currentFile: artifact.id,
+      currentFile: fileId,
       stageLabel: artifact.label,
       downloadedBytes: cumulativeDownloaded,
-      totalBytes: manifest.totalBytes,
+      totalBytes: manifestTotalBytes,
       speedMbps:
         cumulativeDownloaded /
         (1024 * 1024) /
@@ -149,6 +192,10 @@ export async function installAndVerifyClientBuild(options: {
       totalFiles: manifest.artifacts.length,
       lastSha256: actualSha256,
     });
+  }
+
+  if (signal.aborted) {
+    throw makeAbortError();
   }
 
   onPhaseChange('launching');

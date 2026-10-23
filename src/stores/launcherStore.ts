@@ -17,6 +17,7 @@ import {
 import { installAndVerifyClientBuild } from '../services/downloadService';
 import {
   isTauriDesktop,
+  tauriCancelNativeLaunch,
   tauriCloseWindow,
   tauriLaunchMinecraft,
   tauriMinimizeWindow,
@@ -71,6 +72,7 @@ interface LauncherState {
 }
 
 let activeAbortController: AbortController | null = null;
+let currentLaunchRunId = 0;
 
 const INITIAL_PROGRESS: DownloadProgressState = {
   active: false,
@@ -116,7 +118,7 @@ export const useLauncherStore = create<LauncherState>()(
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.6.0 initialized`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.6.1 initialized`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 
@@ -233,7 +235,8 @@ export const useLauncherStore = create<LauncherState>()(
           state.launchPhase === 'verifying' ||
           state.launchPhase === 'launching'
         ) {
-          set({ downloadDrawerOpen: true });
+          // Clicking main action while busy immediately cancels launch
+          get().cancelDownload();
           return;
         }
 
@@ -249,15 +252,13 @@ export const useLauncherStore = create<LauncherState>()(
         activeAbortController?.abort();
         const controller = new AbortController();
         activeAbortController = controller;
+        const myRunId = ++currentLaunchRunId;
 
         const settings = useSettingsStore.getState();
         const accState = useAccountStore.getState();
         const activeAccount =
           accState.accounts.find((a) => a.id === accState.activeAccountId) ?? accState.accounts[0];
         const isRu = settings.language === 'ru';
-
-        // Ensure latest HUD layout & module states are flushed to disk before client boot
-        await useVisualClientStore.getState().persistHudConfigToDisk().catch(() => null);
 
         set({
           launchPhase: 'preparing',
@@ -271,6 +272,11 @@ export const useLauncherStore = create<LauncherState>()(
             errorMessage: null,
           },
         });
+
+        await useVisualClientStore.getState().persistHudConfigToDisk().catch(() => null);
+        if (myRunId !== currentLaunchRunId || controller.signal.aborted) {
+          return;
+        }
 
         try {
           if (isTauriDesktop()) {
@@ -286,6 +292,10 @@ export const useLauncherStore = create<LauncherState>()(
               speedLimitMbps: settings.downloadSpeedLimitMbps,
               optimizeModsBundle: settings.optimizeModsBundle,
             });
+            if (myRunId !== currentLaunchRunId) {
+              await tauriStopClientProcess();
+              return;
+            }
             get().appendLog(`[TAURI-JVM] Spawned native Minecraft process PID ${pid}`);
             set((prev) => ({
               launchPhase: 'running',
@@ -306,9 +316,14 @@ export const useLauncherStore = create<LauncherState>()(
             speedLimitMbps: settings.downloadSpeedLimitMbps,
             simulateNetworkDrop: get().simulateNetworkDrop,
             signal: controller.signal,
-            onLog: (line) => get().appendLog(line),
-            onPhaseChange: (phase) => set({ launchPhase: phase }),
-            onProgress: (payload) =>
+            onLog: (line) => {
+              if (myRunId === currentLaunchRunId) get().appendLog(line);
+            },
+            onPhaseChange: (phase) => {
+              if (myRunId === currentLaunchRunId) set({ launchPhase: phase });
+            },
+            onProgress: (payload) => {
+              if (myRunId !== currentLaunchRunId) return;
               set((prev) => ({
                 downloadProgress: {
                   ...prev.downloadProgress,
@@ -316,10 +331,29 @@ export const useLauncherStore = create<LauncherState>()(
                   active: true,
                   errorMessage: null,
                 },
-              })),
+              }));
+            },
           });
 
-          await new Promise((r) => window.setTimeout(r, 380));
+          if (myRunId !== currentLaunchRunId || controller.signal.aborted) {
+            return;
+          }
+
+          await new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, 240);
+            controller.signal.addEventListener(
+              'abort',
+              () => {
+                clearTimeout(timer);
+                resolve();
+              },
+              { once: true }
+            );
+          });
+
+          if (myRunId !== currentLaunchRunId || controller.signal.aborted) {
+            return;
+          }
 
           get().appendLog(
             `[CLIENT] Verified ${summary.verifiedArtifacts} bundles (${(
@@ -350,34 +384,41 @@ export const useLauncherStore = create<LauncherState>()(
             });
           }
         } catch (err) {
-          if (err instanceof DOMException && err.name === 'AbortError') {
-            get().appendLog('[ABORT] Client installation cancelled by user.');
-            set({
-              launchPhase: 'idle',
-              activeProcessPid: null,
-              downloadProgress: { ...INITIAL_PROGRESS },
-            });
-            if (settings.notificationsEnabled) {
-              useNotificationStore.getState().pushToast({
-                type: 'warning',
-                title: isRu ? 'Загрузка отменена' : 'Download cancelled',
-                description: isRu
-                  ? 'Передача файлов остановлена пользователем.'
-                  : 'Artifact stream aborted cleanly.',
+          const rawMsg =
+            typeof err === 'string'
+              ? err
+              : err instanceof Error
+                ? err.message
+                : String(err ?? 'Connection interrupted');
+
+          const isCancelled =
+            myRunId !== currentLaunchRunId ||
+            (err instanceof Error && err.name === 'AbortError') ||
+            rawMsg.includes('LAUNCH_CANCELLED') ||
+            rawMsg.toLowerCase().includes('abort') ||
+            rawMsg.toLowerCase().includes('cancelled');
+
+          if (isCancelled) {
+            // If cancelDownload() already reset state synchronously, avoid duplicate toast
+            if (get().launchPhase !== 'idle') {
+              set({
+                launchPhase: 'idle',
+                activeProcessPid: null,
+                downloadDrawerOpen: false,
+                downloadProgress: { ...INITIAL_PROGRESS },
               });
             }
             return;
           }
 
-          const message = err instanceof Error ? err.message : 'Connection interrupted';
-          get().appendLog(`[ERROR] ${message}`);
+          get().appendLog(`[ERROR] ${rawMsg}`);
           set((prev) => ({
             launchPhase: 'error',
             activeProcessPid: null,
             downloadProgress: {
               ...prev.downloadProgress,
               active: false,
-              errorMessage: message,
+              errorMessage: rawMsg,
             },
           }));
 
@@ -385,18 +426,45 @@ export const useLauncherStore = create<LauncherState>()(
             useNotificationStore.getState().pushToast({
               type: 'error',
               title: isRu ? 'Не удалось загрузить файлы клиента' : 'Failed to download client files',
-              description: message,
+              description: rawMsg,
             });
           }
         }
       },
 
       cancelDownload: () => {
+        currentLaunchRunId += 1;
         activeAbortController?.abort();
         activeAbortController = null;
+
+        if (isTauriDesktop()) {
+          tauriCancelNativeLaunch().catch(() => {});
+        }
+        useVisualClientStore.getState().setLiveSessionModalOpen(false);
+
+        set({
+          launchPhase: 'idle',
+          activeProcessPid: null,
+          downloadDrawerOpen: false,
+          downloadProgress: { ...INITIAL_PROGRESS },
+        });
+
+        get().appendLog('[ABORT] Launch cancelled immediately by user.');
+        const settings = useSettingsStore.getState();
+        if (settings.notificationsEnabled) {
+          useNotificationStore.getState().pushToast({
+            type: 'warning',
+            title: settings.language === 'ru' ? 'Запуск отменён' : 'Launch cancelled',
+            description:
+              settings.language === 'ru'
+                ? 'Загрузка и подготовка клиента мгновенно остановлены.'
+                : 'Client download and preparation stopped immediately.',
+          });
+        }
       },
 
       stopRunningSession: async () => {
+        currentLaunchRunId += 1;
         const settings = useSettingsStore.getState();
         const prevPid = get().activeProcessPid;
         if (isTauriDesktop()) {

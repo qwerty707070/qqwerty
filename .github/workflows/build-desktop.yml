@@ -60,9 +60,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v2.6.0
-          releaseName: "WinVisual Launcher v2.6.0"
-          releaseBody: "Native Tauri v2 Desktop Installers for Windows x64 (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage) — full-bleed frameless shell, real javaw lifecycle + Stop, Modrinth Fabric API/Sodium/Iris auto-sync, pixel 3D custom skin loader, and disk HUD persistence."
+          tagName: v2.6.1
+          releaseName: "WinVisual Launcher v2.6.1"
+          releaseBody: "Native Tauri v2 Desktop Installers for Windows x64 (.exe / .msi), macOS (.dmg), and Linux (.deb / .AppImage) — instant atomic Cancel Launch (Tokio AbortHandle + .wvpart atomic writes), full-bleed shell, javaw PID lifecycle, Modrinth Sodium/Iris sync, 3D PNG skin loader & disk HUD sync."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
