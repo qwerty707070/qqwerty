@@ -2,11 +2,14 @@ import {
   isTauriDesktop,
   tauriGetGameDirectoryTree,
   tauriInitGameDirectory,
+  tauriListGameDirFiles,
+  tauriRemoveGameDirFile,
   type GameDirEntry,
   type GameDirInitResult,
+  type GameFileEntry,
 } from './tauriBridge';
 
-export type { GameDirEntry, GameDirInitResult } from './tauriBridge';
+export type { GameDirEntry, GameDirInitResult, GameFileEntry } from './tauriBridge';
 
 /**
  * WinVisual game directory (EvoVisual-style structure):
@@ -70,6 +73,58 @@ export async function getGameDirectoryTreeEverywhere(
     return data.folders ?? [];
   } catch {
     return null;
+  }
+}
+
+export const GAME_FILE_SUBFOLDERS = ['mods', 'resourcepacks', 'shaderpacks', 'config', 'logs'] as const;
+export type GameFileSubfolder = (typeof GAME_FILE_SUBFOLDERS)[number];
+
+export async function listGameDirFilesEverywhere(
+  gameDirectory: string,
+  sub: GameFileSubfolder
+): Promise<GameFileEntry[]> {
+  if (isTauriDesktop()) {
+    try {
+      return await tauriListGameDirFiles(gameDirectory, sub);
+    } catch {
+      return [];
+    }
+  }
+  if (typeof window === 'undefined' || !window.location?.origin) {
+    return [];
+  }
+  try {
+    const res = await fetch(
+      `/api/game-dir/files?dir=${encodeURIComponent(gameDirectory)}&sub=${sub}`,
+      { cache: 'no-store' }
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as { files: GameFileEntry[] };
+    return data.files ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function removeGameDirFileEverywhere(
+  gameDirectory: string,
+  sub: GameFileSubfolder,
+  fileName: string
+): Promise<boolean> {
+  if (isTauriDesktop()) {
+    return tauriRemoveGameDirFile(gameDirectory, sub, fileName);
+  }
+  if (typeof window === 'undefined' || !window.location?.origin) {
+    return false;
+  }
+  try {
+    const res = await fetch(
+      `/api/game-dir/remove?dir=${encodeURIComponent(gameDirectory)}&sub=${sub}&file=${encodeURIComponent(fileName)}`,
+      { cache: 'no-store' }
+    );
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

@@ -537,8 +537,61 @@ pub async fn sync_modrinth_optimization_bundle(
     })
 }
 
+/// Parses the major version of a Java binary: `openjdk version "21.0.5"` -> 21,
+/// `java version "1.8.0_412"` -> 8.
+pub fn probe_java_major(java_path: &str) -> Option<u32> {
+    let output = crate::silent_command(java_path).arg("-version").output().ok()?;
+    let combined = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stderr),
+        String::from_utf8_lossy(&output.stdout)
+    );
+    for line in combined.lines() {
+        let quote_positions: Vec<usize> = line.match_indices('"').map(|(i, _)| i).collect();
+        if quote_positions.len() < 2 {
+            continue;
+        }
+        let quoted = &line[quote_positions[0] + 1..quote_positions[1]];
+        let parts: Vec<&str> = quoted.split('.').collect();
+        if parts.len() >= 2 && parts[0] == "1" {
+            if let Ok(major) = parts[1].parse::<u32>() {
+                return Some(major);
+            }
+        } else if let Some(first) = parts.first() {
+            if let Ok(major) = first.parse::<u32>() {
+                return Some(major);
+            }
+        }
+    }
+    None
+}
+
+fn component_required_major(component: &str) -> u32 {
+    match component {
+        "java-legacy-runtime" => 8,
+        "java-runtime-beta" => 12,
+        "java-runtime-gamma" => 17,
+        _ => 21, // java-runtime-delta and anything newer
+    }
+}
+
+/// Minecraft 1.16.5 (legacy, Java 8) runs on Java 8..=16; 1.17+ requires the manifest's
+/// major version or newer (1.21.x strictly needs Java 21+).
+pub fn java_major_compatible(major: u32, required_major: u32) -> bool {
+    if required_major <= 8 {
+        (8..=16).contains(&major)
+    } else {
+        major >= required_major
+    }
+}
+
 /// Ensures the exact Mojang-signed Java runtime component required by `mc_meta["javaVersion"]`
 /// exists on disk, downloading atomically with instant cancellation support if missing.
+///
+/// The user's/system Java is now version-probed first: if it does not satisfy the required
+/// major version (e.g. Java 17 for Minecraft 1.21.4 which needs Java 21+), the launcher
+/// automatically provisions the correct official Mojang runtime instead of crashing the game
+/// with "Incompatible mods found!".
 async fn ensure_mojang_java_runtime(
     http: &Client,
     app: &AppHandle,
@@ -546,14 +599,45 @@ async fn ensure_mojang_java_runtime(
     game_dir: &Path,
     requested_java: &str,
     component: &str,
+    required_major: u32,
 ) -> Result<String, String> {
     if is_launch_cancelled_or_stale(launch_gen) {
         return Err("LAUNCH_CANCELLED".to_string());
     }
 
     let trimmed = requested_java.trim();
-    if !trimmed.is_empty() && trimmed != "java" && Path::new(trimmed).exists() {
-        return Ok(resolve_java_executable(trimmed));
+    let candidate = resolve_java_executable(if trimmed.is_empty() { "java" } else { trimmed });
+    let candidate_is_explicit_file =
+        !trimmed.is_empty() && trimmed != "java" && Path::new(trimmed).exists();
+
+    match probe_java_major(&candidate) {
+        Some(major) if java_major_compatible(major, required_major) => {
+            let _ = app.emit(
+                "logs://line",
+                format!("[JAVA] Using compatible Java {major}: {candidate}"),
+            );
+            return Ok(candidate);
+        }
+        Some(major) => {
+            let _ = app.emit(
+                "logs://line",
+                format!(
+                    "[JAVA] System Java {major} (`{candidate}`) does not satisfy Minecraft's Java {required_major}+ requirement — auto-downloading official Mojang runtime `{component}`..."
+                ),
+            );
+        }
+        None => {
+            if candidate_is_explicit_file {
+                // The user deliberately picked this binary; trust it if we cannot probe it.
+                return Ok(candidate);
+            }
+            let _ = app.emit(
+                "logs://line",
+                format!(
+                    "[JAVA] No compatible system Java detected (required: Java {required_major}+) — auto-downloading official Mojang runtime `{component}`..."
+                ),
+            );
+        }
     }
 
     let bin_name = if cfg!(target_os = "windows") {
@@ -922,6 +1006,10 @@ pub async fn prepare_and_launch_minecraft(
     let java_component = mc_meta["javaVersion"]["component"]
         .as_str()
         .unwrap_or("java-runtime-delta");
+    let required_major = mc_meta["javaVersion"]["majorVersion"]
+        .as_u64()
+        .map(|m| m as u32)
+        .unwrap_or_else(|| component_required_major(java_component));
     let java_bin = ensure_mojang_java_runtime(
         &http,
         &app,
@@ -929,6 +1017,7 @@ pub async fn prepare_and_launch_minecraft(
         &game_dir,
         &req.java_path,
         java_component,
+        required_major,
     )
     .await?;
 
@@ -1504,6 +1593,65 @@ pub struct GameDirReport {
     pub dir: String,
     pub display_dir: String,
     pub folders: Vec<GameDirEntry>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameFileEntry {
+    pub name: String,
+    pub size_bytes: u64,
+}
+
+/// Allowed subfolders for direct file management (safety: no arbitrary paths).
+pub const GAME_FILE_SUBFOLDERS: &[&str] = &["mods", "resourcepacks", "shaderpacks", "config", "logs"];
+
+fn validated_sub(game_dir: &Path, sub: &str) -> Result<PathBuf, String> {
+    if !GAME_FILE_SUBFOLDERS.contains(&sub) {
+        return Err(format!("Invalid subfolder: {sub}"));
+    }
+    let p = game_dir.join(sub);
+    if p.symlink_metadata().map(|m| m.file_type().is_symlink()).unwrap_or(false) {
+        return Err("Refusing to operate on a symlinked folder".to_string());
+    }
+    Ok(p)
+}
+
+/// Lists files directly inside a WinVisual subfolder (e.g. `mods`, `resourcepacks`).
+pub fn list_game_dir_files(game_directory: &str, sub: &str) -> Result<Vec<GameFileEntry>, String> {
+    let game_dir = expand_tilde(game_directory);
+    let target = validated_sub(&game_dir, sub)?;
+    if !target.exists() {
+        return Ok(Vec::new());
+    }
+    let mut entries = Vec::new();
+    if let Ok(dirents) = std::fs::read_dir(&target) {
+        for entry in dirents.flatten() {
+            let p = entry.path();
+            if !p.is_file() {
+                continue;
+            }
+            entries.push(GameFileEntry {
+                name: entry.file_name().to_string_lossy().to_string(),
+                size_bytes: p.metadata().map(|m| m.len()).unwrap_or(0),
+            });
+        }
+    }
+    entries.sort_by(|a, b| a.name.cmp(&b.name));
+    Ok(entries)
+}
+
+/// Removes a single file from a WinVisual subfolder (e.g. uninstall a Modrinth mod/pack).
+pub fn remove_game_dir_file(game_directory: &str, sub: &str, file_name: &str) -> Result<(), String> {
+    if file_name.is_empty() || file_name.contains('/') || file_name.contains('\\') || file_name == "." || file_name == ".." {
+        return Err("Invalid file name".to_string());
+    }
+    let game_dir = expand_tilde(game_directory);
+    let target = validated_sub(&game_dir, sub)?;
+    let path = target.join(file_name);
+    if !path.is_file() {
+        return Err("File not found".to_string());
+    }
+    std::fs::remove_file(&path).map_err(|e| e.to_string())
 }
 
 /// Scaffolds the WinVisual folder and returns a serialisable report for the UI.

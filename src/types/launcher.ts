@@ -1,4 +1,11 @@
-export type PageRoute = 'home' | 'modules' | 'news' | 'versions' | 'settings' | 'account';
+export type PageRoute =
+  | 'home'
+  | 'modules'
+  | 'news'
+  | 'versions'
+  | 'resources'
+  | 'settings'
+  | 'account';
 
 export type VersionChannel = 'all' | 'stable' | 'beta';
 

@@ -446,6 +446,117 @@ function scaffoldWinvisualGameDir(absDir, rootDir = process.cwd()) {
   return { createdFolders, modsJars };
 }
 
+async function handleModrinthSearchProxy(res, parsed) {
+  const query = (parsed.searchParams.get('query') || '').trim().slice(0, 80);
+  const type = parsed.searchParams.get('type') === 'resourcepack' ? 'resourcepack' : 'mod';
+  const ver = (parsed.searchParams.get('ver') || '1.21.11').trim();
+  const facets =
+    type === 'resourcepack'
+      ? JSON.stringify([
+          ['project_types:resourcepack'],
+          [`game_versions:${ver}`],
+        ])
+      : JSON.stringify([
+          ['project_types:mod'],
+          ['loaders:fabric'],
+          [`game_versions:${ver}`],
+        ]);
+  const params = new URLSearchParams({ limit: '24', index: 'downloads', facets });
+  if (query) params.set('query', query);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const upstream = await fetch(`https://api.modrinth.com/v2/search?${params.toString()}`, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'WinVisual-Launcher/2.7.5' },
+    });
+    if (!upstream.ok) throw new Error(`Modrinth API HTTP ${upstream.status}`);
+    const hits = await upstream.json();
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify(
+        hits
+          .filter((h) => typeof h.slug === 'string' && h.slug.length > 0)
+          .map((h) => ({
+            slug: h.slug,
+            title: h.title ?? h.slug,
+            description: h.description ?? '',
+            iconUrl: h.icon_url ?? '',
+            downloads: h.downloads ?? 0,
+            gameVersions: h.game_versions ?? [],
+            projectType: h.project_type ?? type,
+          }))
+      )
+    );
+  } catch (err) {
+    res.statusCode = 502;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        error: err instanceof Error ? err.message : 'Modrinth API unreachable',
+      })
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleModrinthVersionProxy(res, parsed) {
+  const slug = (parsed.searchParams.get('slug') || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+  const type = parsed.searchParams.get('type') === 'resourcepack' ? 'resourcepack' : 'mod';
+  const ver = (parsed.searchParams.get('ver') || '1.21.11').trim();
+  if (!slug) {
+    res.statusCode = 400;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: 'Missing slug' }));
+    return;
+  }
+  const params = new URLSearchParams({ game_versions: JSON.stringify([ver]) });
+  if (type === 'mod') params.set('loaders', JSON.stringify(['fabric']));
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 12000);
+  try {
+    const upstream = await fetch(
+      `https://api.modrinth.com/v2/project/${slug}/version?${params.toString()}`,
+      {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'WinVisual-Launcher/2.7.5' },
+      }
+    );
+    if (!upstream.ok) throw new Error(`Modrinth API HTTP ${upstream.status}`);
+    const versions = await upstream.json();
+    const version = Array.isArray(versions) ? versions[0] : null;
+    const file = version
+      ? (version.files ?? []).find((f) => f.primary) ?? (version.files ?? [])[0]
+      : null;
+    if (!file || !file.url) {
+      throw new Error(`No ${type} version of ${slug} found for Minecraft ${ver}`);
+    }
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        slug,
+        versionNumber: version?.version_number ?? '',
+        filename: String(file.filename ?? `${slug}.bin`),
+        url: file.url,
+        sha1: file.hashes?.sha1 ?? null,
+      })
+    );
+  } catch (err) {
+    res.statusCode = 502;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(
+      JSON.stringify({
+        error: err instanceof Error ? err.message : 'Modrinth API unreachable',
+      })
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function handleApiRequest(req, res, rootDir = process.cwd()) {
   if (!req.url || !req.url.startsWith('/api/')) {
     return false;
@@ -477,7 +588,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.7.4',
+        launcherVersion: '2.7.5',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: cpuCount,
@@ -563,7 +674,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     });
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ version: '2.7.4', mods: entries }));
+    res.end(JSON.stringify( { version: '2.7.5', mods: entries }));
     return true;
   }
 
@@ -715,7 +826,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.7.4-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.7.5-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
@@ -781,6 +892,81 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     return true;
   }
 
+  // ── Modrinth browser (live proxy; real search & version resolution) ────────────────────────
+  if (pathname === '/api/modrinth/search') {
+    void handleModrinthSearchProxy(res, parsed);
+    return true;
+  }
+
+  if (pathname === '/api/modrinth/version') {
+    void handleModrinthVersionProxy(res, parsed);
+    return true;
+  }
+
+  if (pathname === '/api/game-dir/files') {
+    const rawDir = (parsed.searchParams.get('dir') || '~/WinVisual').trim();
+    const sub = (parsed.searchParams.get('sub') || 'mods').trim();
+    const allowedSubs = ['mods', 'resourcepacks', 'shaderpacks', 'config', 'logs'];
+    const absDir = resolveGameDir(rawDir, rootDir);
+    if (!absDir || !allowedSubs.includes(sub)) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: 'Invalid folder' }));
+      return true;
+    }
+    const target = path.join(absDir, sub);
+    const files = [];
+    if (fs.existsSync(target) && fs.statSync(target).isDirectory()) {
+      for (const name of fs.readdirSync(target)) {
+        const full = path.join(target, name);
+        try {
+          if (fs.statSync(full).isFile()) {
+            files.push({ name, sizeBytes: fs.statSync(full).size });
+          }
+        } catch {
+          // skip unreadable entry
+        }
+      }
+    }
+    files.sort((a, b) => a.name.localeCompare(b.name));
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ ok: true, sub, files }));
+    return true;
+  }
+
+  if (pathname === '/api/game-dir/remove') {
+    const rawDir = (parsed.searchParams.get('dir') || '~/WinVisual').trim();
+    const sub = (parsed.searchParams.get('sub') || 'mods').trim();
+    const file = (parsed.searchParams.get('file') || '').trim();
+    const allowedSubs = ['mods', 'resourcepacks', 'shaderpacks', 'config', 'logs'];
+    const absDir = resolveGameDir(rawDir, rootDir);
+    if (!absDir || !allowedSubs.includes(sub) || !file || file.includes('/') || file.includes('\\') || file === '.' || file === '..') {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: 'Invalid target' }));
+      return true;
+    }
+    const target = path.join(path.join(absDir, sub), file);
+    try {
+      if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ ok: false, error: 'File not found' }));
+        return true;
+      }
+      fs.unlinkSync(target);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: true }));
+    } catch (err) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: err instanceof Error ? err.message : 'Remove failed' }));
+    }
+    return true;
+  }
+
   const manifestMatch = pathname.match(
     /^\/api\/(?:download\/manifest\/([^/]+)|download\/([^/]+)\/manifest|manifest\/([^/]+))$/
   );
@@ -843,7 +1029,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
-    res.setHeader('X-Launcher-Version', '2.7.4');
+    res.setHeader('X-Launcher-Version', '2.7.5');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;

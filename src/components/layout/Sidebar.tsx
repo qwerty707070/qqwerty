@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Home,
   Newspaper,
+  PackageOpen,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -112,6 +113,7 @@ export const Sidebar: React.FC = () => {
     { id: 'modules', label: isRu ? 'Модули' : 'Modules', Icon: Puzzle, trailing: 'chevron-down' },
     { id: 'news', label: copy.nav.news, Icon: Newspaper },
     { id: 'versions', label: copy.nav.versions, Icon: Box },
+    { id: 'resources', label: isRu ? 'Моды и ресурспаки' : 'Mods & Packs', Icon: PackageOpen },
     { id: 'settings', label: copy.nav.settings, Icon: Settings },
     { id: 'account', label: copy.nav.account, Icon: UserRound, trailing: 'chevron-right' },
   ];

@@ -1,5 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 // Minimal DOM globals so client stores/hooks mount cleanly during full-tree SSR verification
 class Element {}
@@ -34,7 +36,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.7.4 telemetry + strict 3-version WinVisual catalog
+// 1. Validate live HTTP API endpoints + v2.7.5 telemetry + strict 3-version WinVisual catalog
 const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -46,13 +48,13 @@ const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.7.4' ||
+  status.launcherVersion !== '2.7.5' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
   !status.java?.path
 ) {
-  throw new Error('Invalid /api/status v2.7.4 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.7.5 telemetry schema: ' + JSON.stringify(status));
 }
 
 if (!Array.isArray(embeddedMods.mods) || embeddedMods.mods.length !== 3) {
@@ -119,7 +121,7 @@ for (const mc of expectedMcVersions) {
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.7.4',
+  version: '2.7.5',
   themeId: 'violet',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
@@ -179,6 +181,45 @@ const modsEntry = gdirTree.folders.find((f) => f.name === 'mods');
 if (!modsEntry || modsEntry.files < 3) throw new Error('WinVisual/mods/ does not contain the embedded JARs on disk');
 console.log(`[GAME-DIR OK] ~/WinVisual scaffolded: ${gdirTree.folders.length} folders, mods/ = ${modsEntry.files} files (${(modsEntry.sizeBytes / 1024).toFixed(0)} KB)`);
 
+// 5c. Verify the in-launcher Modrinth browser contract (search + version + file management)
+const mrSearchRes = await fetch(`${base}/api/modrinth/search?type=mod&ver=1.21.4`);
+const mrSearchData = await mrSearchRes.json();
+if (mrSearchRes.status === 200) {
+  if (!Array.isArray(mrSearchData)) throw new Error('Modrinth search proxy must return an array on 200');
+} else if (mrSearchRes.status !== 502 || !mrSearchData.error) {
+  throw new Error(`Modrinth search proxy must return 200|array or 502|error, got ${mrSearchRes.status}: ${JSON.stringify(mrSearchData)}`);
+}
+console.log(
+  `[MODRINTH OK] search proxy contract (sandbox: ${
+    mrSearchRes.status === 200 ? 'live ' + mrSearchData.length + ' hits' : 'honest 502 — user browser uses direct fetch'
+  })`
+);
+
+const mrVerRes = await fetch(`${base}/api/modrinth/version?slug=not-a-real-slug&type=mod&ver=1.21.4`);
+const mrVerData = await mrVerRes.json();
+if (mrVerRes.status !== 502 || !mrVerData.error) {
+  throw new Error(`Modrinth version proxy must return 502|error for unknown slug, got ${mrVerRes.status}: ${JSON.stringify(mrVerData)}`);
+}
+
+const mrFilesRes = await fetch(`${base}/api/game-dir/files?dir=~/WinVisual&sub=mods`).then((r) => r.json());
+if (!mrFilesRes.ok || !Array.isArray(mrFilesRes.files) || mrFilesRes.files.length < 3) {
+  throw new Error('Game dir files list must expose the embedded WinVisual JARs in mods/');
+}
+const mrBadSubRes = await fetch(`${base}/api/game-dir/files?dir=~/WinVisual&sub=../etc`);
+if (mrBadSubRes.status !== 400) throw new Error('Game dir files endpoint must reject non-allowlisted subfolders');
+
+const tmpProbe = 'winvisual-verify-modrinth-probe.jar';
+const modsAbs = path.join(os.homedir(), 'WinVisual', 'mods', tmpProbe);
+fs.mkdirSync(path.dirname(modsAbs), { recursive: true });
+fs.writeFileSync(modsAbs, 'probe');
+const mrRemoveRes = await fetch(
+  `${base}/api/game-dir/remove?dir=~/WinVisual&sub=mods&file=${encodeURIComponent(tmpProbe)}`
+).then((r) => r.json());
+if (!mrRemoveRes.ok || fs.existsSync(modsAbs)) {
+  throw new Error('Game dir remove endpoint failed to delete the probe file');
+}
+console.log(`[MODRINTH OK] game-dir files list/remove roundtrip (${mrFilesRes.files.length} files in mods/)`);
+
 // Check simulated HTTP 503 error recovery endpoint
 const errRes = await fetch(`${base}/api/download/winvisual-1.21.11/winvisual-1.21.11-rendercore.jar?simulate_error=1`);
 if (errRes.status !== 503) throw new Error('Expected 503 fault simulation');
@@ -205,7 +246,25 @@ for (const icon of [
   if (st.size < 1000) throw new Error(`Icon too small: ${icon}`);
 }
 
-// 6. Full React Component Tree Render Verification across ALL 6 pages x 2 languages + modals
+// 5d. Verify the Java major-version guard + Modrinth native client exist in the Rust source
+const launcherRs = fs.readFileSync('src-tauri/src/launcher.rs', 'utf8');
+for (const needle of ['probe_java_major', 'java_major_compatible', 'component_required_major', 'required_major']) {
+  if (!launcherRs.includes(needle)) throw new Error(`Java major-version guard missing in launcher.rs: ${needle}`);
+}
+if (!launcherRs.includes('modrinth.rs') && !fs.existsSync('src-tauri/src/modrinth.rs')) {
+  throw new Error('src-tauri/src/modrinth.rs is missing');
+}
+const modrinthRs = fs.readFileSync('src-tauri/src/modrinth.rs', 'utf8');
+for (const needle of ['search_modrinth_resources', 'download_modrinth_resource', 'sha1', 'modrinth://progress']) {
+  if (!modrinthRs.includes(needle)) throw new Error(`Modrinth native client missing in modrinth.rs: ${needle}`);
+}
+const mainRs = fs.readFileSync('src-tauri/src/main.rs', 'utf8');
+for (const needle of ['mod modrinth', 'search_modrinth', 'download_modrinth_resource', 'list_game_dir_files_cmd', 'remove_game_dir_file_cmd']) {
+  if (!mainRs.includes(needle)) throw new Error(`Tauri command registration missing in main.rs: ${needle}`);
+}
+console.log('[JAVA+MODRINTH OK] Rust: java major probe + compatibility gate + native Modrinth search/download/verify commands');
+
+// 6. Full React Component Tree Render Verification across ALL 7 pages x 2 languages + modals
 const ssrEntry = await import('../.verify-ssr/ssr-entry.js');
 ssrEntry.seedLiveState({
   versions: verAll.versions,
@@ -226,7 +285,7 @@ if (!exportedCode.startsWith('WINVISUAL-')) {
   throw new Error('Preset code export failed');
 }
 
-const routes = ['home', 'modules', 'news', 'versions', 'settings', 'account'];
+const routes = ['home', 'modules', 'news', 'versions', 'resources', 'settings', 'account'];
 for (const lang of ['ru', 'en']) {
   for (const route of routes) {
     const html = ssrEntry.renderRouteSnapshot(route, lang);
@@ -255,6 +314,12 @@ for (const lang of ['ru', 'en']) {
       }
       if (!html.includes('64×32')) {
         throw new Error('Account route must advertise the strict 64×32 / 64×64 skin upload rule');
+      }
+    }
+    if (route === 'resources') {
+      const headline = lang === 'ru' ? 'Моды и ресурспаки' : 'Mods &amp; Resource Packs';
+      if (!html.includes('WinVisual') || !html.includes(headline)) {
+        throw new Error(`Resources route must advertise the in-launcher Modrinth browser (headline "${headline}" missing)`);
       }
     }
     for (const removedVer of [
@@ -295,7 +360,7 @@ console.log(
 );
 
 console.log(
-  `[ALL CHECKS PASSED] v2.7.4 nick=${activeNick}! + ~/WinVisual folder (mods/resourcepacks/logs + 3 embedded JARs) + Real WinVisual mod JAR in launch manifest + Skin-only upload (64×32/64×64, no Steve/Alex) + Fixed 3D Cape + Solid Skin + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.7.5 nick=${activeNick}! + In-launcher Modrinth (mods & resource packs, direct download to WinVisual) + Java 21 auto-fix (major-version probe + Mojang runtime) + ~/WinVisual folder (3 embedded JARs) + Skin-only upload (64×32/64×64, no Steve/Alex) + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

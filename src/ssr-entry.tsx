@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage';
 import { ModulesPage } from './pages/ModulesPage';
 import { NewsPage } from './pages/NewsPage';
 import { VersionsPage } from './pages/VersionsPage';
+import { ResourcesPage } from './pages/ResourcesPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AccountPage } from './pages/AccountPage';
 import { LiveClientSessionModal } from './components/launcher/LiveClientSessionModal';
@@ -70,6 +71,7 @@ export function renderRouteSnapshot(route: PageRoute, lang: LanguageCode): strin
     modules: <ModulesPage />,
     news: <NewsPage />,
     versions: <VersionsPage />,
+    resources: <ResourcesPage />,
     settings: <SettingsPage />,
     account: <AccountPage />,
   };

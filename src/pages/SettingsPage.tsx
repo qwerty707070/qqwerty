@@ -226,8 +226,8 @@ export const SettingsPage: React.FC = () => {
                   <h2 className="text-[15.5px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
                     <Laptop size={17} strokeWidth={1.75} className="text-[var(--accent-secondary)]" />
                     {isRu
-                      ? 'Нативный лаунчер и вшитые моды (WinVisual v2.7.4)'
-                      : 'Native Installers & Embedded Client Mods (WinVisual v2.7.4)'}
+                      ? 'Нативный лаунчер и вшитые моды (WinVisual v2.7.5)'
+                      : 'Native Installers & Embedded Client Mods (WinVisual v2.7.5)'}
                   </h2>
                   <p className="text-[12.5px] text-[var(--text-secondary)]">
                     {isRu
@@ -491,6 +491,15 @@ export const SettingsPage: React.FC = () => {
                   {isRu ? 'Обзор' : 'Browse'}
                 </Button>
               </div>
+              <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]/80">
+                {isRu
+                  ? `Авт.проверка версии: для Minecraft ${activeMcVersion} требуется ${
+                      activeMcVersion === '1.16.5' ? 'Java 8 (или 16 и ниже)' : 'Java 21'
+                    }. Если системный Java не подходит, лаунчер сам скачает официальный рантайм Mojang — игра не упадёт с «Incompatible mods».`
+                  : `Auto version check: Minecraft ${activeMcVersion} needs ${
+                      activeMcVersion === '1.16.5' ? 'Java 8 (or up to 16)' : 'Java 21'
+                    }. If your system Java doesn't match, the launcher auto-downloads the official Mojang runtime so the game never crashes with "Incompatible mods".`}
+              </p>
             </div>
 
             <div className="space-y-2">

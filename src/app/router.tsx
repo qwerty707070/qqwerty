@@ -12,6 +12,9 @@ const NewsPage = lazy(() =>
 const VersionsPage = lazy(() =>
   import('../pages/VersionsPage').then((m) => ({ default: m.VersionsPage }))
 );
+const ResourcesPage = lazy(() =>
+  import('../pages/ResourcesPage').then((m) => ({ default: m.ResourcesPage }))
+);
 const SettingsPage = lazy(() =>
   import('../pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 );
@@ -42,6 +45,7 @@ export const AppRouter: React.FC = () => {
       {currentPage === 'modules' && <ModulesPage />}
       {currentPage === 'news' && <NewsPage />}
       {currentPage === 'versions' && <VersionsPage />}
+      {currentPage === 'resources' && <ResourcesPage />}
       {currentPage === 'settings' && <SettingsPage />}
       {currentPage === 'account' && <AccountPage />}
     </Suspense>

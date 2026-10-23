@@ -119,7 +119,7 @@ export const useLauncherStore = create<LauncherState>()(
       simulateNetworkDrop: false,
       logsModalOpen: false,
       logs: [
-        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.7.4 initialized (WinVisual 1.16.5 / 1.21.4 / 1.21.11)`,
+        `[${new Date().toLocaleTimeString('en-GB')}] [BOOT] WinVisual Shell v2.7.5 initialized (WinVisual 1.16.5 / 1.21.4 / 1.21.11)`,
       ],
       downloadProgress: INITIAL_PROGRESS,
 

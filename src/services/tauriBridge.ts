@@ -10,7 +10,7 @@ declare global {
 }
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.4';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.5';
 
 export function isTauriDesktop(): boolean {
   return typeof window !== 'undefined' && Boolean(window.__TAURI_INTERNALS__);
@@ -172,6 +172,75 @@ export async function tauriInitGameDirectory(gameDirectory: string): Promise<Gam
 
 export async function tauriGetGameDirectoryTree(gameDirectory: string): Promise<GameDirEntry[]> {
   return window.__TAURI_INTERNALS__!.invoke<GameDirEntry[]>('get_game_directory_tree', {
+    gameDirectory,
+  });
+}
+
+export interface GameFileEntry {
+  name: string;
+  sizeBytes: number;
+}
+
+export async function tauriListGameDirFiles(gameDirectory: string, sub: string): Promise<GameFileEntry[]> {
+  return window.__TAURI_INTERNALS__!.invoke<GameFileEntry[]>('list_game_dir_files_cmd', {
+    gameDirectory,
+    sub,
+  });
+}
+
+export async function tauriRemoveGameDirFile(gameDirectory: string, sub: string, fileName: string): Promise<boolean> {
+  try {
+    await window.__TAURI_INTERNALS__!.invoke('remove_game_dir_file_cmd', {
+      gameDirectory,
+      sub,
+      fileName,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export interface ModrinthHit {
+  slug: string;
+  title: string;
+  description: string;
+  iconUrl: string;
+  downloads: number;
+  gameVersions: string[];
+  projectType: string;
+}
+
+export interface ModrinthProgress {
+  slug: string;
+  filename: string;
+  downloadedBytes: number;
+  totalBytes: number;
+  stage: string;
+}
+
+export async function tauriSearchModrinth(
+  query: string,
+  resourceType: 'mod' | 'resourcepack',
+  gameVersion: string
+): Promise<ModrinthHit[]> {
+  return window.__TAURI_INTERNALS__!.invoke<ModrinthHit[]>('search_modrinth', {
+    query,
+    resourceType,
+    gameVersion,
+  });
+}
+
+export async function tauriDownloadModrinthResource(
+  slug: string,
+  resourceType: 'mod' | 'resourcepack',
+  gameVersion: string,
+  gameDirectory: string
+): Promise<string> {
+  return window.__TAURI_INTERNALS__!.invoke<string>('download_modrinth_resource', {
+    slug,
+    resourceType,
+    gameVersion,
     gameDirectory,
   });
 }

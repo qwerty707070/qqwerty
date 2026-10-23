@@ -3,6 +3,7 @@
 mod auth;
 mod downloader;
 mod launcher;
+mod modrinth;
 
 use auth::{
     complete_minecraft_oauth, delete_encrypted_mc_token, request_microsoft_device_code,
@@ -12,9 +13,10 @@ use base64::Engine;
 use launcher::{
     build_http_client, cancel_active_launch_and_processes, collect_game_dir_entries,
     current_active_client_pid, ensure_clean_dir, expand_tilde, init_game_directory_report,
-    install_embedded_winvisual_client_mod, resolve_java_executable, run_abortable_launch,
-    sync_modrinth_optimization_bundle, terminate_active_client_processes, GameDirEntry,
-    LaunchRequest, ModBundleResult,
+    install_embedded_winvisual_client_mod, list_game_dir_files, remove_game_dir_file,
+    resolve_java_executable, run_abortable_launch, sync_modrinth_optimization_bundle,
+    terminate_active_client_processes, GameDirEntry, GameFileEntry, LaunchRequest,
+    ModBundleResult,
 };
 use rfd::AsyncFileDialog;
 use serde::Serialize;
@@ -351,6 +353,48 @@ fn get_game_directory_tree(game_directory: String) -> Result<Vec<GameDirEntry>, 
 }
 
 #[tauri::command]
+fn list_game_dir_files_cmd(game_directory: String, sub: String) -> Result<Vec<GameFileEntry>, String> {
+    list_game_dir_files(&game_directory, &sub)
+}
+
+#[tauri::command]
+fn remove_game_dir_file_cmd(
+    game_directory: String,
+    sub: String,
+    file_name: String,
+) -> Result<(), String> {
+    remove_game_dir_file(&game_directory, &sub, &file_name)
+}
+
+#[tauri::command]
+async fn search_modrinth(
+    query: String,
+    resource_type: String,
+    game_version: String,
+) -> Result<Vec<modrinth::ModrinthHit>, String> {
+    modrinth::search_modrinth_resources(&query, &resource_type, &game_version).await
+}
+
+#[tauri::command]
+async fn download_modrinth_resource(
+    app: AppHandle,
+    slug: String,
+    resource_type: String,
+    game_version: String,
+    game_directory: String,
+) -> Result<String, String> {
+    let dest = modrinth::download_modrinth_resource(
+        &app,
+        &slug,
+        &resource_type,
+        &game_version,
+        &game_directory,
+    )
+    .await?;
+    Ok(dest.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 fn open_game_folder(game_directory: String) -> Result<(), String> {
     let target = expand_tilde(&game_directory);
     std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
@@ -385,6 +429,10 @@ fn main() {
             pick_java_binary_dialog,
             init_game_directory,
             get_game_directory_tree,
+            list_game_dir_files_cmd,
+            remove_game_dir_file_cmd,
+            search_modrinth,
+            download_modrinth_resource,
             fetch_minecraft_skin,
             save_hud_config_disk,
             load_hud_config_disk,
