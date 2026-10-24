@@ -132,6 +132,11 @@ public final class WinVisualEngine {
     private int activeTopTab = 0; // 0 = Modules, 1 = HUD Studio, 2 = Themes, 3 = Presets
     private int activeCategoryIdx = 0; // 0 = All, 1..5 = Category
     private int modulePageOffset = 0;
+    private WinVisualModule selectedModule = null;
+    private UiKit.Tokens uiTokens = null;
+    private String uiTokensKey = "";
+    private final List<WinVisualModule> keybindScratch = new ArrayList<WinVisualModule>();
+    private final List<String[]> arrayListScratch = new ArrayList<String[]>();
     private WinVisualModule bindingModule = null;
     private WinVisualModule draggingHudModule = null;
     private int dragOffsetX = 0;
@@ -141,6 +146,12 @@ public final class WinVisualEngine {
     private int activeSliderW = 100;
     private boolean mediaPlaying = true;
     private int mediaTrackIdx = 0;
+    private static final java.util.Comparator<String[]> ARRAY_LIST_ORDER = new java.util.Comparator<String[]>() {
+        @Override
+        public int compare(String[] a, String[] b) {
+            return Integer.compare(Integer.parseInt(b[2]), Integer.parseInt(a[2]));
+        }
+    };
     private static final String[] MEDIA_TRACKS = new String[] {
         "WinVisual • Nightfall Synth",
         "WinVisual • Nebula Drift",
@@ -966,7 +977,8 @@ public final class WinVisualEngine {
         // 5. Keybinds HUD (Evo Active Binds card)
         WinVisualModule kb = config.get("keybinds-hud");
         if (kb != null && kb.enabled) {
-            List<WinVisualModule> bound = new ArrayList<WinVisualModule>();
+            List<WinVisualModule> bound = keybindScratch;
+            bound.clear();
             for (int i = 0; i < config.modules.size(); i++) {
                 WinVisualModule m = config.modules.get(i);
                 if (m.keyCode > 0 && (kb.modeIndex == 0 || m.enabled)) {
@@ -1103,25 +1115,25 @@ public final class WinVisualEngine {
         // 11. Active Modules ArrayList (top-right badge column, clean cards)
         WinVisualModule arr = config.get("array-list");
         if (arr != null && arr.enabled) {
-            List<String[]> entries = new ArrayList<String[]>();
+            List<String[]> entries = arrayListScratch;
+            entries.clear();
             for (int i = 0; i < config.modules.size(); i++) {
                 WinVisualModule m = config.modules.get(i);
                 if (m.enabled && m.category != WinVisualModule.Category.HUD) {
                     String suffix = m.modes.length > 0 ? m.activeMode() : "";
-                    entries.add(new String[] { m.name, suffix });
+                    int entryW = g.textWidth(m.name) + (suffix.isEmpty() ? 0 : 6 + g.textWidth(suffix));
+                    entries.add(new String[] { m.name, suffix, String.valueOf(entryW) });
                 }
             }
-            entries.sort((a, b) -> Integer.compare(
-                    g.textWidth(b[0]) + g.textWidth(b[1]),
-                    g.textWidth(a[0]) + g.textWidth(a[1])));
+            // Sort on the width measured once above instead of re-measuring every comparison.
+            entries.sort(ARRAY_LIST_ORDER);
 
             int rowH = Math.max(10, Math.round(arr.sliderValue));
             int gap = 4;
             int pad = 14;
             int maxTw = pad;
-            for (String[] e : entries) {
-                maxTw = Math.max(maxTw, pad + g.textWidth(e[0])
-                        + (e[1].isEmpty() ? 0 : 6 + g.textWidth(e[1])));
+            for (int i = 0; i < entries.size(); i++) {
+                maxTw = Math.max(maxTw, pad + Integer.parseInt(entries.get(i)[2]));
             }
             int w = Math.min(maxTw, 240);
             int h = entries.isEmpty() ? 0 : Math.min(12, entries.size()) * (rowH + gap) - gap;
@@ -1214,6 +1226,16 @@ public final class WinVisualEngine {
         }
     }
 
+    /** Reuses one token object per theme instead of rebuilding it every frame. */
+    private UiKit.Tokens tokens(WinVisualConfig.ThemePalette theme) {
+        String key = theme.id + "#" + config.themeIndex;
+        if (uiTokens == null || !key.equals(uiTokensKey)) {
+            uiTokens = new UiKit.Tokens(theme);
+            uiTokensKey = key;
+        }
+        return uiTokens;
+    }
+
     private void renderInteractiveMenu(
             Canvas2D g,
             GameSnapshot snap,
@@ -1223,11 +1245,12 @@ public final class WinVisualEngine {
     ) {
         boolean clickLeft = snap.mouseLeftDown && !prevLeftMouse;
         boolean clickRight = snap.mouseRightDown && !prevRightMouse;
+        UiKit.Tokens t = tokens(theme);
 
-        // Subtle dark backdrop so both HUD widgets and ClickGUI stay crisp
-        g.fill(0, 0, snap.guiWidth, snap.guiHeight, activeTopTab == 1 ? 0x3805060B : 0x7805060B);
+        // Full-screen scrim. HUD Studio keeps a lighter one so widgets stay readable.
+        g.fill(0, 0, snap.guiWidth, snap.guiHeight, activeTopTab == 1 ? 0x3A04060B : 0x8C04060B);
 
-        // HUD Dragging handler (works whenever menu is open — especially clean in HUD Studio tab!)
+        // --- existing drag / slider interaction state ---------------------
         if (!snap.mouseLeftDown) {
             if (draggingHudModule != null || activeSliderModule != null) {
                 draggingHudModule = null;
@@ -1237,7 +1260,6 @@ public final class WinVisualEngine {
         } else if (draggingHudModule != null) {
             int nx = (int) Math.round(snap.mouseX) - dragOffsetX;
             int ny = (int) Math.round(snap.mouseY) - dragOffsetY;
-            // Magnetic center snap
             int midX = (snap.guiWidth - draggingHudModule.hudW) / 2;
             if (Math.abs(nx - midX) <= 6) {
                 nx = midX;
@@ -1252,76 +1274,132 @@ public final class WinVisualEngine {
                     + ratio * (activeSliderModule.sliderMax - activeSliderModule.sliderMin);
         }
 
-        // In HUD Studio tab, show compact floating toolbar at top so the full screen is free for dragging!
+        // --- HUD Studio: floating toolbar, whole screen free for dragging --
         if (activeTopTab == 1) {
-            int barW = 360, barH = 30;
+            int barW = 420;
+            int barH = 40;
             int bx = (snap.guiWidth - barW) / 2;
-            int by = 10;
-            g.evoCard(bx, by, barW, barH, 0xF00B0D16, theme.cardBorder,
-                    0xFF000000 | theme.primary, 0xFF000000 | theme.secondary);
-            g.drawText("HUD STUDIO — Drag any widget on screen", bx + 10, by + 11, 0xFFFFFFFF);
-            int backX = bx + barW - 86;
-            g.roundedRect(backX, by + 5, 78, 20, 4, 0xFF000000 | theme.primary);
-            g.drawCenteredText("Back to Menu", backX + 39, by + 11, 0xFFFFFFFF);
-            if (clickLeft && inBox(snap.mouseX, snap.mouseY, backX, by + 5, 78, 20)) {
+            int by = 12;
+            UiKit.window(g, bx, by, barW, barH, t);
+            UiKit.glyphTile(g, bx + 10, by + 9, 22, "W", true, t);
+            g.drawText("HUD Studio", bx + 40, by + 10, t.text);
+            g.drawText("Drag any widget to move it", bx + 40, by + 21, t.textDim);
+
+            String done = "Done";
+            int dw = g.textWidth(done) + 20;
+            int dx = bx + barW - dw - 10;
+            g.roundedRect(dx, by + 10, dw, 20, 10, t.accent);
+            g.drawCenteredText(done, dx + dw / 2, by + 16, 0xFF0A0C12);
+            if (clickLeft && UiKit.inBox(snap.mouseX, snap.mouseY, dx, by + 10, dw, 20)) {
                 activeTopTab = 0;
             } else if (clickLeft) {
                 tryStartHudDrag(snap);
             }
             prevLeftMouse = snap.mouseLeftDown;
             prevRightMouse = snap.mouseRightDown;
+            final long hudUnused = nowMs;
+            if (hudUnused < 0) pushToast("", false);
             return;
         }
 
-        int panelW = Math.min(520, snap.guiWidth - 28);
-        int panelH = Math.min(316, snap.guiHeight - 28);
-        int px = (snap.guiWidth - panelW) / 2;
-        int py = (snap.guiHeight - panelH) / 2;
+        // --- window geometry ----------------------------------------------
+        int winW = Math.min(820, snap.guiWidth - 24);
+        int winH = Math.min(492, snap.guiHeight - 24);
+        int wx = (snap.guiWidth - winW) / 2;
+        int wy = (snap.guiHeight - winH) / 2;
+        int railW = 142;
+        int topH = 50;
+        int footH = 22;
 
-        // If user clicked outside main panel on a visible HUD widget, allow instant dragging too!
-        if (clickLeft && !inBox(snap.mouseX, snap.mouseY, px, py, panelW, panelH)) {
-            tryStartHudDrag(snap);
-        }
+        UiKit.window(g, wx, wy, winW, winH, t);
 
-        g.evoCard(px, py, panelW, panelH, 0xF20A0C14, theme.cardBorder,
-                0xFF000000 | theme.primary, 0xFF000000 | theme.secondary);
+        // Left rail ---------------------------------------------------------
+        g.roundedRect(wx + 1, wy + 1, railW, winH - 2, t.radius, 0x59000000);
+        g.fill(wx + railW, wy + 10, wx + railW + 1, wy + winH - 10, 0x12FFFFFF);
 
-        // Header Bar
-        g.roundedRect(px + 12, py + 10, 18, 18, 4, 0xFF000000 | theme.primary);
-        g.drawText("W", px + 18, py + 15, 0xFFFFFFFF);
-        g.drawText("WinVisual " + snap.mcVersion, px + 36, py + 11, 0xFFFFFFFF);
-        g.drawText("Visual Studio • Right Shift", px + 36, py + 21, 0xFF94A3B8);
+        UiKit.glyphTile(g, wx + 14, wy + 14, 24, "W", true, t);
+        g.drawText("WinVisual", wx + 46, wy + 13, t.text);
+        g.drawText("Studio  " + snap.mcVersion, wx + 46, wy + 24, t.textMute);
 
-        String[] topTabs = new String[] { "Modules", "HUD Studio", "Themes", "Presets" };
-        int tabStartX = px + 166;
-        for (int t = 0; t < topTabs.length; t++) {
-            int tw = 72;
-            int tx = tabStartX + t * 76;
-            boolean sel = activeTopTab == t;
-            g.roundedRect(tx, py + 10, tw, 20, 4, sel ? (0xFF000000 | theme.primary) : 0x16FFFFFF);
-            g.drawCenteredText(topTabs[t], tx + tw / 2, py + 16, sel ? 0xFFFFFFFF : 0xFFCBD5E1);
-            if (clickLeft && inBox(snap.mouseX, snap.mouseY, tx, py + 10, tw, 20)) {
-                activeTopTab = t;
+        String[] navLabels = new String[] { "All modules", "ESP & render", "HUD 2.0", "Particles", "Cosmetics", "World & view" };
+        int[] navCounts = new int[navLabels.length];
+        navCounts[0] = config.modules.size();
+        WinVisualModule.Category[] cats = WinVisualModule.Category.values();
+        for (int i = 0; i < config.modules.size(); i++) {
+            WinVisualModule m = config.modules.get(i);
+            for (int c = 0; c < cats.length; c++) {
+                if (m.category == cats[c]) navCounts[c + 1]++;
             }
         }
 
-        // Close button [X]
-        int closeX = px + panelW - 28;
-        g.roundedRect(closeX, py + 10, 18, 18, 4, 0x22FFFFFF);
-        g.drawCenteredText("X", closeX + 9, py + 15, 0xFFE2E8F0);
-        if (clickLeft && inBox(snap.mouseX, snap.mouseY, closeX, py + 10, 18, 18)) {
+        int navY = wy + 54;
+        for (int i = 0; i < navLabels.length; i++) {
+            int iy = navY + i * 27;
+            boolean sel = activeCategoryIdx == i;
+            boolean hov = UiKit.inBox(snap.mouseX, snap.mouseY, wx + 8, iy, railW - 16, 23);
+            UiKit.navItem(g, wx + 8, iy, railW - 16, 23, navLabels[i], navCounts[i], sel, hov, t, g);
+            if (clickLeft && hov) {
+                activeCategoryIdx = i;
+                modulePageOffset = 0;
+            }
+        }
+
+        // Rail footer: theme switcher
+        int themeY = wy + winH - 54;
+        UiKit.divider(g, wx + 12, themeY - 8, railW - 24);
+        UiKit.sectionLabel(g, "Theme", wx + 14, themeY, t);
+        g.roundedRect(wx + 14, themeY + 12, 11, 11, 3, t.accent);
+        g.roundedRect(wx + 28, themeY + 12, 11, 11, 3, t.accent2);
+        g.drawText(UiKit.ellipsize(g, theme.name, railW - 60), wx + 44, themeY + 13, t.textDim);
+        if (clickLeft && UiKit.inBox(snap.mouseX, snap.mouseY, wx + 8, themeY + 6, railW - 16, 22)) {
+            config.themeIndex = (config.themeIndex + 1) % WinVisualConfig.THEMES.length;
+            config.save();
+            pushToast("Theme: " + WinVisualConfig.THEMES[config.themeIndex].name, true);
+        }
+
+        // Content origin ----------------------------------------------------
+        int cx0 = wx + railW + 1;
+        int cw = winW - railW - 1;
+
+        String[] tabs = new String[] { "Modules", "HUD", "Themes", "Presets" };
+        int tabW = 68;
+        int tabHit = UiKit.segmented(g, tabs, activeTopTab, cx0 + 14, wy + 14, tabW, 21,
+                snap.mouseX, snap.mouseY, clickLeft, t);
+        if (tabHit >= 0) {
+            activeTopTab = tabHit;
+            if (tabHit != 0) selectedModule = null;
+        }
+
+        int closeX = wx + winW - 30;
+        boolean closeHov = UiKit.inBox(snap.mouseX, snap.mouseY, closeX, wy + 14, 20, 20);
+        g.roundedRect(closeX, wy + 14, 20, 20, 6, closeHov ? 0x1FFFFFFF : 0x0EFFFFFF);
+        g.drawCenteredText("X", closeX + 10, wy + 20, t.textDim);
+        if (clickLeft && closeHov) {
             if (host != null) host.closeMenuScreen();
         }
 
-        g.fill(px + 10, py + 36, px + panelW - 10, py + 37, 0x1EFFFFFF);
+        g.drawText("Right Shift", cx0 + 14 + tabs.length * (tabW + 4) + 10, wy + 20, t.textMute);
+
+        UiKit.divider(g, cx0 + 12, wy + topH - 6, cw - 24);
+
+        int contentX = cx0 + 14;
+        int contentY = wy + topH + 4;
+        int contentW = cw - 28;
+        int contentH = winH - topH - footH - 10;
 
         if (activeTopTab == 2) {
-            renderThemesSubPage(g, snap, px, py + 44, panelW, panelH - 50, clickLeft, theme);
+            renderThemesSubPage(g, snap, contentX, contentY, contentW, contentH, clickLeft, theme);
         } else if (activeTopTab == 3) {
-            renderPresetsSubPage(g, snap, px, py + 44, panelW, panelH - 50, clickLeft, theme);
+            renderPresetsSubPage(g, snap, contentX, contentY, contentW, contentH, clickLeft, theme);
         } else {
-            renderModulesSubPage(g, snap, px, py + 42, panelW, panelH - 48, clickLeft, clickRight, theme);
+            renderModulesSubPage(g, snap, contentX, contentY, contentW, contentH, clickLeft, clickRight, t);
         }
+
+        // Footer ------------------------------------------------------------
+        UiKit.divider(g, cx0 + 12, wy + winH - footH, cw - 24);
+        g.drawText("LMB toggle    RMB settings    RShift close", cx0 + 14, wy + winH - footH + 6, t.textMute);
+        String sync = "Synced with launcher";
+        g.drawText(sync, wx + winW - 14 - g.textWidth(sync), wy + winH - footH + 6, t.textMute);
 
         prevLeftMouse = snap.mouseLeftDown;
         prevRightMouse = snap.mouseRightDown;
@@ -1344,35 +1422,14 @@ public final class WinVisualEngine {
     private void renderModulesSubPage(
             Canvas2D g,
             GameSnapshot snap,
-            int px,
-            int bodyY,
-            int panelW,
-            int bodyH,
+            int x,
+            int y,
+            int w,
+            int h,
             boolean clickLeft,
             boolean clickRight,
-            WinVisualConfig.ThemePalette theme
+            UiKit.Tokens t
     ) {
-        // Left category rail
-        int railW = 104;
-        String[] cats = new String[] { "All Modules", "ESP & Render", "HUD 2.0", "Particles", "Cosmetics", "World & View" };
-        for (int c = 0; c < cats.length; c++) {
-            int cy = bodyY + 4 + c * 26;
-            boolean sel = activeCategoryIdx == c;
-            g.roundedRect(px + 10, cy, railW, 22, 4, sel ? Canvas2D.withAlpha(theme.primary, 0.28f) : 0x0DFFFFFF);
-            if (sel) g.fill(px + 10, cy + 4, px + 13, cy + 18, 0xFF000000 | theme.primary);
-            g.drawText(cats[c], px + 18, cy + 7, sel ? 0xFFFFFFFF : 0xFF94A3B8);
-            if (clickLeft && inBox(snap.mouseX, snap.mouseY, px + 10, cy, railW, 22)) {
-                activeCategoryIdx = c;
-                modulePageOffset = 0;
-            }
-        }
-
-        // Hint footer inside left rail
-        g.drawText("LMB: Toggle", px + 12, bodyY + bodyH - 36, 0xFF64748B);
-        g.drawText("RMB: Settings", px + 12, bodyY + bodyH - 25, 0xFF64748B);
-        g.drawText("RShift: Hide", px + 12, bodyY + bodyH - 14, 0xFF64748B);
-
-        // Filtered module list
         List<WinVisualModule> filtered = new ArrayList<WinVisualModule>();
         WinVisualModule.Category[] catValues = WinVisualModule.Category.values();
         for (int i = 0; i < config.modules.size(); i++) {
@@ -1382,114 +1439,185 @@ public final class WinVisualEngine {
             }
         }
 
-        int gridX = px + railW + 20;
-        int gridW = panelW - railW - 30;
-        int colW = (gridW - 8) / 2;
+        boolean inspectorOpen = selectedModule != null;
+        int inspW = inspectorOpen ? Math.max(176, Math.min(240, w / 3)) : 0;
+        int gridW = w - (inspectorOpen ? inspW + 10 : 0);
 
-        // Pager controls in top-right of module area
-        int perPage = 8;
+        int cardH = 38;
+        int gap = 7;
+        int colW = (gridW - gap) / 2;
+        int rows = Math.max(1, (h - 20) / (cardH + gap));
+        int perPage = rows * 2;
         int maxOffset = Math.max(0, ((filtered.size() - 1) / perPage) * perPage);
-        modulePageOffset = Math.min(modulePageOffset, maxOffset);
+        modulePageOffset = Math.max(0, Math.min(modulePageOffset, maxOffset));
 
-        String pageInfo = ((modulePageOffset / perPage) + 1) + "/" + ((maxOffset / perPage) + 1);
-        g.drawText("Showing " + filtered.size() + " modules  •  Page " + pageInfo, gridX, bodyY + 4, 0xFF94A3B8);
-
-        int prevBtnX = gridX + gridW - 56;
-        g.roundedRect(prevBtnX, bodyY + 1, 24, 15, 3, 0x1EFFFFFF);
-        g.drawCenteredText("<", prevBtnX + 12, bodyY + 5, 0xFFFFFFFF);
-        g.roundedRect(prevBtnX + 28, bodyY + 1, 24, 15, 3, 0x1EFFFFFF);
-        g.drawCenteredText(">", prevBtnX + 40, bodyY + 5, 0xFFFFFFFF);
-        if (clickLeft && inBox(snap.mouseX, snap.mouseY, prevBtnX, bodyY + 1, 24, 15)) {
-            modulePageOffset = Math.max(0, modulePageOffset - perPage);
-        }
-        if (clickLeft && inBox(snap.mouseX, snap.mouseY, prevBtnX + 28, bodyY + 1, 24, 15)) {
-            modulePageOffset = Math.min(maxOffset, modulePageOffset + perPage);
+        int enabledCount = 0;
+        for (int i = 0; i < filtered.size(); i++) {
+            if (filtered.get(i).enabled) enabledCount++;
         }
 
-        int leftColY = bodyY + 22;
-        int rightColY = bodyY + 22;
+        // --- header row ----------------------------------------------------
+        UiKit.sectionLabel(g, filtered.size() + " modules  /  " + enabledCount + " enabled", x, y, t);
+        int pageIdx = (modulePageOffset / perPage) + 1;
+        int pageTotal = (maxOffset / perPage) + 1;
+        String pageTxt = pageIdx + " / " + pageTotal;
+        int px = x + gridW - g.textWidth(pageTxt);
+        g.drawText(pageTxt, px, y, t.textMute);
+        int arrowY = y - 3;
+        int prevX = px - 34;
+        int nextX = px - 16;
+        boolean prevHov = UiKit.inBox(snap.mouseX, snap.mouseY, prevX, arrowY, 14, 15);
+        boolean nextHov = UiKit.inBox(snap.mouseX, snap.mouseY, nextX, arrowY, 14, 15);
+        g.roundedRect(prevX, arrowY, 14, 15, 4, prevHov ? 0x1FFFFFFF : 0x0EFFFFFF);
+        g.drawCenteredText("<", prevX + 7, arrowY + 4, t.textDim);
+        g.roundedRect(nextX, arrowY, 14, 15, 4, nextHov ? 0x1FFFFFFF : 0x0EFFFFFF);
+        g.drawCenteredText(">", nextX + 7, arrowY + 4, t.textDim);
+        if (clickLeft && prevHov) modulePageOffset = Math.max(0, modulePageOffset - perPage);
+        if (clickLeft && nextHov) modulePageOffset = Math.min(maxOffset, modulePageOffset + perPage);
+
+        // --- card grid -----------------------------------------------------
+        int gridY = y + 14;
 
         for (int idx = modulePageOffset; idx < Math.min(filtered.size(), modulePageOffset + perPage); idx++) {
             WinVisualModule m = filtered.get(idx);
-            boolean leftCol = (idx % 2) == 0;
-            int cx = leftCol ? gridX : (gridX + colW + 8);
-            int cy = leftCol ? leftColY : rightColY;
-            int cardH = m.expanded ? 86 : 36;
+            int slot = idx - modulePageOffset;
+            int col = slot % 2;
+            int row = slot / 2;
+            int cardX = x + col * (colW + gap);
+            int cardY = gridY + row * (cardH + gap);
 
-            if (cy + cardH <= bodyY + bodyH) {
-                int bg = m.enabled ? Canvas2D.withAlpha(theme.primary, 0.16f) : 0x12FFFFFF;
-                int border = m.enabled ? (0xCC000000 | theme.primary) : 0x26FFFFFF;
-                g.roundedRect(cx, cy, colW, cardH, 5, bg);
-                g.outlineRect(cx, cy, colW, cardH, 1, border);
+            boolean hov = UiKit.inBox(snap.mouseX, snap.mouseY, cardX, cardY, colW, cardH);
+            boolean sel = selectedModule == m;
+            UiKit.card(g, cardX, cardY, colW, cardH, sel, hov, t);
+            UiKit.glyphTile(g, cardX + 8, cardY + 7, 24, UiKit.glyphFor(m.name), m.enabled, t);
 
-                g.drawText(m.name, cx + 8, cy + 7, 0xFFFFFFFF);
-                g.drawText(m.description.length() > 30 ? m.description.substring(0, 30) : m.description,
-                        cx + 8, cy + 19, 0xFF94A3B8);
+            int textW = colW - 24 - 40 - 34;
+            g.drawText(UiKit.ellipsize(g, m.name, textW), cardX + 38, cardY + 8, t.text);
+            String sub = m.enabled ? (m.modes.length > 0 ? m.activeMode() : m.category.badge) : m.category.title;
+            g.drawText(UiKit.ellipsize(g, sub, textW), cardX + 38, cardY + 20, t.textMute);
 
-                // Toggle pill switch
-                int swX = cx + colW - 30;
-                g.roundedRect(swX, cy + 8, 22, 11, 4, m.enabled ? (0xFF000000 | theme.primary) : 0x33FFFFFF);
-                g.roundedRect(m.enabled ? (swX + 12) : (swX + 2), cy + 10, 8, 7, 3, 0xFFFFFFFF);
+            UiKit.switchPill(g, cardX + colW - 32, cardY + 13, m.enabled, t);
 
-                if (inBox(snap.mouseX, snap.mouseY, cx, cy, colW, 34)) {
-                    if (clickLeft) {
-                        m.enabled = !m.enabled;
-                        config.save();
-                    } else if (clickRight) {
-                        m.expanded = !m.expanded;
-                    }
-                }
-
-                // Expanded Evo settings drawer: Mode pill + Interactive Slider + SubToggle + Keybind
-                if (m.expanded) {
-                    int sy = cy + 36;
-                    if (m.modes.length > 0) {
-                        String modeStr = m.modeLabel + ": " + m.activeMode();
-                        g.roundedRect(cx + 8, sy, colW - 16, 14, 3, 0x24FFFFFF);
-                        g.drawText(modeStr, cx + 12, sy + 3, 0xFFE2E8F0);
-                        if (clickLeft && inBox(snap.mouseX, snap.mouseY, cx + 8, sy, colW - 16, 14)) {
-                            m.cycleMode();
-                            config.save();
-                        }
-                    }
-
-                    int slY = sy + 18;
-                    int slX = cx + 8;
-                    int slW = colW - 72;
-                    float ratio = (m.sliderValue - m.sliderMin) / Math.max(0.001f, m.sliderMax - m.sliderMin);
-                    g.roundedRect(slX, slY + 4, slW, 5, 2, 0x30FFFFFF);
-                    g.hGradient(slX, slY + 4, Math.max(3, Math.round(slW * ratio)), 5,
-                            0xFF000000 | theme.primary, 0xFF000000 | theme.secondary);
-                    g.drawText(String.format(Locale.US, "%.1f", m.sliderValue), slX + slW + 4, slY + 2, 0xFFCBD5E1);
-                    if (clickLeft && inBox(snap.mouseX, snap.mouseY, slX - 2, slY, slW + 4, 13)) {
-                        activeSliderModule = m;
-                        activeSliderX = slX;
-                        activeSliderW = slW;
-                    }
-
-                    // Keybind button on bottom right
-                    String kbStr = bindingModule == m ? "[Press...]" : ("[" + m.keyLabel + "]");
-                    int kbW = 40;
-                    int kbX = cx + colW - kbW - 6;
-                    g.roundedRect(kbX, slY + 14, kbW, 13, 3, bindingModule == m ? (0xFF000000 | theme.primary) : 0x24FFFFFF);
-                    g.drawCenteredText(kbStr, kbX + kbW / 2, slY + 17, 0xFFFFFFFF);
-                    if (clickLeft && inBox(snap.mouseX, snap.mouseY, kbX, slY + 14, kbW, 13)) {
-                        bindingModule = m;
-                    }
-
-                    if (m.subToggleLabel != null) {
-                        String st = (m.subToggle ? "[✓] " : "[ ] ") + m.subToggleLabel;
-                        g.drawText(st, cx + 8, slY + 16, m.subToggle ? (0xFF000000 | theme.secondary) : 0xFF94A3B8);
-                        if (clickLeft && inBox(snap.mouseX, snap.mouseY, cx + 8, slY + 14, colW - kbW - 18, 13)) {
-                            m.subToggle = !m.subToggle;
-                            config.save();
-                        }
-                    }
+            if (hov) {
+                if (clickLeft) {
+                    m.enabled = !m.enabled;
+                    config.save();
+                } else if (clickRight) {
+                    selectedModule = sel ? null : m;
                 }
             }
+        }
 
-            if (leftCol) leftColY += cardH + 6;
-            else rightColY += cardH + 6;
+        if (filtered.isEmpty()) {
+            g.drawText("Nothing here yet", x, gridY + 6, t.textMute);
+        }
+
+        // --- inspector -----------------------------------------------------
+        if (!inspectorOpen) return;
+
+        WinVisualModule m = selectedModule;
+        int ix = x + gridW + 10;
+        int iy = gridY - 14;
+        int ih = h - 6;
+        UiKit.card(g, ix, iy, inspW, ih, false, false, t);
+
+        int pad = 12;
+        int innerW = inspW - pad * 2;
+
+        UiKit.glyphTile(g, ix + pad, iy + pad, 30, UiKit.glyphFor(m.name), m.enabled, t);
+        g.drawText(UiKit.ellipsize(g, m.name, innerW - 40), ix + pad + 38, iy + pad + 2, t.text);
+        g.drawText(m.enabled ? "Enabled" : "Disabled", ix + pad + 38, iy + pad + 14,
+                m.enabled ? t.accent2 : t.textMute);
+
+        int cy = iy + pad + 40;
+        String[] desc = UiKit.wrap(g, m.description, innerW, 3);
+        for (int i = 0; i < desc.length; i++) {
+            g.drawText(desc[i], ix + pad, cy, t.textDim);
+            cy += 11;
+        }
+
+        cy += 6;
+        UiKit.divider(g, ix + pad, cy, innerW);
+        cy += 8;
+
+        // Mode
+        if (m.modes.length > 0) {
+            UiKit.sectionLabel(g, m.modeLabel, ix + pad, cy, t);
+            cy += 13;
+            int cols = 2;
+            int chipW = (innerW - 4) / cols;
+            for (int i = 0; i < Math.min(m.modes.length, 4); i++) {
+                int r = i / cols;
+                int c = i % cols;
+                int bx = ix + pad + c * (chipW + 4);
+                int by = cy + r * 18;
+                boolean on = i == m.modeIndex;
+                g.roundedRect(bx, by, chipW, 15, 7, on ? Canvas2D.withAlpha(t.accent & 0xFFFFFF, 0.85f) : 0x0EFFFFFF);
+                if (!on) g.outlineRect(bx, by, chipW, 15, 1, 0x1AFFFFFF);
+                g.drawCenteredText(UiKit.ellipsize(g, m.modes[i], chipW - 6), bx + chipW / 2, by + 4,
+                        on ? 0xFF0A0C12 : t.textDim);
+                if (clickLeft && UiKit.inBox(snap.mouseX, snap.mouseY, bx, by, chipW, 15)) {
+                    m.modeIndex = i;
+                    config.save();
+                }
+            }
+            cy += ((Math.min(m.modes.length, 4) + 1) / 2) * 18 + 6;
+        }
+
+        // Slider
+        UiKit.sectionLabel(g, m.sliderLabel, ix + pad, cy, t);
+        String val = String.format(Locale.US, "%.1f", m.sliderValue);
+        g.drawText(val, ix + inspW - pad - g.textWidth(val), cy, t.accent2);
+        cy += 12;
+        float ratio = (m.sliderValue - m.sliderMin) / Math.max(0.001f, m.sliderMax - m.sliderMin);
+        UiKit.slider(g, ix + pad, cy + 2, innerW, ratio, t);
+        if (clickLeft && UiKit.inBox(snap.mouseX, snap.mouseY, ix + pad - 3, cy - 3, innerW + 6, 14)) {
+            activeSliderModule = m;
+            activeSliderX = ix + pad;
+            activeSliderW = innerW;
+            float r2 = (float) ((snap.mouseX - activeSliderX) / Math.max(1.0, activeSliderW));
+            r2 = Math.max(0f, Math.min(1f, r2));
+            m.sliderValue = m.sliderMin + r2 * (m.sliderMax - m.sliderMin);
+        }
+        cy += 20;
+
+        // Sub toggle
+        if (m.subToggleLabel != null) {
+            g.drawText(UiKit.ellipsize(g, m.subToggleLabel, innerW - 34), ix + pad, cy, t.textDim);
+            UiKit.switchPill(g, ix + inspW - pad - 24, cy - 1, m.subToggle, t);
+            if (clickLeft && UiKit.inBox(snap.mouseX, snap.mouseY, ix + pad, cy - 4, innerW, 16)) {
+                m.subToggle = !m.subToggle;
+                config.save();
+            }
+            cy += 18;
+        }
+
+        // Keybind
+        g.drawText("Keybind", ix + pad, cy, t.textDim);
+        String kb = bindingModule == m ? "press..." : ("[" + m.keyLabel + "]");
+        int kbW = Math.max(38, g.textWidth(kb) + 12);
+        g.roundedRect(ix + inspW - pad - kbW, cy - 3, kbW, 14, 5,
+                bindingModule == m ? Canvas2D.withAlpha(t.accent & 0xFFFFFF, 0.85f) : 0x0EFFFFFF);
+        g.drawCenteredText(kb, ix + inspW - pad - kbW / 2, cy, t.textDim);
+        if (clickLeft && UiKit.inBox(snap.mouseX, snap.mouseY, ix + inspW - pad - kbW, cy - 4, kbW, 16)) {
+            bindingModule = m;
+        }
+        cy += 18;
+
+        // Master switch
+        UiKit.divider(g, ix + pad, cy, innerW);
+        cy += 8;
+        g.drawText("Module enabled", ix + pad, cy, t.textDim);
+        UiKit.switchPill(g, ix + inspW - pad - 24, cy - 1, m.enabled, t);
+        if (clickLeft && UiKit.inBox(snap.mouseX, snap.mouseY, ix + pad, cy - 4, innerW, 16)) {
+            m.enabled = !m.enabled;
+            config.save();
+        }
+
+        // Empty-space right click closes the inspector
+        if (clickRight && UiKit.inBox(snap.mouseX, snap.mouseY, ix, iy, inspW, ih)) {
+            boolean onControl = snap.mouseY < cy + 16;
+            if (!onControl) selectedModule = null;
         }
     }
 
@@ -1503,29 +1631,39 @@ public final class WinVisualEngine {
             boolean clickLeft,
             WinVisualConfig.ThemePalette activeTheme
     ) {
-        g.drawText("Select Global WinVisual Color Theme (Synced with Launcher)", px + 16, bodyY + 4, 0xFFE2E8F0);
-        int cardW = (panelW - 44) / 3;
+        UiKit.Tokens t = tokens(activeTheme);
+        UiKit.sectionLabel(g, "Accent themes - synced with the launcher", px, bodyY, t);
+
+        int gap = 8;
+        int cols = Math.max(2, Math.min(3, panelW / 150));
+        int cardW = (panelW - gap * (cols - 1)) / cols;
+        int cardH = 74;
+
         for (int i = 0; i < WinVisualConfig.THEMES.length; i++) {
             WinVisualConfig.ThemePalette tp = WinVisualConfig.THEMES[i];
-            int col = i % 3;
-            int row = i / 3;
-            int cx = px + 16 + col * (cardW + 6);
-            int cy = bodyY + 24 + row * 72;
+            int col = i % cols;
+            int row = i / cols;
+            int cx = px + col * (cardW + gap);
+            int cy = bodyY + 14 + row * (cardH + gap);
             boolean sel = config.themeIndex == i;
-            g.evoCard(cx, cy, cardW, 60, tp.cardBg, sel ? (0xFF000000 | tp.primary) : tp.cardBorder,
-                    0xFF000000 | tp.primary, 0xFF000000 | tp.secondary);
-            g.roundedRect(cx + 10, cy + 12, 22, 22, 5, 0xFF000000 | tp.primary);
-            g.roundedRect(cx + 36, cy + 12, 22, 22, 5, 0xFF000000 | tp.secondary);
-            g.drawText(tp.name, cx + 10, cy + 42, 0xFFFFFFFF);
-            if (sel) g.drawText("ACTIVE", cx + cardW - 44, cy + 14, 0xFF000000 | tp.secondary);
-            if (clickLeft && inBox(snap.mouseX, snap.mouseY, cx, cy, cardW, 60)) {
+            boolean hov = UiKit.inBox(snap.mouseX, snap.mouseY, cx, cy, cardW, cardH);
+
+            UiKit.card(g, cx, cy, cardW, cardH, sel, hov, t);
+
+            // Gradient preview strip
+            g.hGradient(cx + 9, cy + 9, cardW - 18, 18,
+                    Canvas2D.withAlpha(tp.primary, 0.95f), Canvas2D.withAlpha(tp.secondary, 0.95f));
+            g.roundedRect(cx + 9, cy + 31, cardW - 18, 1, 0, 0x22FFFFFF);
+
+            g.drawText(UiKit.ellipsize(g, tp.name, cardW - 18), cx + 9, cy + 38, t.text);
+            g.drawText(sel ? "active" : "click to apply", cx + 9, cy + 50, sel ? t.accent2 : t.textMute);
+
+            if (clickLeft && hov) {
                 config.themeIndex = i;
                 config.save();
-                pushToast("Theme switched to " + tp.name, true);
+                pushToast("Theme: " + tp.name, true);
             }
         }
-        final int unused = bodyH + activeTheme.primary;
-        if (unused == Integer.MIN_VALUE) pushToast("", false);
     }
 
     private void renderPresetsSubPage(
@@ -1538,29 +1676,42 @@ public final class WinVisualEngine {
             boolean clickLeft,
             WinVisualConfig.ThemePalette theme
     ) {
-        g.drawText("One-Click Visual Profiles & Bidirectional WinVisual Launcher Sync", px + 16, bodyY + 4, 0xFFE2E8F0);
+        UiKit.Tokens t = tokens(theme);
+        UiKit.sectionLabel(g, "One-click profiles", px, bodyY, t);
+
         String[][] presets = new String[][] {
-            { "WinVisual Full Suite (ESP + HUD 2.0 + Cosmetics)", "Enables full WinVisual ESP, all flagship HUD widgets, ChinaHat & Particles" },
-            { "Competitive PvP Clean (High FPS)", "Enables Player ESP, TargetHUD, Keystrokes, Potions, Armor & HitParticles" },
-            { "Cinematic Showcase (Shaders + Aura)", "Enables ChinaHat, Crystal Wings, JumpCircles, 3D Trails & Sunset Ambience" },
-            { "Sync Reload from WinVisual Launcher", "Reloads latest HUD layout, cloak & module switches from winvisual-hud.json" }
+            { "Full suite", "ESP, every HUD widget, cosmetics, particles" },
+            { "Competitive", "Player ESP, Target HUD, keystrokes, potions, armor" },
+            { "Cinematic", "China hat, crystal wings, jump rings, trails" },
+            { "Reload from launcher", "Pull the latest layout from winvisual-hud.json" }
         };
 
-        for (int i = 0; i < presets.length; i++) {
-            int cy = bodyY + 24 + i * 48;
-            int cw = panelW - 32;
-            g.evoCard(px + 16, cy, cw, 40, 0x18FFFFFF, theme.cardBorder,
-                    0xFF000000 | theme.primary, 0xFF000000 | theme.secondary);
-            g.drawText(presets[i][0], px + 26, cy + 8, 0xFFFFFFFF);
-            g.drawText(presets[i][1], px + 26, cy + 22, 0xFF94A3B8);
-            int btnX = px + cw - 54;
-            g.roundedRect(btnX, cy + 10, 58, 20, 4, 0xFF000000 | theme.primary);
-            g.drawCenteredText("Apply", btnX + 29, cy + 16, 0xFFFFFFFF);
+        int cardH = 46;
+        int gap = 8;
+        int cardW = (panelW - gap) / 2;
 
-            if (clickLeft && inBox(snap.mouseX, snap.mouseY, btnX, cy + 10, 58, 20)) {
+        for (int i = 0; i < presets.length; i++) {
+            int col = i % 2;
+            int row = i / 2;
+            int cx = px + col * (cardW + gap);
+            int cy = bodyY + 14 + row * (cardH + gap);
+            boolean hov = UiKit.inBox(snap.mouseX, snap.mouseY, cx, cy, cardW, cardH);
+
+            UiKit.card(g, cx, cy, cardW, cardH, false, hov, t);
+            g.drawText(presets[i][0], cx + 10, cy + 10, t.text);
+            g.drawText(UiKit.ellipsize(g, presets[i][1], cardW - 20), cx + 10, cy + 23, t.textMute);
+
+            String action = i == 3 ? "Sync" : "Apply";
+            int bw = g.textWidth(action) + 18;
+            int bx = cx + cardW - bw - 10;
+            g.roundedRect(bx, cy + cardH - 24, bw, 16, 8, Canvas2D.withAlpha(t.accent & 0xFFFFFF, 0.85f));
+            g.drawCenteredText(action, bx + bw / 2, cy + cardH - 20, 0xFF0A0C12);
+
+            if (clickLeft && hov) {
                 applyPresetByIndex(i);
             }
         }
+
         final int unused = bodyH;
         if (unused == Integer.MIN_VALUE) pushToast("", false);
     }
