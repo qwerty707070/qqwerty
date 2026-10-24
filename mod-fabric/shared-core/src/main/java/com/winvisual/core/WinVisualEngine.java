@@ -1100,41 +1100,53 @@ public final class WinVisualEngine {
             drawHudDragFrame(g, media, snap, theme);
         }
 
-        // 11. Active Modules ArrayList (top-right wave badges)
+        // 11. Active Modules ArrayList (top-right badge column, clean cards)
         WinVisualModule arr = config.get("array-list");
         if (arr != null && arr.enabled) {
-            List<String> activeNames = new ArrayList<String>();
+            List<String[]> entries = new ArrayList<String[]>();
             for (int i = 0; i < config.modules.size(); i++) {
                 WinVisualModule m = config.modules.get(i);
                 if (m.enabled && m.category != WinVisualModule.Category.HUD) {
-                    String suffix = m.modes.length > 0 ? (" §7" + m.activeMode()) : "";
-                    activeNames.add(m.name + suffix);
+                    String suffix = m.modes.length > 0 ? m.activeMode() : "";
+                    entries.add(new String[] { m.name, suffix });
                 }
             }
-            Collections.sort(activeNames, new Comparator<String>() {
-                @Override
-                public int compare(String a, String b) {
-                    return Integer.compare(g.textWidth(b), g.textWidth(a));
-                }
-            });
+            entries.sort((a, b) -> Integer.compare(
+                    g.textWidth(b[0]) + g.textWidth(b[1]),
+                    g.textWidth(a[0]) + g.textWidth(a[1])));
 
-            int rightEdge = snap.guiWidth - 8;
-            int curY = Math.max(8, arr.hudY);
-            int stepY = Math.max(11, Math.round(arr.sliderValue));
-            for (int i = 0; i < Math.min(12, activeNames.size()); i++) {
-                String label = activeNames.get(i).replace("§7", "");
-                int tw = g.textWidth(label) + 10;
-                int bx = rightEdge - tw;
+            int rowH = Math.max(10, Math.round(arr.sliderValue));
+            int gap = 4;
+            int pad = 14;
+            int maxTw = pad;
+            for (String[] e : entries) {
+                maxTw = Math.max(maxTw, pad + g.textWidth(e[0])
+                        + (e[1].isEmpty() ? 0 : 6 + g.textWidth(e[1])));
+            }
+            int w = Math.min(maxTw, 240);
+            int h = entries.isEmpty() ? 0 : Math.min(12, entries.size()) * (rowH + gap) - gap;
+            int x = Math.max(4, Math.min(snap.guiWidth - w - 4, arr.hudX));
+            int y = Math.max(4, Math.min(snap.guiHeight - h - 4, arr.hudY));
+            if (h > 0) {
+                g.evoCard(x, y, w, h, theme.cardBg, theme.cardBorder,
+                        accentA, accentB);
+            }
+            int curY = y + 3;
+            for (int i = 0; i < Math.min(12, entries.size()); i++) {
+                String[] e = entries.get(i);
                 int col = arr.modeIndex == 0
                         ? Canvas2D.waveColor(theme.primary, theme.secondary, i * 0.08)
                         : accentA;
-                g.roundedRect(bx, curY, tw, stepY, 3, 0xBD080A12);
-                if (arr.subToggle) {
-                    g.fill(rightEdge - 2, curY, rightEdge, curY + stepY, col);
+                g.drawText(e[0], x + 7, curY + 1, col);
+                if (!e[1].isEmpty()) {
+                    g.drawText(" §7" + e[1], x + 7 + g.textWidth(e[0]), curY + 1, 0xFF94A3B8);
                 }
-                g.drawText(label, bx + 4, curY + 2, col);
-                curY += stepY + 1;
+                if (arr.subToggle) {
+                    g.fill(x + 3, curY - 1, x + 5, curY + rowH - 1, col);
+                }
+                curY += rowH + gap;
             }
+            drawHudDragFrame(g, arr, snap, theme);
         }
 
         // 12. Hit Combo Badge
