@@ -7,11 +7,13 @@ package com.winvisual.core;
 public final class WinVisualModule {
 
     public enum Category {
-        ESP("ESP & Render", "ESP"),
-        HUD("HUD 2.0", "HUD"),
-        PARTICLES("Particles", "FX"),
-        COSMETICS("Cosmetics", "COSM"),
-        WORLD("World & View", "VIEW");
+        COMBAT("Combat", "Combat"),
+        PLAYERS("Players", "Players"),
+        WORLD("World", "World"),
+        EFFECTS("Effects", "Effects"),
+        HANDS("Hands", "Hands"),
+        COSMETICS("Cosmetics", "Cosmetics"),
+        HUD("HUD", "HUD");
 
         public final String title;
         public final String badge;

@@ -80,47 +80,57 @@ public final class WinVisualConfig {
 
     private void registerDefaults() {
         // === 1. ESP & RENDER (WinVisual core visual suite) ===
-        add(new WinVisualModule("player-esp", "Player ESP", "2D projected bounding boxes around players", WinVisualModule.Category.ESP, true, 0, "NONE")
+        add(new WinVisualModule("player-esp", "Player ESP", "2D projected bounding boxes around players", WinVisualModule.Category.PLAYERS, true, 0, "NONE")
                 .withModes("Style", 0, "Corners", "Full Box", "Filled Glow")
                 .withSlider("Max Range", 24f, 160f, 96f)
                 .withSubToggle("Tint Fill", true));
 
-        add(new WinVisualModule("health-esp", "Health & Armor ESP", "Side HP gradient bar & held item next to ESP box", WinVisualModule.Category.ESP, true, 0, "NONE")
+        add(new WinVisualModule("health-esp", "Health & Armor ESP", "Side HP gradient bar & held item next to ESP box", WinVisualModule.Category.PLAYERS, true, 0, "NONE")
                 .withModes("Position", 0, "Left Bar", "Right Bar", "Bottom")
                 .withSlider("Thickness", 1f, 4f, 2f)
                 .withSubToggle("Numeric HP", true));
 
-        add(new WinVisualModule("nametags", "Nametags", "Floating distance-scaled player name, HP & ping badge", WinVisualModule.Category.ESP, true, 0, "NONE")
+        add(new WinVisualModule("nametags", "Nametags", "Floating distance-scaled player name, HP & ping badge", WinVisualModule.Category.PLAYERS, true, 0, "NONE")
                 .withModes("Style", 0, "Glass Pill", "Minimal", "Compact")
                 .withSlider("Scale", 0.7f, 1.6f, 1.0f)
                 .withSubToggle("Show Held Item", true));
 
-        add(new WinVisualModule("tracers", "Tracers", " translucent snaplines to visible nearby players", WinVisualModule.Category.ESP, false, 0, "NONE")
+        add(new WinVisualModule("tracers", "Tracers", " translucent snaplines to visible nearby players", WinVisualModule.Category.PLAYERS, false, 0, "NONE")
                 .withModes("Origin", 0, "Crosshair", "Bottom")
                 .withSlider("Opacity", 0.2f, 1.0f, 0.55f)
                 .withSubToggle("Distance Color", true));
 
-        add(new WinVisualModule("mob-esp", "Mob ESP", "Projected corner boxes on hostile & passive mobs", WinVisualModule.Category.ESP, false, 0, "NONE")
+        add(new WinVisualModule("mob-esp", "Mob ESP", "Projected corner boxes on hostile & passive mobs", WinVisualModule.Category.PLAYERS, false, 0, "NONE")
                 .withModes("Filter", 0, "Hostile Only", "All Mobs")
                 .withSlider("Range", 16f, 96f, 48f)
                 .withSubToggle("Mob Labels", true));
 
-        add(new WinVisualModule("item-esp", "Item ESP", "Floating count tags & boxes on dropped ground items", WinVisualModule.Category.ESP, true, 0, "NONE")
+        add(new WinVisualModule("item-esp", "Item ESP", "Floating count tags & boxes on dropped ground items", WinVisualModule.Category.PLAYERS, true, 0, "NONE")
                 .withModes("Style", 0, "Pill Tag", "Box + Tag")
                 .withSlider("Range", 12f, 64f, 36f)
                 .withSubToggle("Stack Count", true));
 
-        add(new WinVisualModule("pearl-tracer", "Pearl Tracer", "3D glowing trajectory trail & distance on Ender Pearls", WinVisualModule.Category.ESP, true, 0, "NONE")
+        add(new WinVisualModule("pearl-tracer", "Pearl Tracer", "3D glowing trajectory trail & distance on Ender Pearls", WinVisualModule.Category.PLAYERS, true, 0, "NONE")
                 .withModes("Color", 0, "Theme Neon", "Cyan", "Gold")
                 .withSlider("Trail Length", 10f, 50f, 28f)
                 .withSubToggle("Landing Tag", true));
 
-        add(new WinVisualModule("hitbox-outline", "Target Outline", "Crisp frame around focused entity in crosshair", WinVisualModule.Category.ESP, true, 0, "NONE")
+        add(new WinVisualModule("hitbox-outline", "Target Outline", "Crisp frame around focused entity in crosshair", WinVisualModule.Category.PLAYERS, true, 0, "NONE")
                 .withModes("Style", 0, "Neon Glow", "Sharp")
                 .withSlider("Width", 1f, 3f, 2f)
                 .withSubToggle("Hurt Flash", true));
 
         // === 2. DRAGGABLE HUD 2.0 ===
+        add(new WinVisualModule("hitmarker", "Hitmarker", "Cross flash on every landed hit plus a live combo counter", WinVisualModule.Category.COMBAT, true, 0, "NONE")
+                .withModes("Style", 0, "Cross", "X", "Dot")
+                .withSlider("Size", 4f, 14f, 7f)
+                .withSubToggle("Combo Counter", true));
+
+        add(new WinVisualModule("damage-numbers", "Damage Numbers", "Rising damage values above the entity you just hit", WinVisualModule.Category.COMBAT, true, 0, "NONE")
+                .withModes("Style", 0, "Compact", "Bold", "Outline")
+                .withSlider("Rise", 6f, 30f, 16f)
+                .withSubToggle("Show Hearts", true));
+
         add(new WinVisualModule("watermark", "Watermark", "WinVisual pill header with FPS, ping & clock", WinVisualModule.Category.HUD, true, 0, "NONE")
                 .withModes("Style", 0, "Glass Pill", "Neon Line", "Minimal")
                 .withSlider("Opacity", 0.5f, 1.0f, 0.92f)
@@ -188,22 +198,22 @@ public final class WinVisualConfig {
                 .withHudBox(516, 14, 118, 120));
 
         // === 3. PARTICLES & TRAILS ===
-        add(new WinVisualModule("hit-particles", "Hit Particles", "Spawns world & screen particles on entity damage", WinVisualModule.Category.PARTICLES, true, 0, "NONE")
+        add(new WinVisualModule("hit-particles", "Hit Particles", "Spawns world & screen particles on entity damage", WinVisualModule.Category.EFFECTS, true, 0, "NONE")
                 .withModes("Particle", 0, "EndRod", "Totem", "Heart", "Flame", "Crit")
                 .withSlider("Count", 4f, 24f, 12f)
                 .withSubToggle("Screen Stars", true));
 
-        add(new WinVisualModule("trails", "3D Ribbon Trail", "Glowing smooth 3D world trail following player motion", WinVisualModule.Category.PARTICLES, true, 0, "NONE")
+        add(new WinVisualModule("trails", "3D Ribbon Trail", "Glowing smooth 3D world trail following player motion", WinVisualModule.Category.EFFECTS, true, 0, "NONE")
                 .withModes("Style", 0, "Dual Ribbon", "Neon Line", "Orbs")
                 .withSlider("Length", 15f, 70f, 42f)
                 .withSubToggle("First Person", false));
 
-        add(new WinVisualModule("jump-circles", "Jump Circles", "Expanding 3D shockwave rings on ground when jumping", WinVisualModule.Category.PARTICLES, true, 0, "NONE")
+        add(new WinVisualModule("jump-circles", "Jump Circles", "Expanding 3D shockwave rings on ground when jumping", WinVisualModule.Category.EFFECTS, true, 0, "NONE")
                 .withModes("Ring", 0, "Double Wave", "Hex Pulse", "Single")
                 .withSlider("Radius", 0.8f, 2.4f, 1.45f)
                 .withSubToggle("Inner Glow", true));
 
-        add(new WinVisualModule("ambient-particles", "Fireflies Aura", "Floating glowing motes drifting in 3D air around you", WinVisualModule.Category.PARTICLES, true, 0, "NONE")
+        add(new WinVisualModule("ambient-particles", "Fireflies Aura", "Floating glowing motes drifting in 3D air around you", WinVisualModule.Category.EFFECTS, true, 0, "NONE")
                 .withModes("Density", 0, "Subtle", "Medium", "Lush")
                 .withSlider("Radius", 3f, 10f, 6f)
                 .withSubToggle("Pulse Alpha", true));
@@ -230,7 +240,7 @@ public final class WinVisualConfig {
                 .withSubToggle("Sound Cue", true));
 
         // === 5. WORLD, CAMERA & HAND ===
-        add(new WinVisualModule("custom-crosshair", "Custom Crosshair", "Dynamic movement & attack-reactive neon crosshair", WinVisualModule.Category.WORLD, true, 0, "NONE")
+        add(new WinVisualModule("custom-crosshair", "Custom Crosshair", "Dynamic movement & attack-reactive neon crosshair", WinVisualModule.Category.COMBAT, true, 0, "NONE")
                 .withModes("Shape", 0, "Dynamic Cross", "Circle + Dot", "T-Cross")
                 .withSlider("Gap", 2f, 10f, 4f)
                 .withSubToggle("Center Dot", true));
@@ -250,7 +260,7 @@ public final class WinVisualConfig {
                 .withSlider("Tint", 0f, 0.35f, 0.10f)
                 .withSubToggle("Sky Vignette", true));
 
-        add(new WinVisualModule("viewmodel", "ViewModel Tint", "Subtle theme aura vignette & hand shader accent", WinVisualModule.Category.WORLD, false, 0, "NONE")
+        add(new WinVisualModule("viewmodel", "ViewModel Tint", "Subtle theme aura vignette & hand shader accent", WinVisualModule.Category.HANDS, false, 0, "NONE")
                 .withModes("Tint", 0, "Neon Glow", "Cyber")
                 .withSlider("Intensity", 0.05f, 0.35f, 0.14f)
                 .withSubToggle("Pulse", true));
