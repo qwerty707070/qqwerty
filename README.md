@@ -23,3 +23,17 @@ npm start
 # Сборка нативного установщика Windows (.msi / .exe), macOS (.dmg), Linux (.AppImage / .deb)
 npx @tauri-apps/cli build
 ```
+
+## Client core
+
+The in-game client is split into three builds:
+
+| Minecraft | Source | Notes |
+|---|---|---|
+| 1.21.11 | `mod-fabric/arcanic-1.21.11/` | Full Arcanic Visuals source tree (GPL-3.0) — menus, HUD, wardrobe, presets, cosmetics, effects |
+| 1.21.4 | `mod-fabric/mc-1.21.4/` + `shared-core` | WinVisual shared-core HUD and menus |
+| 1.16.5 | `mod-fabric/mc-1.16.5/` + `shared-core` | WinVisual shared-core HUD and menus |
+
+`mod-fabric/arcanic-1.21.11/` is a copy of [Arcanic Visuals](https://github.com/arcanic-su/arcanic)
+(GNU GPL v3.0). See [NOTICE.md](NOTICE.md) for attribution and the licence terms that
+apply to builds containing it.

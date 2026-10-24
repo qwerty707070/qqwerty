@@ -74,6 +74,64 @@ jobs:
           path: public/mods/winvisual-client-*.jar
           if-no-files-found: error
 
+  build-arcanic-1.21.11:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Temurin JDK 25 (Loom 1.18 needs it)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Cache Gradle & Fabric Loom dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: winvisual-arcanic-loom-${{ hashFiles('mod-fabric/arcanic-1.21.11/**/*.gradle', 'mod-fabric/arcanic-1.21.11/gradle.properties') }}
+          restore-keys: |
+            winvisual-arcanic-loom-
+
+      - name: Build the Arcanic-based 1.21.11 client core
+        working-directory: mod-fabric/arcanic-1.21.11
+        run: |
+          chmod +x gradlew
+          ./gradlew build -x spotlessCheck -x spotlessJava --no-daemon --stacktrace
+
+      - name: Publish jar into public/mods and commit it
+        run: |
+          mkdir -p public/mods
+          SRC=$(ls mod-fabric/arcanic-1.21.11/build/libs/*.jar | grep -v sources | head -1)
+          cp "$SRC" public/mods/winvisual-arcanic-1.21.11.jar
+          python3 - <<'PY'
+          import hashlib
+          p = "public/mods/winvisual-arcanic-1.21.11.jar"
+          data = open(p, "rb").read()
+          print(f"VERIFIED {p}: {len(data)} bytes | sha256={hashlib.sha256(data).hexdigest()}")
+          PY
+
+          git config user.name "WinVisual Builder"
+          git config user.email "builder@winvisual.local"
+          git fetch origin "${GITHUB_REF_NAME}"
+          git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
+          cp "$SRC" public/mods/winvisual-arcanic-1.21.11.jar
+          git add public/mods/winvisual-arcanic-1.21.11.jar
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(mods): build WinVisual 1.21.11 core from the Arcanic source [skip ci]"
+            git push origin "${GITHUB_REF_NAME}"
+          fi
+
+      - name: Upload the 1.21.11 core jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: winvisual-arcanic-1.21.11
+          path: public/mods/winvisual-arcanic-1.21.11.jar
+          if-no-files-found: error
+
   build-tauri:
     needs: build-fabric-mods
     strategy:

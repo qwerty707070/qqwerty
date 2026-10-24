@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "arcanicvisuals",
+  "version": "${version}",
+  "name": "WinVisual",
+  "description": "WinVisual 1.21.11 client core. Based on Arcanic Visuals by the Arcanic team (https://github.com/arcanic-su/arcanic), licensed under the GNU GPL v3.0.",
+  "authors": [
+    "Arcanic"
+  ],
+  "contact": {
+    "homepage": "https://github.com/qwerty707070/qqwerty",
+    "sources": "https://github.com/arcanic-su/arcanic"
+  },
+  "license": "GPL-3.0-or-later",
+  "icon": "assets/arcanicvisuals/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.arcanic.visuals.ArcanicVisuals"
+    ]
+  },
+  "mixins": [
+    "arcanicvisuals.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.17.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
