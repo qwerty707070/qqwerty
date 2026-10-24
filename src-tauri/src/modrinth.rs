@@ -32,39 +32,66 @@ pub struct ModrinthProgress {
 #[derive(Debug, Deserialize)]
 struct ApiSearchResult {
     #[serde(default)]
-    slug: String,
+    slug: Option<String>,
     #[serde(default)]
-    title: String,
+    title: Option<String>,
     #[serde(default)]
-    description: String,
+    description: Option<String>,
     #[serde(default)]
     icon_url: Option<String>,
     #[serde(default)]
-    downloads: u64,
+    downloads: Option<u64>,
     #[serde(default)]
-    game_versions: Vec<String>,
+    game_versions: Option<Vec<String>>,
     #[serde(default)]
-    project_type: String,
+    project_type: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct ApiVersionFile {
     #[serde(default)]
-    url: String,
+    url: Option<String>,
     #[serde(default)]
-    filename: String,
+    filename: Option<String>,
     #[serde(default)]
-    primary: bool,
+    primary: Option<bool>,
     #[serde(default)]
-    hashes: std::collections::BTreeMap<String, String>,
+    hashes: Option<std::collections::BTreeMap<String, String>>,
 }
 
 #[derive(Debug, Deserialize)]
 struct ApiVersion {
     #[serde(default)]
-    version_number: String,
+    version_number: Option<String>,
     #[serde(default)]
-    files: Vec<ApiVersionFile>,
+    files: Option<Vec<ApiVersionFile>>,
+}
+
+/// Decodes a Modrinth API response with clear errors: non-2xx statuses and
+/// unexpected bodies (HTML block pages, error JSON objects) are reported with
+/// the HTTP status and a body snippet instead of an opaque decode failure.
+async fn parse_api_response<T: serde::de::DeserializeOwned>(
+    resp: reqwest::Response,
+) -> Result<T, String> {
+    let status = resp.status();
+    if !status.is_success() {
+        let body = resp.text().await.unwrap_or_default();
+        let snippet: String = body.chars().take(240).collect();
+        return Err(format!("Modrinth API returned HTTP {status}: {snippet}"));
+    }
+    let text = resp
+        .text()
+        .await
+        .map_err(|e| format!("Cannot read Modrinth API response: {e}"))?;
+    match serde_json::from_str::<T>(&text) {
+        Ok(value) => Ok(value),
+        Err(_) => {
+            let snippet: String = text.chars().take(240).collect();
+            Err(format!(
+                "Modrinth API returned an unexpected response (HTTP {status}): {snippet}"
+            ))
+        }
+    }
 }
 
 fn sanitize_slug(slug: &str) -> Result<String, String> {
@@ -122,25 +149,28 @@ pub async fn search_modrinth_resources(
         req = req.query(&[("query", clean_query)]);
     }
 
-    let body: Vec<ApiSearchResult> = req
+    let resp = req
         .send()
         .await
-        .map_err(|e| format!("Modrinth API unreachable: {e}"))?
-        .json()
-        .await
-        .map_err(|e| format!("Modrinth API returned an invalid response: {e}"))?;
+        .map_err(|e| format!("Modrinth API unreachable: {e}"))?;
+    let body: Vec<ApiSearchResult> = parse_api_response(resp).await?;
 
     Ok(body
         .into_iter()
-        .filter(|r| !r.slug.is_empty())
-        .map(|r| ModrinthHit {
-            slug: r.slug,
-            title: r.title,
-            description: r.description,
-            icon_url: r.icon_url.unwrap_or_default(),
-            downloads: r.downloads,
-            game_versions: r.game_versions,
-            project_type: r.project_type,
+        .filter_map(|r| {
+            let slug = r.slug?;
+            if slug.is_empty() {
+                return None;
+            }
+            Some(ModrinthHit {
+                title: r.title.filter(|t| !t.is_empty()).unwrap_or(slug.clone()),
+                description: r.description.unwrap_or_default(),
+                icon_url: r.icon_url.unwrap_or_default(),
+                downloads: r.downloads.unwrap_or(0),
+                game_versions: r.game_versions.unwrap_or_default(),
+                project_type: r.project_type.unwrap_or_else(|| "mod".to_string()),
+                slug,
+            })
         })
         .collect())
 }
@@ -171,32 +201,38 @@ pub async fn download_modrinth_resource(
         req = req.query(&[("loaders", "[\"fabric\"]")]);
     }
 
-    let versions: Vec<ApiVersion> = req
+    let resp = req
         .send()
         .await
-        .map_err(|e| format!("Modrinth API unreachable: {e}"))?
-        .json()
-        .await
-        .map_err(|e| format!("Modrinth API returned an invalid response: {e}"))?;
+        .map_err(|e| format!("Modrinth API unreachable: {e}"))?;
+    let versions: Vec<ApiVersion> = parse_api_response(resp).await?;
 
     let version = versions
         .first()
         .ok_or_else(|| format!("No {resource_type} version of `{slug}` found for Minecraft {game_version}"))?;
 
-    let file = version
-        .files
+    let files = version.files.as_deref().unwrap_or_default();
+    let file = files
         .iter()
-        .find(|f| f.primary)
-        .or_else(|| version.files.first())
+        .find(|f| f.primary.unwrap_or(false))
+        .or_else(|| files.first())
         .ok_or_else(|| format!("Project `{slug}` has no downloadable files"))?;
 
-    if file.url.is_empty() || file.filename.is_empty() {
-        return Err("Modrinth returned an empty download file entry".to_string());
-    }
-
-    let expected_sha1 = file.hashes.get("sha1").cloned();
-    let filename = file
+    let file_url = file
+        .url
+        .as_deref()
+        .filter(|u| !u.is_empty())
+        .ok_or_else(|| "Modrinth returned an empty download file entry".to_string())?;
+    let expected_sha1 = file
+        .hashes
+        .as_ref()
+        .and_then(|h| h.get("sha1").cloned());
+    let filename_raw = file
         .filename
+        .as_deref()
+        .filter(|f| !f.is_empty())
+        .ok_or_else(|| "Modrinth returned an empty file name".to_string())?;
+    let filename = filename_raw
         .replace(['/', '\\', ':', '*'], "_")
         .chars()
         .take(180)
@@ -223,13 +259,13 @@ pub async fn download_modrinth_resource(
         "logs://line",
         format!(
             "[MODRINTH] Downloading `{slug}` v{} -> {}",
-            version.version_number,
+            version.version_number.as_deref().unwrap_or(""),
             dest_dir.display()
         ),
     );
 
     let mut resp = http
-        .get(&file.url)
+        .get(file_url)
         .send()
         .await
         .map_err(|e| format!("Download from Modrinth CDN failed: {e}"))?;

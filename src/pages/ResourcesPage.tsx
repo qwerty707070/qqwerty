@@ -302,10 +302,10 @@ export const ResourcesPage: React.FC = () => {
           <div>
             <p className="font-semibold">
               {isRu
-                ? 'Modrinth недоступен из этой сети'
-                : 'Modrinth is unreachable from this network'}
+                ? 'Не удалось получить каталог Modrinth'
+                : 'Failed to fetch the Modrinth catalogue'}
             </p>
-            <p className="text-rose-200/75 mt-0.5">{searchError}</p>
+            <p className="text-rose-200/75 mt-0.5 break-words">{searchError}</p>
             <p className="text-rose-200/60 mt-1">
               {isRu
                 ? 'Попытайтесь ещё раз — или откройте каталог на modrinth.com и скачайте файл вручную в mods/'
