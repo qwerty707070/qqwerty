@@ -1,7 +1,7 @@
 import type { ClientVersion, NewsArticle } from '../types/launcher';
 
 export const GITHUB_RELEASE_URL =
-  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.5';
+  'https://github.com/qwerty707070/qqwerty/releases/tag/v2.8.0';
 
 export const CANONICAL_VERSIONS: ClientVersion[] = [
   {

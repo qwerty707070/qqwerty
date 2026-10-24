@@ -63,6 +63,13 @@ import org.slf4j.LoggerFactory;
 /** Arcanic Visuals entrypoint: registers the keys, tick handlers, HUD and world render hooks. */
 public final class ArcanicVisuals implements ClientModInitializer {
     public static final String ID = "arcanicvisuals";
+    /** Shown in the menu footer; keep in sync with gradle.properties. */
+    public static final String VERSION = "2.8.0";
+
+    public static String version() {
+        return VERSION;
+    }
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ID);
     private static KeyMapping menuKey, inspectKey, emoteKey;
 

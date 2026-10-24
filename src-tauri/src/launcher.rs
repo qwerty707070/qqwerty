@@ -888,7 +888,7 @@ fn extract_native_jar(jar_path: &Path, natives_dir: &Path) {
 
 pub fn build_http_client() -> Result<Client, String> {
     Client::builder()
-        .user_agent("WinVisual-Launcher/2.7.5 (https://github.com/qwerty707070/qqwerty)")
+        .user_agent("WinVisual-Launcher/2.8.0 (https://github.com/qwerty707070/qqwerty)")
         .build()
         .map_err(|e| e.to_string())
 }

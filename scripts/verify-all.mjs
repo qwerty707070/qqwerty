@@ -36,7 +36,7 @@ globalThis.document = {
 
 const base = 'http://127.0.0.1:3000';
 
-// 1. Validate live HTTP API endpoints + v2.7.5 telemetry + strict 3-version WinVisual catalog
+// 1. Validate live HTTP API endpoints + v2.8.0 telemetry + strict 3-version WinVisual catalog
 const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise.all([
   fetch(`${base}/api/status`).then((r) => r.json()),
   fetch(`${base}/api/versions?channel=all`).then((r) => r.json()),
@@ -48,7 +48,7 @@ const [status, verAll, verStable, newsData, oauth, embeddedMods] = await Promise
 
 if (
   !status.operational ||
-  status.launcherVersion !== '2.7.5' ||
+  status.launcherVersion !== '2.8.0' ||
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
@@ -56,7 +56,7 @@ if (
   typeof status.java?.path !== 'string' ||
   (status.java.installed === true && status.java.path === '')
 ) {
-  throw new Error('Invalid /api/status v2.7.5 telemetry schema: ' + JSON.stringify(status));
+  throw new Error('Invalid /api/status v2.8.0 telemetry schema: ' + JSON.stringify(status));
 }
 
 if (!Array.isArray(embeddedMods.mods) || embeddedMods.mods.length !== 3) {
@@ -123,7 +123,7 @@ for (const mc of expectedMcVersions) {
 
 // 4. Verify HUD disk persistence roundtrip (POST & GET /api/config/hud -> winvisual-hud.json)
 const sampleHudPayload = {
-  version: '2.7.5',
+  version: '2.8.0',
   themeId: 'violet',
   equippedCape: 'nebula',
   crosshair: { gap: 5, size: 9, thickness: 2, centerDot: true, outline: true, accentColor: true },
@@ -363,7 +363,7 @@ console.log(
 );
 
 console.log(
-  `[ALL CHECKS PASSED] v2.7.5 nick=${activeNick}! + In-launcher Modrinth (mods & resource packs, direct download to WinVisual) + Java 21 auto-fix (major-version probe + Mojang runtime) + ~/WinVisual folder (3 embedded JARs) + Skin-only upload (64×32/64×64, no Steve/Alex) + OAuth (${oauth.userCode}) + ${(
+  `[ALL CHECKS PASSED] v2.8.0 nick=${activeNick}! + In-launcher Modrinth (mods & resource packs, direct download to WinVisual) + Java 21 auto-fix (major-version probe + Mojang runtime) + ~/WinVisual folder (3 embedded JARs) + Skin-only upload (64×32/64×64, no Steve/Alex) + OAuth (${oauth.userCode}) + ${(
     tarBuf.length /
     (1024 * 1024)
   ).toFixed(2)} MB .tar.gz`

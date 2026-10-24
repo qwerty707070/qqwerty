@@ -98,7 +98,7 @@ public final class FrontEndMenu {
             entries.add(entry);
         }
         entries.add(new Entry(
-                Component.literal("Arcanic Social"), new Spec(40, "players", Kind.CLIENT), i -> Minecraft.getInstance()
+                Component.literal("WinVisual Social"), new Spec(40, "players", Kind.CLIENT), i -> Minecraft.getInstance()
                         .setScreen(new SocialScreen(screen))));
         entries.add(new Entry(
                 Component.literal(Lang.tr("Аккаунты")),
@@ -186,15 +186,15 @@ public final class FrontEndMenu {
         Px.fade = old * opacity * k;
         int ls = brandH,
                 fs = s(30),
-                w1 = Px.textWidth("Arcanic", Weight.BOLD, fs),
-                w2 = Px.textWidth(" Visuals", Weight.MEDIUM, fs);
+                w1 = Px.textWidth("WinVisual", Weight.BOLD, fs),
+                w2 = Px.textWidth("", Weight.MEDIUM, fs);
         int total = ls + s(16) + w1 + w2, bx = (sw - total) / 2, by = colTop + Math.round(s(10) * (1 - k));
         BrandLogo.idle(g, bx, by, ls);
         int tx = bx + ls + s(16), ty = by + (ls - fs) / 2;
-        Px.text(g, "Arcanic", tx, ty, Weight.BOLD, fs, 0xFFF4F1F8);
-        Px.text(g, " Visuals", tx + w1, ty, Weight.MEDIUM, fs, 0xFF9890A6);
+        Px.text(g, "WinVisual", tx, ty, Weight.BOLD, fs, 0xFFF4F1F8);
+        Px.text(g, "", tx + w1, ty, Weight.MEDIUM, fs, 0xFF9890A6);
         Px.fade = old * opacity;
-        Px.text(g, "Arcanic Visuals 1.6.7", s(24), sh - s(38), Weight.MEDIUM, s(12), 0xFF7A7388);
+        Px.text(g, "WinVisual " + net.arcanic.visuals.ArcanicVisuals.version(), s(24), sh - s(38), Weight.MEDIUM, s(12), 0xFF7A7388);
         if (hintClose != null && hintClose.visible) accountHint(g, stage(7));
         Px.fade = old;
         Px.end(g);

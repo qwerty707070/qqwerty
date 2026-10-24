@@ -116,7 +116,7 @@ public final class ArcanicMenu extends Screen {
     final ModulePopup popup = new ModulePopup(this);
 
     public ArcanicMenu() {
-        super(Component.literal("Arcanic"));
+        super(Component.literal("WinVisual"));
         UiSound.play("open");
         Toasts.menu(true);
         if (category == Category.COSMETICS) category = Category.COMBAT;
@@ -308,7 +308,7 @@ public final class ArcanicMenu extends Screen {
     private void brand(GuiGraphics g, int cx, int y) {
         float t = (now - openedAt) / 1000f, a = ease(t / .35f);
         int ls = S(28), fs = S(21), ts = S(21), gap = S(10);
-        String w1 = "Arcanic", w2 = " Visuals";
+        String w1 = "WinVisual", w2 = "";
         int w1w = Px.textWidth(w1, Weight.BOLD, fs), w2w = Px.textWidth(w2, Weight.MEDIUM, ts);
         int total = ls + gap + w1w + w2w, x = cx - total / 2;
         float k = Px.fade;

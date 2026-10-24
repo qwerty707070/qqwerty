@@ -24,7 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HexFormat;
 
-/** The installed Arcanic launcher. */
+/** The installed WinVisual launcher (falls back to the upstream Arcanic launcher). */
 public final class Launcher {
     private Launcher() {}
 
@@ -33,8 +33,17 @@ public final class Launcher {
         if (!started.isEmpty() && Files.isRegularFile(Path.of(started))) return Path.of(started);
         String local = System.getenv("LOCALAPPDATA");
         if (local == null) return null;
-        Path installed = Path.of(local, "Programs", "Arcanic", "Arcanic.exe");
-        return Files.isRegularFile(installed) ? installed : null;
+        // WinVisual launcher first, then the upstream launcher this code came from.
+        Path[][] candidates = {
+            {Path.of(local, "Programs", "WinVisual", "WinVisual.exe"), Path.of(local, "WinVisual", "WinVisual.exe")},
+            {Path.of(local, "Programs", "Arcanic", "Arcanic.exe")},
+        };
+        for (Path[] group : candidates) {
+            for (Path candidate : group) {
+                if (Files.isRegularFile(candidate)) return candidate;
+            }
+        }
+        return null;
     }
 
     /** Can the launcher that started the game read the media session for us (--media)? Older ones cannot. */

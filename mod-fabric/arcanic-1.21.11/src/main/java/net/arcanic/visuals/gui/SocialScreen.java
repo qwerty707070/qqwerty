@@ -52,7 +52,7 @@ public final class SocialScreen extends Screen {
     private int head, whoY, keyY, redeemY, noteY, goY, outY;
 
     public SocialScreen(Screen parent) {
-        super(Component.literal("Arcanic Social"));
+        super(Component.literal("WinVisual Social"));
         this.parent = parent;
         anim.set("open", 0);
         ArcanicAccount.refresh();
@@ -223,7 +223,7 @@ public final class SocialScreen extends Screen {
                     : shownState == State.WAITING
                             ? "Ждём вход в браузере"
                             : "Войди, чтобы видеть косметику других игроков";
-            k.header(g, x, top, w, "Arcanic Social", Lang.tr(sub), head);
+            k.header(g, x, top, w, "WinVisual Social", Lang.tr(sub), head);
 
             // the account: a round letter, the login and the plan on the right
             int ay = top + whoY, ah = k.S(44), av = k.S(34), avy = ay + (ah - av) / 2;

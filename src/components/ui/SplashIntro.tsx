@@ -51,7 +51,7 @@ export const SplashIntro: React.FC = () => {
             <div className="text-center space-y-1">
               <p className="text-[20px] font-bold tracking-tight text-[#F5F5F7]">WinVisual</p>
               <p className="text-[11px] font-mono uppercase tracking-[0.18em] text-[var(--accent-secondary)]">
-                WinVisual 2.7.5 • GLSL 144Hz
+                WinVisual 2.8.0 • GLSL 144Hz
               </p>
             </div>
             <div className="w-40 h-[3px] rounded-full bg-white/[0.08] overflow-hidden mt-1">

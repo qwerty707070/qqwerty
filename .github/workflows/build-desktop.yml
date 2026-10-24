@@ -47,9 +47,9 @@ jobs:
           /opt/gradle-8.11.1/bin/gradle -p mod-fabric/mc-1.21.4 build --no-daemon --stacktrace
           /opt/gradle-9.1.0/bin/gradle  -p mod-fabric/mc-1.21.11 build --no-daemon --stacktrace
 
-          cp mod-fabric/mc-1.16.5/build/libs/winvisual-client-1.16.5-2.7.5.jar public/mods/winvisual-client-1.16.5.jar
-          cp mod-fabric/mc-1.21.4/build/libs/winvisual-client-1.21.4-2.7.5.jar public/mods/winvisual-client-1.21.4.jar
-          cp mod-fabric/mc-1.21.11/build/libs/winvisual-client-1.21.11-2.7.5.jar public/mods/winvisual-client-1.21.11.jar
+          cp mod-fabric/mc-1.16.5/build/libs/winvisual-client-1.16.5-2.8.0.jar public/mods/winvisual-client-1.16.5.jar
+          cp mod-fabric/mc-1.21.4/build/libs/winvisual-client-1.21.4-2.8.0.jar public/mods/winvisual-client-1.21.4.jar
+          cp mod-fabric/mc-1.21.11/build/libs/winvisual-client-1.21.11-2.8.0.jar public/mods/winvisual-client-1.21.11.jar
 
           python3 - <<'PY'
           import hashlib, zipfile
@@ -75,6 +75,7 @@ jobs:
           if-no-files-found: error
 
   build-arcanic-12111:
+    needs: build-fabric-mods
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -122,7 +123,12 @@ jobs:
           git add public/mods/winvisual-arcanic-1.21.11.jar
           if ! git diff --cached --quiet; then
             git commit -m "chore(mods): build WinVisual 1.21.11 core from the Arcanic source [skip ci]"
-            git push origin "${GITHUB_REF_NAME}"
+            for attempt in 1 2 3; do
+              if git push origin "${GITHUB_REF_NAME}"; then break; fi
+              echo "push rejected (attempt $attempt) - rebasing on the remote tip"
+              git pull --rebase origin "${GITHUB_REF_NAME}" || exit 1
+              sleep 3
+            done
           fi
 
       - name: Upload the 1.21.11 core jar
@@ -200,9 +206,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: v2.7.5
-          releaseName: "WinVisual Launcher v2.7.5 — WinVisual 1.16.5 / 1.21.4 / 1.21.11"
-          releaseBody: "Native Tauri v2 Desktop Installers (Windows .exe / .msi, macOS .dmg, Linux .deb / .rpm / .AppImage) with in-launcher Modrinth browser (direct mods & resource-pack downloads into WinVisual/) and the Java major-version fix (auto-provisions the official Mojang runtime when system Java is incompatible, e.g. Java 21 for 1.21.x). Embedded source-compiled client builds WinVisual 1.16.5 and WinVisual 1.21.4, plus the full Arcanic-based core (menus, HUD, wardrobe, cosmetics, effects) for WinVisual 1.21.11 — GPL-3.0, see NOTICE.md."
+          tagName: v2.8.0
+          releaseName: "WinVisual Launcher v2.8.0 — 1.16.5 / 1.21.4 / 1.21.11"
+          releaseBody: "WinVisual Launcher v2.8.0 — native Tauri v2 installers (Windows .exe / .msi, macOS .dmg, Linux .deb / .rpm / .AppImage). WinVisual 1.21.11 now ships the full Arcanic-based client core (menu, wardrobe, presets, HUD editor, Dynamic Island, target HUD, cosmetics, hit effects) — GPL-3.0, see NOTICE.md. WinVisual 1.16.5 and 1.21.4 keep the shared-core build with the new token-based Studio menu and module inspector. Includes the in-launcher Modrinth browser for mods and resource packs, and the automatic Mojang Java runtime provisioning (Java 21 for 1.21.x)."
+
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
@@ -212,7 +219,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload v2.7.5 \
+          gh release upload v2.8.0 \
             public/mods/winvisual-client-1.16.5.jar \
             public/mods/winvisual-client-1.21.4.jar \
             public/mods/winvisual-arcanic-1.21.11.jar \
@@ -229,5 +236,10 @@ jobs:
           if ! git diff --quiet public/mods/; then
             git add public/mods/winvisual-client-*.jar public/mods/winvisual-arcanic-*.jar
             git commit -m "chore(mods): embed compiled Fabric bytecode jars for 1.16.5, 1.21.4, 1.21.11 [skip ci]"
-            git push origin "${GITHUB_REF_NAME}"
+            for attempt in 1 2 3; do
+              if git push origin "${GITHUB_REF_NAME}"; then break; fi
+              echo "push rejected (attempt $attempt) - rebasing on the remote tip"
+              git pull --rebase origin "${GITHUB_REF_NAME}" || exit 1
+              sleep 3
+            done
           fi

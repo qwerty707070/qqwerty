@@ -509,7 +509,7 @@ async function handleModrinthSearchProxy(res, parsed) {
   try {
     const upstream = await fetch(`${MODRINTH_API_BASE}/v2/search?${params.toString()}`, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'WinVisual-Launcher/2.7.5' },
+      headers: { 'User-Agent': 'WinVisual-Launcher/2.8.0' },
     });
     if (!upstream.ok) throw new Error(`Modrinth API HTTP ${upstream.status}`);
     const hits = extractJsonList(await upstream.json(), 'hits');
@@ -562,7 +562,7 @@ async function handleModrinthVersionProxy(res, parsed) {
       `${MODRINTH_API_BASE}/v2/project/${slug}/version?${params.toString()}`,
       {
         signal: controller.signal,
-        headers: { 'User-Agent': 'WinVisual-Launcher/2.7.5' },
+        headers: { 'User-Agent': 'WinVisual-Launcher/2.8.0' },
       }
     );
     if (!upstream.ok) throw new Error(`Modrinth API HTTP ${upstream.status}`);
@@ -628,7 +628,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.end(
       JSON.stringify({
         operational: true,
-        launcherVersion: '2.7.5',
+        launcherVersion: '2.8.0',
         uptimeSeconds: Math.round(os.uptime()),
         platform: `${os.type()} ${os.arch()}`,
         cpuCores: cpuCount,
@@ -714,7 +714,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     });
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify( { version: '2.7.5', mods: entries }));
+    res.end(JSON.stringify( { version: '2.8.0', mods: entries }));
     return true;
   }
 
@@ -890,7 +890,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
         res.setHeader('Content-Type', 'application/gzip');
         res.setHeader(
           'Content-Disposition',
-          'attachment; filename="winvisual-launcher-v2.7.5-src.tar.gz"'
+          'attachment; filename="winvisual-launcher-v2.8.0-src.tar.gz"'
         );
         res.setHeader('Content-Length', String(stdout.length));
         res.end(stdout);
@@ -1093,7 +1093,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Length', String(buffer.length));
     res.setHeader('X-Artifact-Sha256', sha256);
-    res.setHeader('X-Launcher-Version', '2.7.5');
+    res.setHeader('X-Launcher-Version', '2.8.0');
     res.setHeader('Cache-Control', 'no-store');
 
     let offset = 0;

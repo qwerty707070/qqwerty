@@ -51,7 +51,7 @@ public final class DynamicIsland extends HudModule {
     public final Setting.Bool music = add(new Setting.Bool("music", "Музыка (Яндекс и другие)", true));
     private final Anim anim = new Anim();
     private final IslandIntro intro = new IslandIntro();
-    private String caption = "Arcanic", previous = "Arcanic";
+    private String caption = "WinVisual", previous = "WinVisual";
     private Music.Track media = Music.Track.EMPTY;
     private long lastEvent, fpsAt;
     private int sampledFps, renderedFrames;
@@ -142,7 +142,7 @@ public final class DynamicIsland extends HudModule {
         boolean musical = music.on() && heard && !pack && event == null && !editing;
         if (observed.present()) media = observed;
         String desired =
-                musical ? media.title() : pack ? packTitle : event == null ? "Arcanic" : Lang.tr(event.title());
+                musical ? media.title() : pack ? packTitle : event == null ? "WinVisual" : Lang.tr(event.title());
         String sub = musical
                 ? (media.playing() ? "" : Lang.tr("Пауза · ")) + media.artist()
                 : pack
