@@ -18,6 +18,28 @@ interface ResolvedModrinthVersion {
   sha1: string | null;
 }
 
+/**
+ * The Modrinth API returns list endpoints either as a bare JSON array or as an
+ * enveloped object ({"hits": [...]} for search, {"versions": [...]} for project
+ * versions). This extracts the item list from both shapes.
+ */
+function extractJsonList(
+  data: unknown,
+  preferredKey: string
+): Array<Record<string, unknown>> {
+  if (Array.isArray(data)) return data as Array<Record<string, unknown>>;
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj[preferredKey])) {
+      return obj[preferredKey] as Array<Record<string, unknown>>;
+    }
+    for (const value of Object.values(obj)) {
+      if (Array.isArray(value)) return value as Array<Record<string, unknown>>;
+    }
+  }
+  return [];
+}
+
 async function browserSearch(
   query: string,
   resourceType: ModrinthResourceType,
@@ -45,17 +67,17 @@ async function browserSearch(
       cache: 'no-store',
     });
     if (!res.ok) throw new Error(`Modrinth API HTTP ${res.status}`);
-    const hits = (await res.json()) as Array<Record<string, unknown>>;
+    const hits = extractJsonList(await res.json(), 'hits');
     return hits
       .filter((h) => typeof h.slug === 'string' && (h.slug as string).length > 0)
       .map((h) => ({
         slug: h.slug as string,
-        title: (h.title as string) ?? (h.slug as string),
+        title: (h.title as string) || (h.slug as string),
         description: (h.description as string) ?? '',
         iconUrl: (h.icon_url as string) ?? '',
         downloads: (h.downloads as number) ?? 0,
-        gameVersions: (h.game_versions as string[]) ?? [],
-        projectType: (h.project_type as string) ?? resourceType,
+        gameVersions: Array.isArray(h.game_versions) ? (h.game_versions as string[]) : [],
+        projectType: (h.project_type as string) || resourceType,
       }));
   } finally {
     clearTimeout(timer);
@@ -95,14 +117,13 @@ async function browserResolveVersion(
       cache: 'no-store',
     });
     if (!res.ok) throw new Error(`Modrinth API HTTP ${res.status}`);
-    const versions = (await res.json()) as Array<{
+    const versions = extractJsonList(await res.json(), 'versions') as Array<{
       version_number?: string;
       files?: Array<{ url?: string; filename?: string; primary?: boolean; hashes?: Record<string, string> }>;
     }>;
     const version = versions[0];
-    const file = version
-      ? (version.files ?? []).find((f) => f.primary) ?? (version.files ?? [])[0]
-      : undefined;
+    const files = version && Array.isArray(version.files) ? version.files : [];
+    const file = files.find((f) => f.primary) ?? files[0];
     if (!file?.url || !file.filename) {
       throw new Error(`No ${resourceType} version of ${slug} for Minecraft ${gameVersion}`);
     }

@@ -446,6 +446,22 @@ function scaffoldWinvisualGameDir(absDir, rootDir = process.cwd()) {
   return { createdFolders, modsJars };
 }
 
+// The Modrinth API returns list endpoints either as a bare JSON array or as an
+// enveloped object ({"hits": [...]} for search, {"versions": [...]} for project
+// versions). This extracts the item list from both shapes.
+function extractJsonList(data, preferredKey) {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    if (Array.isArray(data[preferredKey])) return data[preferredKey];
+    for (const value of Object.values(data)) {
+      if (Array.isArray(value)) return value;
+    }
+  }
+  return [];
+}
+
+const MODRINTH_API_BASE = process.env.MODRINTH_API_BASE || 'https://api.modrinth.com';
+
 async function handleModrinthSearchProxy(res, parsed) {
   const query = (parsed.searchParams.get('query') || '').trim().slice(0, 80);
   const type = parsed.searchParams.get('type') === 'resourcepack' ? 'resourcepack' : 'mod';
@@ -466,26 +482,26 @@ async function handleModrinthSearchProxy(res, parsed) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12000);
   try {
-    const upstream = await fetch(`https://api.modrinth.com/v2/search?${params.toString()}`, {
+    const upstream = await fetch(`${MODRINTH_API_BASE}/v2/search?${params.toString()}`, {
       signal: controller.signal,
       headers: { 'User-Agent': 'WinVisual-Launcher/2.7.5' },
     });
     if (!upstream.ok) throw new Error(`Modrinth API HTTP ${upstream.status}`);
-    const hits = await upstream.json();
+    const hits = extractJsonList(await upstream.json(), 'hits');
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/json');
     res.end(
       JSON.stringify(
         hits
-          .filter((h) => typeof h.slug === 'string' && h.slug.length > 0)
+          .filter((h) => h && typeof h.slug === 'string' && h.slug.length > 0)
           .map((h) => ({
             slug: h.slug,
-            title: h.title ?? h.slug,
+            title: h.title || h.slug,
             description: h.description ?? '',
             iconUrl: h.icon_url ?? '',
             downloads: h.downloads ?? 0,
-            gameVersions: h.game_versions ?? [],
-            projectType: h.project_type ?? type,
+            gameVersions: Array.isArray(h.game_versions) ? h.game_versions : [],
+            projectType: h.project_type || type,
           }))
       )
     );
@@ -518,18 +534,17 @@ async function handleModrinthVersionProxy(res, parsed) {
   const timer = setTimeout(() => controller.abort(), 12000);
   try {
     const upstream = await fetch(
-      `https://api.modrinth.com/v2/project/${slug}/version?${params.toString()}`,
+      `${MODRINTH_API_BASE}/v2/project/${slug}/version?${params.toString()}`,
       {
         signal: controller.signal,
         headers: { 'User-Agent': 'WinVisual-Launcher/2.7.5' },
       }
     );
     if (!upstream.ok) throw new Error(`Modrinth API HTTP ${upstream.status}`);
-    const versions = await upstream.json();
-    const version = Array.isArray(versions) ? versions[0] : null;
-    const file = version
-      ? (version.files ?? []).find((f) => f.primary) ?? (version.files ?? [])[0]
-      : null;
+    const versions = extractJsonList(await upstream.json(), 'versions');
+    const version = versions[0] ?? null;
+    const files = version && Array.isArray(version.files) ? version.files : [];
+    const file = files.find((f) => f && f.primary) ?? files[0] ?? null;
     if (!file || !file.url) {
       throw new Error(`No ${type} version of ${slug} found for Minecraft ${ver}`);
     }

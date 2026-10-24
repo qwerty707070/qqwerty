@@ -94,6 +94,27 @@ async fn parse_api_response<T: serde::de::DeserializeOwned>(
     }
 }
 
+/// The Modrinth API returns list endpoints either as a bare JSON array or as an
+/// enveloped object (e.g. `{"hits": [...]}` for search, `{"versions": [...]}`
+/// for project versions). This extracts the item list from both shapes.
+fn extract_json_list(value: &serde_json::Value, preferred_key: &str) -> Vec<serde_json::Value> {
+    match value {
+        serde_json::Value::Array(items) => items.clone(),
+        serde_json::Value::Object(map) => {
+            if let Some(serde_json::Value::Array(items)) = map.get(preferred_key) {
+                return items.clone();
+            }
+            for item in map.values() {
+                if let serde_json::Value::Array(items) = item {
+                    return items.clone();
+                }
+            }
+            Vec::new()
+        }
+        _ => Vec::new(),
+    }
+}
+
 fn sanitize_slug(slug: &str) -> Result<String, String> {
     let clean: String = slug
         .chars()
@@ -153,7 +174,11 @@ pub async fn search_modrinth_resources(
         .send()
         .await
         .map_err(|e| format!("Modrinth API unreachable: {e}"))?;
-    let body: Vec<ApiSearchResult> = parse_api_response(resp).await?;
+    let value: serde_json::Value = parse_api_response(resp).await?;
+    let body: Vec<ApiSearchResult> = extract_json_list(&value, "hits")
+        .into_iter()
+        .filter_map(|item| serde_json::from_value(item).ok())
+        .collect();
 
     Ok(body
         .into_iter()
@@ -205,7 +230,11 @@ pub async fn download_modrinth_resource(
         .send()
         .await
         .map_err(|e| format!("Modrinth API unreachable: {e}"))?;
-    let versions: Vec<ApiVersion> = parse_api_response(resp).await?;
+    let value: serde_json::Value = parse_api_response(resp).await?;
+    let versions: Vec<ApiVersion> = extract_json_list(&value, "versions")
+        .into_iter()
+        .filter_map(|item| serde_json::from_value(item).ok())
+        .collect();
 
     let version = versions
         .first()
