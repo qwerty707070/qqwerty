@@ -130,7 +130,7 @@ export const DownloadProgressModal: React.FC = () => {
               <span className="inline-flex items-center gap-2 truncate">
                 <ShieldCheck size={15} strokeWidth={1.75} className="shrink-0" />
                 <span className="truncate font-mono">
-                  SHA-256 ({progress.verifiedFiles}/{progress.totalFiles}): {progress.lastSha256.slice(0, 28)}…
+                  Checksum ({progress.verifiedFiles}/{progress.totalFiles}): {progress.lastSha256.slice(0, 28)}…
                 </span>
               </span>
               <CheckCircle2 size={14} strokeWidth={2} className="shrink-0" />

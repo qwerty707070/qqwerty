@@ -309,7 +309,8 @@ public final class WinVisualConfig {
     }
 
     public void applyJson(String json) {
-        Matcher tm = Pattern.compile("\"theme\"\\s*:\\s*\"([^\"]+)\"").matcher(json);
+        // The launcher writes "themeId"; older in-game saves used "theme".
+        Matcher tm = Pattern.compile("\"(?:themeId|theme)\"\\s*:\\s*\"([^\"]+)\"").matcher(json);
         if (tm.find()) {
             String tid = tm.group(1);
             for (int i = 0; i < THEMES.length; i++) {
@@ -354,14 +355,16 @@ public final class WinVisualConfig {
                 if (mi.find() && m.modes.length > 0) {
                     m.modeIndex = Math.max(0, Math.min(m.modes.length - 1, Integer.parseInt(mi.group(1))));
                 }
-                Matcher sv = Pattern.compile("\"sliderValue\"\\s*:\\s*(-?[0-9.]+)").matcher(block);
+                // The launcher writes "amount"; older in-game saves used "sliderValue".
+                Matcher sv = Pattern.compile("\"(?:amount|sliderValue)\"\\s*:\\s*(-?[0-9.]+)").matcher(block);
                 if (sv.find()) {
                     try {
                         m.sliderValue = Float.parseFloat(sv.group(1));
                     } catch (NumberFormatException ignored) {
                     }
                 }
-                Matcher kc = Pattern.compile("\"keyCode\"\\s*:\\s*(\\d+)").matcher(block);
+                // The launcher writes "keybindCode"; older in-game saves used "keyCode".
+                Matcher kc = Pattern.compile("\"(?:keybindCode|keyCode)\"\\s*:\\s*(\\d+)").matcher(block);
                 if (kc.find()) {
                     m.keyCode = Integer.parseInt(kc.group(1));
                 }
@@ -378,8 +381,10 @@ public final class WinVisualConfig {
         try {
             StringBuilder sb = new StringBuilder(4096);
             sb.append("{\n");
-            sb.append("  \"version\": \"2.7.4\",\n");
-            sb.append("  \"theme\": \"").append(theme().id).append("\",\n");
+            sb.append("  \"version\": \"2.7.5\",\n");
+            // "themeId" is the field name used by the launcher's HUD store;
+            // applyJson() still accepts the legacy "theme" key as well.
+            sb.append("  \"themeId\": \"").append(theme().id).append("\",\n");
             sb.append("  \"equippedCape\": \"").append(escape(equippedCape)).append("\",\n");
             sb.append("  \"crosshair\": {\n");
             sb.append("    \"gap\": ").append(crosshairGap).append(",\n");
@@ -404,12 +409,14 @@ public final class WinVisualConfig {
             sb.append("  \"modules\": [\n");
             for (int i = 0; i < modules.size(); i++) {
                 WinVisualModule m = modules.get(i);
+                // "amount" / "keybindCode" are the field names the launcher reads;
+                // applyJson() still accepts the legacy "sliderValue"/"keyCode" keys.
                 sb.append("    { \"id\": \"").append(m.id)
                   .append("\", \"enabled\": ").append(m.enabled)
                   .append(", \"keybind\": \"").append(escape(m.keyLabel))
-                  .append("\", \"keyCode\": ").append(m.keyCode)
+                  .append("\", \"keybindCode\": ").append(m.keyCode)
                   .append(", \"modeIndex\": ").append(m.modeIndex)
-                  .append(", \"sliderValue\": ").append(String.format(java.util.Locale.US, "%.2f", m.sliderValue))
+                  .append(", \"amount\": ").append(String.format(java.util.Locale.US, "%.2f", m.sliderValue))
                   .append(" }");
                 if (i + 1 < modules.size()) sb.append(",");
                 sb.append("\n");

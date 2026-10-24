@@ -434,7 +434,9 @@ pub async fn sync_modrinth_optimization_bundle(
             _ => None,
         };
 
-        let Some(arr) = versions_resp.and_then(|v| v.as_array().cloned()) else {
+        // The endpoint may return a bare array or an enveloped object
+        // (`{"version": 2, "versions": [...]}`) — accept both shapes.
+        let Some(arr) = versions_resp.as_ref().and_then(|v| first_json_array(v)) else {
             continue;
         };
 
@@ -585,6 +587,53 @@ pub fn java_major_compatible(major: u32, required_major: u32) -> bool {
     }
 }
 
+/// Finds the `java` binary inside an auto-provisioned Mojang runtime folder.
+/// Mojang macOS archives extract into a versioned subdirectory
+/// (`jre-21.0.2+13/Contents/Home/bin/java`), so several known layouts are checked.
+fn find_managed_java_bin(managed_root: &Path) -> Option<PathBuf> {
+    // `javaw.exe` first on Windows (windowless), then plain `java`/`java.exe`.
+    let bin_names: [&str; 2] = if cfg!(target_os = "windows") {
+        ["javaw.exe", "java.exe"]
+    } else {
+        ["java", "java"]
+    };
+    for bin_name in bin_names {
+        let candidates: Vec<PathBuf> = {
+            let mut list = vec![managed_root.join("bin").join(bin_name)];
+            if let Ok(children) = std::fs::read_dir(managed_root) {
+                for child in children.flatten() {
+                    let c = child.path();
+                    if !c.is_dir() {
+                        continue;
+                    }
+                    list.push(c.join("bin").join(bin_name));
+                    list.push(c.join("Contents").join("Home").join("bin").join(bin_name));
+                    list.push(
+                        c.join("jre.bundle")
+                            .join("Contents")
+                            .join("Home")
+                            .join("bin")
+                            .join(bin_name),
+                    );
+                }
+            }
+            list.push(
+                managed_root
+                    .join("jre.bundle")
+                    .join("Contents")
+                    .join("Home")
+                    .join("bin")
+                    .join(bin_name),
+            );
+            list
+        };
+        if let Some(found) = candidates.into_iter().find(|c| c.exists()) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 /// Ensures the exact Mojang-signed Java runtime component required by `mc_meta["javaVersion"]`
 /// exists on disk, downloading atomically with instant cancellation support if missing.
 ///
@@ -640,29 +689,8 @@ async fn ensure_mojang_java_runtime(
         }
     }
 
-    let bin_name = if cfg!(target_os = "windows") {
-        "javaw.exe"
-    } else {
-        "java"
-    };
-
     let managed_root = game_dir.join("runtime").join(component);
-    let managed_bin = if cfg!(target_os = "macos") {
-        let bundle_bin = managed_root
-            .join("jre.bundle")
-            .join("Contents")
-            .join("Home")
-            .join("bin")
-            .join("java");
-        if bundle_bin.exists() {
-            bundle_bin
-        } else {
-            managed_root.join("bin").join(bin_name)
-        }
-    } else {
-        managed_root.join("bin").join(bin_name)
-    };
-    if managed_bin.exists() {
+    if let Some(managed_bin) = find_managed_java_bin(&managed_root) {
         return Ok(managed_bin.to_string_lossy().to_string());
     }
 
@@ -820,23 +848,7 @@ async fn ensure_mojang_java_runtime(
         }
     }
 
-    let final_bin = if cfg!(target_os = "macos") {
-        let bundle_bin = managed_root
-            .join("jre.bundle")
-            .join("Contents")
-            .join("Home")
-            .join("bin")
-            .join("java");
-        if bundle_bin.exists() {
-            bundle_bin
-        } else {
-            managed_root.join("bin").join(bin_name)
-        }
-    } else {
-        managed_root.join("bin").join(bin_name)
-    };
-
-    if final_bin.exists() {
+    if let Some(final_bin) = find_managed_java_bin(&managed_root) {
         Ok(final_bin.to_string_lossy().to_string())
     } else {
         Ok(resolve_java_executable(requested_java))
@@ -873,9 +885,29 @@ fn extract_native_jar(jar_path: &Path, natives_dir: &Path) {
 
 pub fn build_http_client() -> Result<Client, String> {
     Client::builder()
-        .user_agent("WinVisual-Launcher/2.6.1 (https://github.com/qwerty707070/qqwerty)")
+        .user_agent("WinVisual-Launcher/2.7.5 (https://github.com/qwerty707070/qqwerty)")
         .build()
         .map_err(|e| e.to_string())
+}
+
+/// Extracts the item list from a Modrinth API response that may arrive either as a
+/// bare JSON array or as an enveloped object (`{"versions": [...]}`).
+fn first_json_array(value: &serde_json::Value) -> Option<Vec<serde_json::Value>> {
+    match value {
+        serde_json::Value::Array(items) => Some(items.clone()),
+        serde_json::Value::Object(map) => {
+            if let Some(serde_json::Value::Array(items)) = map.get("versions") {
+                return Some(items.clone());
+            }
+            for item in map.values() {
+                if let serde_json::Value::Array(items) = item {
+                    return Some(items.clone());
+                }
+            }
+            None
+        }
+        _ => None,
+    }
 }
 
 /// Runs `prepare_and_launch_minecraft` inside an abortable Tokio task so `cancel_native_launch`

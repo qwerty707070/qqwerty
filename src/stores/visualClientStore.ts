@@ -697,11 +697,15 @@ export const useVisualClientStore = create<VisualClientState>()(
               : state.hudPositions,
             modules: state.modules.map((m) => {
               const tuple = parsed.modes?.[m.id];
+              const rawMode = tuple && Number.isFinite(tuple[0]) ? tuple[0] : m.modeIndex;
+              const rawAmount = tuple && Number.isFinite(tuple[1]) ? tuple[1] : m.amount;
               return {
                 ...m,
                 enabled: parsed.on!.includes(m.id),
-                modeIndex: tuple ? tuple[0] : m.modeIndex,
-                amount: tuple ? tuple[1] : m.amount,
+                // Clamp external preset values so a crafted code can't push
+                // the mode index or intensity slider out of range.
+                modeIndex: Math.max(0, Math.min(m.modes.length - 1, Math.round(rawMode))),
+                amount: Math.max(0, Math.min(100, Math.round(rawAmount))),
               };
             }),
           }));

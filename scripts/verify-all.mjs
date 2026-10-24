@@ -52,7 +52,9 @@ if (
   typeof status.cpuUsagePercent !== 'number' ||
   typeof status.hostTotalMemoryMb !== 'number' ||
   typeof status.hostUsedMemoryMb !== 'number' ||
-  !status.java?.path
+  typeof status.java?.installed !== 'boolean' ||
+  typeof status.java?.path !== 'string' ||
+  (status.java.installed === true && status.java.path === '')
 ) {
   throw new Error('Invalid /api/status v2.7.5 telemetry schema: ' + JSON.stringify(status));
 }

@@ -302,10 +302,13 @@ pub async fn download_modrinth_resource(
         return Err(format!("Modrinth CDN returned HTTP {}", resp.status()));
     }
 
+    // Stream into a temp part file first: an interrupted download must never leave
+    // a partial/corrupt JAR in mods/ that the game loader would try to read.
+    let part = dest.with_file_name(format!("{}.wvdl.tmp", filename));
     let total = resp.content_length().unwrap_or(0);
-    let mut out = tokio::fs::File::create(&dest)
+    let mut out = tokio::fs::File::create(&part)
         .await
-        .map_err(|e| format!("Cannot create `{}`: {e}", dest.display()))?;
+        .map_err(|e| format!("Cannot create `{}`: {e}", part.display()))?;
     let mut hasher = Sha1::new();
     let mut downloaded: u64 = 0;
     let mut last_emit: u64 = 0;
@@ -337,12 +340,14 @@ pub async fn download_modrinth_resource(
             );
         }
     }
-    out.flush().await.map_err(|e| e.to_string())?;
+    out.flush()
+        .await
+        .map_err(|e| format!("Cannot finalize `{filename}`: {e}"))?;
 
     let actual_sha1 = hex::encode(hasher.finalize());
     if let Some(ref exp) = expected_sha1 {
         if !exp.eq_ignore_ascii_case(&actual_sha1) {
-            let _ = tokio::fs::remove_file(&dest).await;
+            let _ = tokio::fs::remove_file(&part).await;
             return Err(format!(
                 "SHA-1 mismatch on {filename}: expected {exp}, got {actual_sha1}"
             ));
@@ -351,6 +356,12 @@ pub async fn download_modrinth_resource(
             "logs://line",
             format!("[SHA-1] Verified {filename} ({}) bytes", downloaded),
         );
+    }
+
+    // Promote the verified part file into place (atomic on all supported OSes).
+    if let Err(e) = tokio::fs::rename(&part, &dest).await {
+        let _ = tokio::fs::remove_file(&part).await;
+        return Err(format!("Failed moving `{filename}` into place: {e}"));
     }
 
     let _ = app.emit(

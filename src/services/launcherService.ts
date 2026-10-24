@@ -21,29 +21,32 @@ export async function fetchSystemTelemetry(): Promise<SystemTelemetry> {
       latencyMs: rtt,
     };
   } catch {
+    // Backend unreachable: report an honest offline state instead of
+    // fabricating a green "all systems operational" telemetry snapshot.
     return {
-      operational: true,
+      operational: false,
       launcherVersion: '2.7.5',
-      uptimeSeconds: 3600,
-      platform: navigator.platform || 'Desktop OS',
-      cpuCores: navigator.hardwareConcurrency || 8,
-      cpuUsagePercent: 8.4,
-      hostTotalMemoryMb: 16384,
-      hostUsedMemoryMb: 5120,
+      uptimeSeconds: 0,
+      platform: typeof navigator !== 'undefined' ? navigator.platform || 'Desktop OS' : 'Desktop OS',
+      cpuCores:
+        typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 8 : 8,
+      cpuUsagePercent: 0,
+      hostTotalMemoryMb: 0,
+      hostUsedMemoryMb: 0,
       activePid: null,
-      latencyMs: 11,
+      latencyMs: 0,
       java: {
-        installed: true,
-        path: 'java',
-        version: 'OpenJDK 21 LTS',
+        installed: false,
+        path: '',
+        version: 'Unknown (offline)',
       },
       services: {
-        manifestApi: 'operational',
-        assetCdn: 'operational',
-        skinRenderer: 'operational',
-        microsoftOAuth: 'operational',
+        manifestApi: 'offline',
+        assetCdn: 'offline',
+        skinRenderer: 'offline',
+        microsoftOAuth: 'offline',
       },
-      onlinePlayers: 14842,
+      onlinePlayers: 0,
     };
   }
 }

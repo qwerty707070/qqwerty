@@ -36,8 +36,26 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const parsed = new URL(req.url || '/', 'http://localhost');
-  let safeRel = path.normalize(decodeURIComponent(parsed.pathname)).replace(/^(\.\.(\/|\\|$))+/, '');
+  let parsed;
+  try {
+    parsed = new URL(req.url || '/', 'http://localhost');
+  } catch {
+    res.statusCode = 400;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: 'Bad request' }));
+    return;
+  }
+
+  let safeRel;
+  try {
+    safeRel = path.normalize(decodeURIComponent(parsed.pathname)).replace(/^(\.\.(\/|\\|$))+/, '');
+  } catch {
+    // Malformed percent-encoding (e.g. /100%) must not crash the server
+    res.statusCode = 400;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ error: 'Bad request' }));
+    return;
+  }
   if (safeRel === '/' || safeRel === '') safeRel = '/index.html';
 
   let target = path.join(DIST_DIR, safeRel);
@@ -48,7 +66,17 @@ const server = http.createServer((req, res) => {
   const ext = path.extname(target).toLowerCase();
   res.statusCode = 200;
   res.setHeader('Content-Type', MIME_TYPES[ext] || 'application/octet-stream');
-  fs.createReadStream(target).pipe(res);
+  const stream = fs.createReadStream(target);
+  stream.on('error', () => {
+    // File vanished (race) — answer 500 instead of crashing the process
+    if (!res.headersSent) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+    }
+    res.end(JSON.stringify({ error: 'File read failed' }));
+  });
+  res.on('close', () => stream.destroy());
+  stream.pipe(res);
 });
 
 server.listen(PORT, '0.0.0.0', () => {

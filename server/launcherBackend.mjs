@@ -169,18 +169,27 @@ function detectServerJava() {
   if (cachedJavaInfo) return cachedJavaInfo;
   try {
     const out = execSync('which java', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    if (out) {
-      cachedJavaInfo = { installed: true, path: out, version: 'OpenJDK 21 LTS' };
+    if (out && fs.existsSync(out)) {
+      let version = 'OpenJDK LTS';
+      try {
+        const v = execSync('java -version 2>&1 | head -n 1', {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+        }).trim();
+        if (v) version = v;
+      } catch {
+        // keep generic label
+      }
+      cachedJavaInfo = { installed: true, path: out, version };
       return cachedJavaInfo;
     }
   } catch {
     // Fallback default Java path
   }
-  cachedJavaInfo = {
-    installed: true,
-    path: '/usr/lib/jvm/temurin-21-jdk/bin/java',
-    version: 'Temurin 21.0.5 LTS',
-  };
+  const fallback = '/usr/lib/jvm/temurin-21-jdk/bin/java';
+  cachedJavaInfo = fs.existsSync(fallback)
+    ? { installed: true, path: fallback, version: 'Temurin 21 LTS' }
+    : { installed: false, path: '', version: 'Java not detected' };
   return cachedJavaInfo;
 }
 
@@ -350,9 +359,15 @@ function resolveGameDir(rawDir, rootDir = process.cwd()) {
   } else {
     abs = path.join(os.homedir(), clean);
   }
-  // Safety: forbid escaping into system directories
+  // Safety: forbid escaping into system directories.
+  // Use a separator-aware prefix check so e.g. /home/user2 is NOT accepted
+  // when the home directory is /home/user.
   const norm = path.normalize(abs);
-  if (!norm.startsWith(os.homedir()) && !norm.startsWith(rootDir)) {
+  const home = os.homedir();
+  const inHome = norm === home || norm.startsWith(home + path.sep);
+  const inRoot =
+    rootDir !== '' && (norm === rootDir || norm.startsWith(rootDir + path.sep));
+  if (!inHome && !inRoot) {
     return null;
   }
   return norm;
@@ -723,6 +738,14 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
 
   if (pathname === '/api/mods/bundle') {
     const mc = (parsed.searchParams.get('mc') || '1.21.11').trim();
+    // `mc` is joined into a file path below — it must be one of the supported
+    // Minecraft versions (blocks `../` traversal writes).
+    if (!['1.16.5', '1.21.4', '1.21.11'].includes(mc)) {
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: `Unsupported Minecraft version: ${mc}` }));
+      return true;
+    }
     const dir = (parsed.searchParams.get('dir') || '~/.minecraft/winvisual').trim();
     const modsCacheDir = path.join(rootDir, '.winvisual-runtime', 'mods_cache', mc);
     fs.mkdirSync(modsCacheDir, { recursive: true });
@@ -754,9 +777,25 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     const cfgFile = path.join(cfgDir, 'winvisual-hud.json');
 
     if (req.method === 'POST') {
+      const MAX_HUD_BODY_BYTES = 1024 * 1024; // 1 MB is far beyond any real HUD config
       const chunks = [];
-      req.on('data', (c) => chunks.push(c));
+      let bodyBytes = 0;
+      let aborted = false;
+      req.on('data', (c) => {
+        if (aborted) return;
+        bodyBytes += c.length;
+        if (bodyBytes > MAX_HUD_BODY_BYTES) {
+          aborted = true;
+          res.statusCode = 413;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ ok: false, error: 'Config payload too large (max 1 MB)' }));
+          req.destroy();
+          return;
+        }
+        chunks.push(c);
+      });
       req.on('end', () => {
+        if (aborted) return;
         try {
           const rawBody = Buffer.concat(chunks).toString('utf8');
           const parsedBody = JSON.parse(rawBody);
@@ -1017,7 +1056,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
       return true;
     }
 
-    const manifest = buildManifest(versionId);
+    const manifest = buildManifest(versionId, rootDir);
     const item = manifest.artifacts.find((a) => a.filename === filename || a.id === filename);
     if (!item) {
       res.statusCode = 404;
