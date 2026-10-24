@@ -9,6 +9,13 @@ declare global {
   }
 }
 
+/** 1.21.11 ships the Arcanic-based core; the other builds use the shared-core jar. */
+export function clientJarName(mcVersion: string): string {
+  return mcVersion === '1.21.11'
+    ? 'winvisual-arcanic-1.21.11.jar'
+    : `winvisual-client-${mcVersion}.jar`;
+}
+
 export const GITHUB_RELEASE_URL =
   'https://github.com/qwerty707070/qqwerty/releases/tag/v2.7.5';
 
@@ -300,7 +307,7 @@ export async function syncOptimizationModsEverywhere(
     return {
       minecraftVersion,
       syncedMods: [
-        `WinVisual ${minecraftVersion} (winvisual-client-${minecraftVersion}.jar)`,
+        `WinVisual ${minecraftVersion} (${clientJarName(minecraftVersion)})`,
         `Fabric API (${minecraftVersion})`,
         `Sodium (${minecraftVersion})`,
         `Iris Shaders (${minecraftVersion})`,
@@ -329,7 +336,7 @@ export async function installOrDownloadClientModEverywhere(
     });
     return { mode: 'injected', target: dest };
   }
-  const jarName = `winvisual-client-${minecraftVersion}.jar`;
+  const jarName = clientJarName(minecraftVersion);
   const url = `/api/downloads/mod/${encodeURIComponent(minecraftVersion)}`;
   if (hasBrowserOrigin() && typeof document !== 'undefined') {
     const a = document.createElement('a');

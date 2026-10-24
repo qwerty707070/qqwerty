@@ -277,12 +277,22 @@ export const CLIENT_VERSIONS = [
 
 export const NEWS_ARTICLES = [];
 
+/**
+ * The 1.21.11 client ships the Arcanic-based core (full menus/HUD/wardrobe),
+ * every other version uses the shared-core build. Keep the mapping in one place.
+ */
+export function modJarNameFor(mcVersion) {
+  return mcVersion === '1.21.11'
+    ? 'winvisual-arcanic-1.21.11.jar'
+    : `winvisual-client-${mcVersion}.jar`;
+}
+
 export function buildManifest(versionId, rootDir = process.cwd()) {
   const found = CLIENT_VERSIONS.find((v) => v.id === versionId) ?? CLIENT_VERSIONS[0];
   const baseBytes = Math.round(found.sizeMb * 1024 * 1024);
 
   // First artifact is the REAL embedded WinVisual client mod JAR shipped inside the launcher
-  const modJarFile = `winvisual-client-${found.minecraftVersion}.jar`;
+  const modJarFile = modJarNameFor(found.minecraftVersion);
   const modJarPath = path.join(rootDir, 'public', 'mods', modJarFile);
   const embeddedArtifact = (() => {
     if (fs.existsSync(modJarPath)) {
@@ -437,7 +447,7 @@ function scaffoldWinvisualGameDir(absDir, rootDir = process.cwd()) {
   const modsDir = path.join(absDir, 'mods');
   const modsJars = [];
   for (const ver of ['1.16.5', '1.21.4', '1.21.11']) {
-    const jarFile = `winvisual-client-${ver}.jar`;
+    const jarFile = modJarNameFor(ver);
     const src = path.join(rootDir, 'public', 'mods', jarFile);
     const dest = path.join(modsDir, jarFile);
     if (fs.existsSync(src) && !fs.existsSync(dest)) {
@@ -685,7 +695,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
   if (pathname === '/api/mods/embedded') {
     const supported = ['1.16.5', '1.21.4', '1.21.11'];
     const entries = supported.map((ver) => {
-      const jarFile = `winvisual-client-${ver}.jar`;
+      const jarFile = modJarNameFor(ver);
       const jarPath = path.join(rootDir, 'public', 'mods', jarFile);
       let sizeBytes = 0;
       let sha256 = '';
@@ -717,7 +727,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
       res.end(JSON.stringify({ error: `Unsupported mod version: ${ver}` }));
       return true;
     }
-    const jarFile = `winvisual-client-${ver}.jar`;
+    const jarFile = modJarNameFor(ver);
     const jarPath = path.join(rootDir, 'public', 'mods', jarFile);
     if (!fs.existsSync(jarPath)) {
       res.statusCode = 404;
@@ -750,7 +760,7 @@ export function handleApiRequest(req, res, rootDir = process.cwd()) {
     const modsCacheDir = path.join(rootDir, '.winvisual-runtime', 'mods_cache', mc);
     fs.mkdirSync(modsCacheDir, { recursive: true });
     const syncedMods = [
-      `WinVisual ${mc} (winvisual-client-${mc}.jar)`,
+      `WinVisual ${mc} (${modJarNameFor(mc)})`,
       `Fabric API (wv-opt-${mc}-fabric-api.jar)`,
       `Sodium (wv-opt-${mc}-sodium-fabric.jar)`,
       `Iris Shaders (wv-opt-${mc}-iris-fabric.jar)`,

@@ -4,7 +4,7 @@ import { AlertCircle, Check, Download, MoveHorizontal, PackageCheck, RefreshCw }
 import { useLauncherStore } from '../stores/launcherStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useNotificationStore } from '../stores/notificationStore';
-import { installOrDownloadClientModEverywhere } from '../services/tauriBridge';
+import { clientJarName, installOrDownloadClientModEverywhere } from '../services/tauriBridge';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { MinecraftBlockIcon } from '../components/ui/MinecraftBlockIcon';
@@ -323,7 +323,7 @@ export const VersionsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={(e) => handleModJarAction(ver.minecraftVersion, e)}
-                    title={`winvisual-client-${ver.minecraftVersion}.jar`}
+                    title={clientJarName(ver.minecraftVersion)}
                     className="h-[38px] px-3 rounded-[11px] bg-[#090B13]/90 hover:bg-[#1A1638] text-[#E4E4EC] border border-white/[0.16] hover:border-[#C4B5FD]/70 inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold transition-all cursor-pointer shrink-0"
                   >
                     <Download size={13} strokeWidth={2.1} />

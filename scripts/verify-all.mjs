@@ -152,7 +152,8 @@ for (const buildId of ['winvisual-1.21.11', 'winvisual-1.21.4', 'winvisual-1.16.
   const manifest = await fetch(`${base}/api/download/${buildId}/manifest`).then((r) => r.json());
   if (manifest.artifacts.length !== 5) throw new Error(`Expected 5 signed artifacts for ${buildId}`);
   const embeddedArt = manifest.artifacts[0];
-  if (embeddedArt.filename !== `winvisual-client-${mcVer}.jar`) {
+  const expectedJar = mcVer === '1.21.11' ? 'winvisual-arcanic-1.21.11.jar' : `winvisual-client-${mcVer}.jar`;
+  if (embeddedArt.filename !== expectedJar) {
     throw new Error(`Expected embedded WinVisual mod JAR first in ${buildId} manifest`);
   }
   for (const art of manifest.artifacts) {

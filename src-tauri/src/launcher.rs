@@ -23,14 +23,16 @@ const EMBEDDED_WINVISUAL_MOD_1_16_5: &[u8] =
     include_bytes!("../../public/mods/winvisual-client-1.16.5.jar");
 const EMBEDDED_WINVISUAL_MOD_1_21_4: &[u8] =
     include_bytes!("../../public/mods/winvisual-client-1.21.4.jar");
+/// 1.21.11 ships the Arcanic-based core (full menus, HUD, wardrobe, cosmetics).
+/// Built from `mod-fabric/arcanic-1.21.11/` — see NOTICE.md for licensing.
 const EMBEDDED_WINVISUAL_MOD_1_21_11: &[u8] =
-    include_bytes!("../../public/mods/winvisual-client-1.21.11.jar");
+    include_bytes!("../../public/mods/winvisual-arcanic-1.21.11.jar");
 
 pub fn embedded_mod_bytes_for_version(minecraft_version: &str) -> Result<(&'static str, &'static [u8]), String> {
     match minecraft_version {
         "1.16.5" => Ok(("winvisual-client-1.16.5.jar", EMBEDDED_WINVISUAL_MOD_1_16_5)),
         "1.21.4" => Ok(("winvisual-client-1.21.4.jar", EMBEDDED_WINVISUAL_MOD_1_21_4)),
-        "1.21.11" => Ok(("winvisual-client-1.21.11.jar", EMBEDDED_WINVISUAL_MOD_1_21_11)),
+        "1.21.11" => Ok(("winvisual-arcanic-1.21.11.jar", EMBEDDED_WINVISUAL_MOD_1_21_11)),
         other => Err(format!(
             "Unsupported WinVisual client mod target `{other}` (expected 1.16.5, 1.21.4, or 1.21.11)"
         )),
@@ -51,7 +53,8 @@ pub fn install_embedded_winvisual_client_mod(
     if let Ok(entries) = std::fs::read_dir(&mods_dir) {
         for entry in entries.flatten() {
             let fname = entry.file_name().to_string_lossy().to_string();
-            if fname.starts_with("winvisual-client-") && fname.ends_with(".jar") && fname != target_filename {
+            let ours = fname.starts_with("winvisual-client-") || fname.starts_with("winvisual-arcanic-");
+            if ours && fname.ends_with(".jar") && fname != target_filename {
                 let _ = std::fs::remove_file(entry.path());
             }
         }

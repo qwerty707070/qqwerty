@@ -133,7 +133,7 @@ jobs:
           if-no-files-found: error
 
   build-tauri:
-    needs: build-fabric-mods
+    needs: [build-fabric-mods, build-arcanic-12111]
     strategy:
       fail-fast: false
       matrix:
@@ -156,11 +156,17 @@ jobs:
           name: winvisual-fabric-mods
           path: public/mods
 
+      - name: Download the Arcanic-based 1.21.11 core into public/mods
+        uses: actions/download-artifact@v4
+        with:
+          name: winvisual-arcanic-1.21.11
+          path: public/mods
+
       - name: Stage compiled JARs copy on Linux runner
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           mkdir -p /tmp/wv-jars
-          cp public/mods/winvisual-client-*.jar /tmp/wv-jars/
+          cp public/mods/winvisual-client-*.jar public/mods/winvisual-arcanic-*.jar /tmp/wv-jars/
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -196,7 +202,7 @@ jobs:
         with:
           tagName: v2.7.5
           releaseName: "WinVisual Launcher v2.7.5 — WinVisual 1.16.5 / 1.21.4 / 1.21.11"
-          releaseBody: "Native Tauri v2 Desktop Installers (Windows .exe / .msi, macOS .dmg, Linux .deb / .rpm / .AppImage) with in-launcher Modrinth browser (direct mods & resource-pack downloads into WinVisual/) and the Java major-version fix (auto-provisions the official Mojang runtime when system Java is incompatible, e.g. Java 21 for 1.21.x). Embedded source-compiled client builds WinVisual 1.16.5, WinVisual 1.21.4, and WinVisual 1.21.11."
+          releaseBody: "Native Tauri v2 Desktop Installers (Windows .exe / .msi, macOS .dmg, Linux .deb / .rpm / .AppImage) with in-launcher Modrinth browser (direct mods & resource-pack downloads into WinVisual/) and the Java major-version fix (auto-provisions the official Mojang runtime when system Java is incompatible, e.g. Java 21 for 1.21.x). Embedded source-compiled client builds WinVisual 1.16.5 and WinVisual 1.21.4, plus the full Arcanic-based core (menus, HUD, wardrobe, cosmetics, effects) for WinVisual 1.21.11 — GPL-3.0, see NOTICE.md."
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
@@ -209,7 +215,7 @@ jobs:
           gh release upload v2.7.5 \
             public/mods/winvisual-client-1.16.5.jar \
             public/mods/winvisual-client-1.21.4.jar \
-            public/mods/winvisual-client-1.21.11.jar \
+            public/mods/winvisual-arcanic-1.21.11.jar \
             src-tauri/target/release/bundle/deb/*.deb \
             src-tauri/target/release/bundle/rpm/*.rpm \
             src-tauri/target/release/bundle/appimage/*.AppImage \
@@ -219,9 +225,9 @@ jobs:
           git config user.email "builder@winvisual.local"
           git fetch origin "${GITHUB_REF_NAME}"
           git checkout -B "${GITHUB_REF_NAME}" "origin/${GITHUB_REF_NAME}"
-          cp /tmp/wv-jars/winvisual-client-*.jar public/mods/
+          cp /tmp/wv-jars/winvisual-client-*.jar /tmp/wv-jars/winvisual-arcanic-*.jar public/mods/
           if ! git diff --quiet public/mods/; then
-            git add public/mods/winvisual-client-*.jar
+            git add public/mods/winvisual-client-*.jar public/mods/winvisual-arcanic-*.jar
             git commit -m "chore(mods): embed compiled Fabric bytecode jars for 1.16.5, 1.21.4, 1.21.11 [skip ci]"
             git push origin "${GITHUB_REF_NAME}"
           fi
