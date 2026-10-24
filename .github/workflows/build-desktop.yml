@@ -74,7 +74,7 @@ jobs:
           path: public/mods/winvisual-client-*.jar
           if-no-files-found: error
 
-  build-arcanic-1.21.11:
+  build-arcanic-12111:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
