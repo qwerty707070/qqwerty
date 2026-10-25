@@ -6,6 +6,8 @@
 
 ![Каталог](catalog.png)
 
+![Все иконки](icons.png)
+
 ## Что внутри
 
 | Файл | Что это |
@@ -14,6 +16,8 @@
 | `catalog.png` | каталог всех префиксов с подписями и HEX-кодами |
 | `preview-grid.png` | компактная сетка всех бейджей |
 | `roles.json` | все цвета (base / light / dark / text), иконки и веса ролей |
+| `icons.png` | лист **всех иконок** крупно: название + роли, где иконка используется |
+| `icons/<icon>.png` | каждая иконка отдельным файлом 128×128, прозрачный фон |
 | `roseworld-prefixes.zip` | архив со всеми PNG + JSON + этим README |
 
 ## Роли и цвета
@@ -86,6 +90,10 @@
 Если ставите именно картинку, используйте плагины, поддерживающие image-prefix
 (DeluxeMenus, TAB с иконками, ItemsAdder / Oraxen — положите PNG в
 `resourcepack/assets/roseworld/textures/prefix/`).
+
+**Иконки отдельно** (`images/prefixes/icons/`) — 28 файлов 128×128 с прозрачным
+фоном: подходят для GUI-меню сервера (DeluxeMenus), TAB, ItemsAdder/Oraxen или
+как отдельные картинки в Discord.
 
 **В HTML/сайте** — `roles.json` содержит готовые HEX-коды для CSS:
 

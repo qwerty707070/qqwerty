@@ -594,26 +594,104 @@ def badge(name, base, icon, frame, scale=SCALE):
 
 # ------------------------------------------------------------------ вывод ----
 
-def icons_debug(scale=10):
+def icons_sheet(path=None, cell=112, cols=4):
+    """Лист ВСЕХ иконок: крупно, в цвете роли, с подписью и списком ролей."""
+    path = path or os.path.join(OUT, "icons.png")
     os.makedirs(OUT, exist_ok=True)
-    names = list(ICONS)
-    cols = 6
-    cw, ch = 16 * scale + 26, 16 * scale + 34
-    rows = (len(names) + cols - 1) // cols
-    img = Image.new("RGBA", (cols * cw, rows * ch), (18, 16, 24, 255))
+
+    used, color_of = {}, {}
+    for name, base, icon, _frame, _w in ROLES:
+        used.setdefault(icon, []).append(name.upper())
+        color_of.setdefault(icon, base)
+
+    names = [n for n in ICONS if n in used]
     f = ImageFont.truetype(FONT_PATH, FS)
-    pal = palette("#59D2FF")
-    for i, n in enumerate(names):
-        cell = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-        draw_icon(cell, ICONS[n], 0, 0, pal, 2)
-        cell = cell.resize((16 * scale, 16 * scale), Image.NEAREST)
-        x = (i % cols) * cw + (cw - 16 * scale) // 2
-        y = (i // cols) * ch + 6
-        img.alpha_composite(cell, (x, y))
-        ImageDraw.Draw(img).text(((i % cols) * cw + 8, y + 16 * scale + 6),
-                                 n, font=f, fill=(200, 205, 220, 255))
-    img.save(os.path.join(OUT, "_icons-debug.png"))
-    print("icons debug ->", os.path.join(OUT, "_icons-debug.png"))
+    line = FS + 8
+
+    def pix_text(txt, color):
+        m = text_mask(txt, f)
+        bb = m.getbbox() or (0, 0, 1, 1)
+        tile = Image.new("RGBA", m.size, color + (255,))
+        out = Image.new("RGBA", m.size, (0, 0, 0, 0))
+        out.paste(tile, (0, 0), m)
+        return out.crop(bb)
+
+    def readable(base):
+        """Цвет иконки, который точно виден на тёмной плашке."""
+        c = hx(base)
+        for _ in range(4):
+            if lum(c) >= 0.62:
+                break
+            c = lighten(c, 0.22)
+        return c
+
+    longest = max([len(n) for n in names] + [len(r) for v in used.values() for r in v])
+    text_w = max(int(f.getlength("M" * 1)) * longest, cell + 24)
+    cw = text_w + 14
+
+    pad_x, pad_y = 22, 22
+    header = pix_text("ROSEWORLD  /  ALL %d PREFIX ICONS" % len(names), (236, 232, 244))
+    top = header.height + 34
+
+    heights = [0] * cols
+    placed = []
+    for n in names:
+        h = cell + 34 + len(used[n]) * line + pad_y
+        c = heights.index(min(heights))
+        placed.append((n, c, heights[c]))
+        heights[c] += h
+
+    W = cw * cols + pad_x
+    Hh = top + max(heights) + pad_x
+    img = Image.new("RGBA", (W, Hh), (14, 12, 20, 255))
+    img.alpha_composite(header, (pad_x, 18))
+    d = ImageDraw.Draw(img)
+
+    for n, c, y0 in placed:
+        cx = pad_x + c * cw
+        cy = top + y0
+        base = color_of[n]
+        d.rectangle([cx, cy, cx + cell + 12, cy + cell + 12], fill=(26, 23, 36, 255))
+        tile = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        body = readable(base)
+        pal = dict(tcol=body, tout=darken(body, 0.72),
+                   mid=darken(body, 0.55), light=body, light_panel=False)
+        draw_icon(tile, ICONS[n], 0, 0, pal, 2)
+        k = max(1, cell // 16)
+        tile = tile.resize((16 * k, 16 * k), Image.NEAREST)
+        img.alpha_composite(tile, (cx + (cell + 12 - 16 * k) // 2,
+                                   cy + (cell + 12 - 16 * k) // 2))
+        img.alpha_composite(pix_text(n, (236, 232, 244)), (cx + 2, cy + cell + 20))
+        for j, role in enumerate(used[n]):
+            img.alpha_composite(pix_text(role, lighten(base, 0.5)),
+                                (cx + 2, cy + cell + 20 + line * (j + 1)))
+    img.save(path)
+    print("иконки ->", path)
+    return path
+
+
+def export_icons(size=128):
+    """Отдельные PNG каждой иконки (прозрачный фон) + иконки в цветах ролей."""
+    d = os.path.join(OUT, "icons")
+    os.makedirs(d, exist_ok=True)
+    made = {}
+    for name, base, icon, _frame, _w in ROLES:
+        made.setdefault(icon, base)
+
+    for icon, base in made.items():
+        c = hx(base)
+        for _ in range(4):
+            if lum(c) >= 0.5:
+                break
+            c = lighten(c, 0.25)
+        pal = dict(tcol=c, tout=darken(c, 0.75), mid=darken(c, 0.5),
+                   light=c, light_panel=False)
+        tile = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+        draw_icon(tile, ICONS[icon], 0, 0, pal, 2)
+        k = size // 16
+        tile = tile.resize((16 * k, 16 * k), Image.NEAREST)
+        tile.save(os.path.join(d, f"{icon}.png"))
+    print("иконки (по одной) ->", d)
 
 
 def build(scale=SCALE, make_zip=True):
@@ -674,12 +752,23 @@ def build(scale=SCALE, make_zip=True):
         grid.alpha_composite(im, ((i % gcols) * gw + 6, (i // gcols) * gh + 6))
     grid.save(os.path.join(OUT, "preview-grid.png"))
 
+    icons_sheet()
+    export_icons()
+
     if make_zip:
         zpath = os.path.join(OUT, "roseworld-prefixes.zip")
         with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
             for name, _, _, _, _ in ROLES:
                 z.write(os.path.join(roles_dir, f"{name}.png"), f"roles/{name}.png")
             z.write(os.path.join(OUT, "roles.json"), "roles.json")
+            icons_dir = os.path.join(OUT, "icons")
+            if os.path.isdir(icons_dir):
+                for f in sorted(os.listdir(icons_dir)):
+                    z.write(os.path.join(icons_dir, f), f"icons/{f}")
+            for extra in ("icons.png", "catalog.png", "preview-grid.png"):
+                p_extra = os.path.join(OUT, extra)
+                if os.path.exists(p_extra):
+                    z.write(p_extra, extra)
             readme = os.path.join(OUT, "README.md")
             if os.path.exists(readme):
                 z.write(readme, "README.md")
@@ -692,10 +781,11 @@ def build(scale=SCALE, make_zip=True):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--scale", type=int, default=SCALE)
-    ap.add_argument("--icons-debug", action="store_true")
+    ap.add_argument("--icons-debug", action="store_true",
+                    help="нарисовать лист всех иконок (images/prefixes/icons.png)")
     ap.add_argument("--no-zip", action="store_true")
     a = ap.parse_args()
     if a.icons_debug:
-        icons_debug()
+        icons_sheet()
     else:
         build(a.scale, not a.no_zip)
