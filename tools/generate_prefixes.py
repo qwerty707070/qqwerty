@@ -432,7 +432,7 @@ def palette(base):
     )
     if lum(base) > 0.55:                       # светлый бейдж — тёмный текст
         p.update(tcol=darken(base, 0.90), tout=darken(base, 0.60),
-                 tsh=darken(base, 0.45))
+                 tsh=darken(base, 0.45), light_panel=True)
     else:                                      # тёмный бейдж — светлый текст
         p.update(tcol=lighten(base, 0.90), tout=darken(base, 0.68),
                  tsh=darken(base, 0.85))
@@ -467,7 +467,14 @@ def draw_icon(img, art, x0, y0, pal, px=2):
         sil.paste(m, (0, 0), m)
     outline = sil.filter(ImageFilter.MaxFilter(3))
 
-    tcol, tout = pal["tcol"], pal["tout"]
+    light_panel = pal.get("light_panel", False)
+    body = pal["tcol"]
+    if light_panel:   # на светлой панели иконку отделяем светлым ореолом
+        ring = lighten(pal["mid"], 0.90)
+        shade = mix(body, pal["mid"], 0.35)
+    else:             # на тёмной — тёмным
+        ring = darken(pal["mid"], 0.78)
+        shade = mix(body, pal["mid"], 0.45)
     size = n * px
 
     def scale(m):
@@ -478,10 +485,10 @@ def draw_icon(img, art, x0, y0, pal, px=2):
             return
         img.paste(Image.new("RGBA", (size, size), color + (255,)), (x0 + dx, y0 + dy), scale(mask))
 
-    paint(outline, tout, -px, -px)
-    paint(m_k, mix(tcol, tout, 0.45))
-    paint(m_m, tcol)
-    paint(m_w, mix(tcol, (255, 255, 255), 0.55))
+    paint(outline, ring, -px, -px)
+    paint(m_k, shade)
+    paint(m_m, body)
+    paint(m_w, mix(body, (255, 255, 255), 0.6))
 
 
 def panel(img, W, pal, frame):
@@ -654,7 +661,7 @@ def build(scale=SCALE, make_zip=True):
         meta_i = meta[i]
         lb = label(f'{meta_i["label"]}  {meta_i["base"]}', (140, 148, 168))
         sheet.alpha_composite(lb, (cx + pad, cy + pad + im.height + 8))
-    sheet = sheet.crop((0, 0, sheet.width, row_h * rows - pad))
+    sheet = sheet.crop((0, 0, sheet.width, row_h * rows - 2))
     sheet.save(os.path.join(OUT, "catalog.png"))
 
     # компактная сетка бейджей
