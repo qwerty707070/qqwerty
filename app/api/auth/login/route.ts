@@ -47,6 +47,6 @@ export async function POST(request: Request) {
 
   clearLoginAttempts(ip);
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(SESSION_COOKIE, createSessionToken(), sessionCookieOptions);
+  response.cookies.set(SESSION_COOKIE, createSessionToken(), sessionCookieOptions(request));
   return response;
 }

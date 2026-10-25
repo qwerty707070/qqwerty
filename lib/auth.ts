@@ -136,13 +136,34 @@ export function isAdminRequest(): boolean {
   return verifySessionToken(cookies().get(SESSION_COOKIE)?.value);
 }
 
-export const sessionCookieOptions = {
-  httpOnly: true as const,
-  sameSite: 'lax' as const,
-  path: '/',
-  maxAge: SESSION_TTL_SECONDS,
-  secure: process.env.NODE_ENV === 'production',
-};
+/**
+ * Атрибуты куки сессии.
+ *
+ * ИСПРАВЛЕННЫЙ БАГ: раньше флаг `secure` включался просто по
+ * NODE_ENV === 'production'. Если production-сборка открыта по HTTP
+ * (локальный `next start`, preview-домен без TLS, IP-адрес), браузер
+ * выбрасывает такую куку — вход «проходит», а сохранение отвечает 401
+ * и форма молча выкидывает на /admin/login. Теперь `secure` включается
+ * только когда запрос действительно пришёл по HTTPS.
+ */
+export function sessionCookieOptions(request?: Request) {
+  const forwardedProto = request?.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const host = (request?.headers.get('host') ?? '').toLowerCase();
+  const isLocalHost =
+    host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]');
+
+  const secure = forwardedProto
+    ? forwardedProto === 'https'
+    : process.env.NODE_ENV === 'production' && !isLocalHost;
+
+  return {
+    httpOnly: true as const,
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: SESSION_TTL_SECONDS,
+    secure,
+  };
+}
 
 /* --------------------------- Лимит попыток ----------------------------- */
 

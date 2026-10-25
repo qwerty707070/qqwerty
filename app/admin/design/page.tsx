@@ -3,8 +3,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { LogoutButton } from '@/components/admin/LogoutButton';
 import { SettingsForm } from '@/components/admin/SettingsForm';
+import { StorageDiagnostics } from '@/components/admin/StorageDiagnostics';
 import { isAdminRequest, isDefaultPassword, totpEnabled } from '@/lib/auth';
-import { getAudit, getSettings, settingsBackend } from '@/lib/settings-store';
+import { getAudit, getSettingsStrict, storageHealth } from '@/lib/settings-store';
 import { STATUS_LABELS, connectAddress } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
@@ -14,8 +15,38 @@ export const metadata: Metadata = { title: 'Дизайн и подключени
 export default async function AdminDesignPage() {
   if (!isAdminRequest()) redirect('/admin/login');
 
-  const settings = await getSettings();
-  const audit = await getAudit(8);
+  const [loaded, audit, health] = await Promise.all([
+    getSettingsStrict(),
+    getAudit(8),
+    storageHealth(),
+  ]);
+
+  if (!loaded.ok) {
+    return (
+      <div className="container admin-shell">
+        <nav className="admin-nav">
+          <Link href="/admin/design" data-active="true">
+            Дизайн и подключение
+          </Link>
+          <Link href="/" >Публичный сайт ↗</Link>
+          <div style={{ marginTop: 10 }}>
+            <LogoutButton />
+          </div>
+        </nav>
+        <div className="stack">
+          <h1>Хранилище недоступно</h1>
+          <div className="alert">
+            <strong>{loaded.error.message}</strong>
+            <div style={{ marginTop: 6 }}>Код: <code>{loaded.error.code}</code></div>
+            <div style={{ marginTop: 6 }}>Что делать: {loaded.error.hint}</div>
+          </div>
+          <StorageDiagnostics initialHealth={health} />
+        </div>
+      </div>
+    );
+  }
+
+  const settings = loaded.settings;
 
   return (
     <div className="container admin-shell">
@@ -24,6 +55,7 @@ export default async function AdminDesignPage() {
           Дизайн и подключение
         </Link>
         <Link href="/privileges">Каталог привилегий ↗</Link>
+        <Link href="/checkout">Оформление заказа ↗</Link>
         <Link href="/">Публичный сайт ↗</Link>
         <div style={{ marginTop: 10 }}>
           <LogoutButton />
@@ -36,10 +68,8 @@ export default async function AdminDesignPage() {
             <span className="eyebrow">Админ-панель</span>
             <h1 style={{ fontSize: 'clamp(26px, 3.6vw, 38px)' }}>Дизайн и подключение</h1>
             <p className="muted" style={{ marginTop: 8, maxWidth: 640 }}>
-              Всё, что вы сохраните здесь, сразу попадает в хранилище настроек и на публичные
-              страницы. Хранилище:{' '}
-              <code>{settingsBackend === 'supabase' ? 'Supabase (site_settings)' : '.data/settings.json'}</code>
-              .
+              Всё, что вы сохраните здесь, сразу попадает в хранилище и на публичные страницы:
+              главную, страницу привилегий и оформление заказа.
             </p>
           </div>
           <div className="preview-panel">
@@ -49,19 +79,29 @@ export default async function AdminDesignPage() {
             <code style={{ fontSize: 18 }}>{connectAddress(settings)}</code>
             <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
               {STATUS_LABELS[settings.status]} · обновлено{' '}
-              {new Date(settings.updatedAt).toLocaleString('ru-RU')}
+              {new Date(settings.updatedAt).toLocaleString('ru-RU')} ({settings.updatedBy})
             </div>
           </div>
         </div>
 
         {isDefaultPassword() ? (
           <div className="alert alert--warn">
-            Используется пароль по умолчанию. Задайте <code>ADMIN_PASSWORD</code> и
-            {totpEnabled() ? '' : ' <code>ADMIN_TOTP_SECRET</code>'} перед публикацией.
+            Используется пароль по умолчанию. Задайте <code>ADMIN_PASSWORD</code>
+            {totpEnabled() ? '' : ' и <code>ADMIN_TOTP_SECRET</code>'} перед публикацией.
+          </div>
+        ) : null}
+
+        {health.degraded ? (
+          <div className="alert alert--warn">
+            Настройки пишутся во временное хранилище: после перезапуска инстанса значения вернутся
+            к предыдущим. Для production задайте <code>SUPABASE_URL</code> и{' '}
+            <code>SUPABASE_SERVICE_ROLE_KEY</code>.
           </div>
         ) : null}
 
         <SettingsForm initial={settings} />
+
+        <StorageDiagnostics initialHealth={health} />
 
         <div className="card">
           <h2 style={{ fontSize: 20, marginBottom: 6 }}>Журнал изменений</h2>
@@ -83,8 +123,8 @@ export default async function AdminDesignPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {audit.map((entry) => (
-                    <tr key={`${entry.at}-${entry.ip}`}>
+                  {audit.map((entry, index) => (
+                    <tr key={`${entry.at}-${index}`}>
                       <td>{new Date(entry.at).toLocaleString('ru-RU')}</td>
                       <td>
                         <code>{entry.ip}</code>

@@ -283,20 +283,17 @@ export function newCapabilityCount(slug: string): number {
   return BY_SLUG.get(slug)?.own.length ?? 0;
 }
 
-/** Полный список возможностей с учётом всей цепочки наследования. */
+/**
+ * Полный список возможностей уровня для страницы: «Всё из PARENT»
+ * (если наследование есть) + собственные пункты.
+ */
 export function fullCapabilities(slug: string): string[] {
   const item = BY_SLUG.get(slug);
   if (!item) return [];
-  const chain = inheritanceChain(slug);
-  const root = chain[0];
+  const parent = item.inherits ? BY_SLUG.get(item.inherits) : undefined;
   const result: string[] = [];
-  for (const level of chain) {
-    if (level.slug === item.slug) {
-      if (item.inherits) result.push(`Всё из ${BY_SLUG.get(item.inherits)?.name ?? ''}`.trim());
-      result.push(...level.own);
-    }
-  }
-  if (!item.inherits && root) return [...root.own];
+  if (parent) result.push(`Всё из ${parent.name}`);
+  result.push(...item.own);
   return result;
 }
 

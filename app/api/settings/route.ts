@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { clientIp, isAdminRequest } from '@/lib/auth';
-import { getSettings, saveSettings, settingsBackend } from '@/lib/settings-store';
+import {
+  StorageError,
+  getSettings,
+  saveSettings,
+  settingsBackend,
+  storageHealth,
+} from '@/lib/settings-store';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,55 +18,98 @@ const NO_STORE = {
   'Vercel-CDN-Cache-Control': 'no-store',
 };
 
+function json(body: unknown, status = 200) {
+  return NextResponse.json(body, { status, headers: NO_STORE });
+}
+
 /** Публичное чтение настроек — источник для клиентской синхронизации. */
 export async function GET() {
   const settings = await getSettings();
-  return NextResponse.json(
-    { settings, backend: settingsBackend },
-    { headers: NO_STORE },
-  );
+  const health = await storageHealth();
+  return json({
+    settings,
+    backend: settingsBackend,
+    // Диагностика нужна админке, но не раскрывает ничего секретного
+    storage: { writable: health.writable, degraded: health.degraded },
+  });
 }
 
 /**
  * Сохранение из админки.
- * После записи обязательно:
- *  - revalidatePath('/', 'layout') — сбрасываем кэш всех страниц;
- *  - отдаём сохранённые настройки клиенту, чтобы форма и публичная
- *    страница показывали ровно то, что лежит в хранилище.
+ *
+ * ИСПРАВЛЕННЫЕ БАГИ:
+ *  1. принимается частичный payload (раньше PUT только с одним полем падал
+ *     с «Ожидается текст» на всех остальных полях);
+ *  2. возвращается понятная причина сбоя хранилища (code + hint) вместо
+ *     общего «Не удалось сохранить настройки»;
+ *  3. оптимистическая блокировка: если настройки изменил кто-то ещё,
+ *     ответ 409 с актуальной версией, а не тихая перезапись.
  */
 export async function PUT(request: Request) {
   if (!isAdminRequest()) {
-    return NextResponse.json({ error: 'Требуется авторизация' }, { status: 401, headers: NO_STORE });
+    return json({ error: 'Требуется авторизация', code: 'UNAUTHORIZED' }, 401);
   }
 
-  let payload: unknown;
+  let payload: unknown = {};
   try {
-    payload = await request.json();
+    const text = await request.text();
+    payload = text ? JSON.parse(text) : {};
   } catch {
-    return NextResponse.json({ error: 'Некорректный JSON' }, { status: 400, headers: NO_STORE });
+    return json({ error: 'Некорректный JSON в теле запроса', code: 'BAD_JSON' }, 400);
   }
 
-  const ip = clientIp(request.headers);
-  try {
-    const result = await saveSettings(payload, 'admin', ip);
+  const body = payload as { version?: unknown; force?: unknown };
+  const expectedVersion = typeof body.version === 'string' ? body.version : undefined;
+  const force = body.force === true;
 
-    if (!result.ok) {
-      return NextResponse.json({ errors: result.errors }, { status: 422, headers: NO_STORE });
+  try {
+    const result = await saveSettings(payload, 'admin', clientIp(request.headers), {
+      expectedVersion,
+      force,
+    });
+
+    if ('conflict' in result) {
+      return json(
+        {
+          error: 'Настройки уже изменены в другой вкладке или другим администратором',
+          code: 'VERSION_CONFLICT',
+          current: result.current,
+        },
+        409,
+      );
     }
 
-    revalidatePath('/', 'layout');
-    revalidatePath('/privileges');
-    revalidatePath('/admin/design');
+    if (!result.ok) {
+      return json({ errors: result.errors, code: 'VALIDATION' }, 422);
+    }
 
-    return NextResponse.json(
-      { settings: result.settings, changed: result.changed },
-      { headers: NO_STORE },
-    );
+    if (result.changed.length > 0) {
+      revalidatePath('/', 'layout');
+      revalidatePath('/privileges');
+      revalidatePath('/checkout');
+      revalidatePath('/admin/design');
+    }
+
+    return json({ settings: result.settings, changed: result.changed });
   } catch (error) {
-    console.error('[api/settings] save failed:', error);
-    return NextResponse.json(
-      { error: 'Не удалось сохранить настройки. Проверьте хранилище (Supabase/диск).' },
-      { status: 500, headers: NO_STORE },
+    const storageError =
+      error instanceof StorageError
+        ? error
+        : new StorageError(
+            error instanceof Error ? error.message : String(error),
+            'WRITE_FAILED',
+            'Проверьте хранилище настроек.',
+          );
+
+    console.error('[api/settings] сохранение не удалось:', storageError);
+    return json(
+      {
+        error: 'Не удалось сохранить настройки',
+        code: storageError.code,
+        detail: storageError.message,
+        hint: storageError.hint,
+      },
+      500,
     );
   }
 }

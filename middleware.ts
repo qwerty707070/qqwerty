@@ -1,22 +1,30 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * Дешёвая проверка на границе: если куки сессии нет вообще — сразу на логин,
- * не рендеря админку. Криптографическая проверка подписи выполняется
- * в самих страницах (isAdminRequest), потому что здесь нет доступа к
- * серверному crypto в полном объёме.
+ * Грубая проверка на границе: без куки сессии в админку не пускаем.
+ * Подпись куки проверяется уже в самой странице (isAdminRequest), потому что
+ * edge-runtime не даёт полноценный node:crypto.
+ *
+ * Матчер написан явно (а не регуляркой вида `/admin/:path((?!login).*)`):
+ * регулярка в матчере молча не срабатывает при изменении структуры путей.
  */
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('kg_admin')?.value;
-  if (!token) {
+  const { pathname } = request.nextUrl;
+
+  const isAdminArea = pathname === '/admin' || pathname.startsWith('/admin/');
+  const isPublicAdminPage = pathname.startsWith('/admin/login');
+  if (!isAdminArea || isPublicAdminPage) return NextResponse.next();
+
+  if (!request.cookies.get('kg_admin')?.value) {
     const url = request.nextUrl.clone();
     url.pathname = '/admin/login';
     url.search = '';
     return NextResponse.redirect(url);
   }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/admin/design/:path*', '/admin/:path((?!login).*)'],
+  matcher: ['/admin', '/admin/:path*'],
 };

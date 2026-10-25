@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "next lint",
-    "check:drift": "node scripts/check-content-drift.mjs"
+    "check:drift": "node scripts/check-content-drift.mjs",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "check:cases": "node --import tsx -e \"import('./lib/cases.ts').then(m=>{const bad=m.validateCases().filter(c=>c.problems.length);if(bad.length){console.error(bad);process.exit(1)}console.log('✓ шансы кейсов корректны')})\""
   },
   "dependencies": {
     "next": "^14.2.35",
@@ -18,6 +20,7 @@
     "@types/node": "20.14.10",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
+    "tsx": "^4.23.15",
     "typescript": "5.5.4"
   }
 }

@@ -31,6 +31,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
             <nav className="site-nav">
               <Link href="/privileges">Привилегии</Link>
+              <Link href="/cases">Кейсы</Link>
+              <Link href="/relics">Рилики</Link>
               <Link href="/#connect">Подключение</Link>
               <Link href="/admin/design">Админка</Link>
             </nav>

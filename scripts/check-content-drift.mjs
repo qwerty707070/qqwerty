@@ -12,7 +12,8 @@ import path from 'node:path';
 const ROOT = process.cwd();
 const LIB_SETTINGS = path.join(ROOT, 'lib', 'settings.ts');
 const LIB_CATALOG = path.join(ROOT, 'lib', 'catalog.ts');
-const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.data', 'scripts', 'supabase']);
+// tests/ содержит адреса как тестовые данные — это не источник для страниц
+const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.data', 'scripts', 'supabase', 'tests']);
 
 const FORBIDDEN = [
   { pattern: /play\.kinggrief\.net/g, why: 'IP сервера должен приходить из настроек (lib/settings.ts)' },
