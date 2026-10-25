@@ -16,6 +16,15 @@ const nextConfig = {
           { key: 'Vercel-CDN-Cache-Control', value: 'no-store' },
         ],
       },
+      {
+        // HTML тоже не кэшируем: браузер с bfcache/диск-кэшем иначе покажет
+        // старое значение IP после «Назад» или повторного открытия вкладки.
+        source: '/((?!_next/static|_next/image|favicon.ico).*)',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, must-revalidate' },
+          { key: 'Vercel-CDN-Cache-Control', value: 'no-store' },
+        ],
+      },
     ];
   },
 };

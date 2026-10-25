@@ -54,6 +54,7 @@ export default async function AdminDesignPage() {
         <Link href="/admin/design" data-active="true">
           Дизайн и подключение
         </Link>
+        <Link href="/admin/diagnose">Диагностика</Link>
         <Link href="/privileges">Каталог привилегий ↗</Link>
         <Link href="/checkout">Оформление заказа ↗</Link>
         <Link href="/">Публичный сайт ↗</Link>
@@ -91,15 +92,17 @@ export default async function AdminDesignPage() {
           </div>
         ) : null}
 
-        {health.degraded ? (
+        {!health.durable ? (
           <div className="alert alert--warn">
-            Настройки пишутся во временное хранилище: после перезапуска инстанса значения вернутся
-            к предыдущим. Для production задайте <code>SUPABASE_URL</code> и{' '}
-            <code>SUPABASE_SERVICE_ROLE_KEY</code>.
+            <strong>Хранилище непостоянное.</strong> {health.serverless ? 'Проект запущен в serverless: ' : ''}
+            настройки видны только одному инстансу, поэтому сохранение будет «откатываться».
+            Задайте <code>SUPABASE_URL</code> и <code>SUPABASE_SERVICE_ROLE_KEY</code>, выполните{' '}
+            <code>supabase/schema.sql</code>. Подробности —{' '}
+            <Link href="/admin/diagnose">диагностика</Link>.
           </div>
         ) : null}
 
-        <SettingsForm initial={settings} />
+        <SettingsForm initial={settings} durable={health.durable} />
 
         <StorageDiagnostics initialHealth={health} />
 

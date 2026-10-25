@@ -33,8 +33,22 @@ export type StorageHealth = {
   location: string;
   writable: boolean;
   degraded: boolean;
+  /** true — данные переживут перезапуск и видны всем инстансам. */
+  durable: boolean;
+  serverless: boolean;
   hint?: string;
 };
+
+/** Serverless-окружение: файл в /tmp не общий между инстансами. */
+export function isServerless(): boolean {
+  return Boolean(
+    process.env.VERCEL ||
+      process.env.VERCEL_ENV ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.FUNCTION_TARGET ||
+      process.env.K_SERVICE,
+  );
+}
 
 export class StorageError extends Error {
   code: string;
@@ -245,6 +259,8 @@ export async function getSettingsStrict(): Promise<
 }
 
 export async function storageHealth(): Promise<StorageHealth> {
+  const serverless = isServerless();
+
   if (useSupabase) {
     try {
       await readFromSupabase();
@@ -253,6 +269,8 @@ export async function storageHealth(): Promise<StorageHealth> {
         location: 'public.site_settings',
         writable: true,
         degraded: false,
+        durable: true,
+        serverless,
       };
     } catch (error) {
       return {
@@ -260,6 +278,8 @@ export async function storageHealth(): Promise<StorageHealth> {
         location: 'public.site_settings',
         writable: false,
         degraded: false,
+        durable: false,
+        serverless,
         hint: error instanceof StorageError ? error.hint : 'Supabase недоступен',
       };
     }
@@ -268,13 +288,21 @@ export async function storageHealth(): Promise<StorageHealth> {
   const writablePrimary = await canWrite(path.dirname(PRIMARY_FILE));
   await resolveFile().catch(() => null);
   const file = resolvedFile ?? PRIMARY_FILE;
+  const onTmp = file !== PRIMARY_FILE;
+  // Файл переживает перезапуск только на обычном сервере с постоянным диском.
+  const durable = !serverless && !onTmp && writablePrimary;
+
   return {
     backend: 'file',
     location: file,
     writable: writablePrimary || degraded,
     degraded: degraded || !writablePrimary,
-    hint: !writablePrimary
-      ? 'Каталог проекта только для чтения (serverless). Записи идут во временный файл и исчезнут при перезапуске — настройте Supabase.'
+    durable,
+    serverless,
+    hint: !durable
+      ? serverless
+        ? 'Запуск в serverless (Vercel): каталог проекта только для чтения, файл в /tmp не общий между инстансами. Каждое сохранение будет «откатываться» — подключите Supabase.'
+        : 'Каталог проекта только для чтения. Записи идут во временный файл и исчезнут при перезапуске — настройте Supabase или смонтируйте диск.'
       : undefined,
   };
 }
@@ -282,7 +310,14 @@ export async function storageHealth(): Promise<StorageHealth> {
 /* -------------------------------- запись ------------------------------ */
 
 export type SaveResult =
-  | { ok: true; settings: Settings; changed: string[] }
+  | {
+      ok: true;
+      settings: Settings;
+      changed: string[];
+      /** Кто-то успел изменить настройки, но правка применена (last-write-wins). */
+      conflictResolved?: boolean;
+      durable: boolean;
+    }
   | { ok: false; errors: Record<string, string> }
   | { ok: false; conflict: true; current: Settings };
 
@@ -306,16 +341,21 @@ export async function saveSettings(
   input: unknown,
   actor: string,
   ip: string,
-  options: { expectedVersion?: string; force?: boolean } = {},
+  options: { expectedVersion?: string; force?: boolean; strict?: boolean } = {},
 ): Promise<SaveResult> {
   const current = await getSettings();
+  const health = await storageHealth();
 
-  if (
-    options.expectedVersion &&
-    !options.force &&
+  const staleVersion =
+    Boolean(options.expectedVersion) &&
     options.expectedVersion !== current.updatedAt &&
-    current.updatedAt !== DEFAULT_SETTINGS.updatedAt
-  ) {
+    current.updatedAt !== DEFAULT_SETTINGS.updatedAt;
+
+  // Раньше рассинхрон версий блокировал сохранение (409), и правка админа
+  // «исчезала» — со стороны это выглядело как «IP удаляется». Теперь по
+  // умолчанию применяем правку (last-write-wins) и только предупреждаем;
+  // строгий режим остаётся доступен через strict: true.
+  if (staleVersion && !options.force && options.strict) {
     return { ok: false, conflict: true, current };
   }
 
@@ -332,7 +372,13 @@ export async function saveSettings(
 
   // Ничего не поменялось — не трогаем updatedAt и не сбрасываем кэш страниц.
   if (changed.length === 0) {
-    return { ok: true, settings: current, changed: [] };
+    return {
+      ok: true,
+      settings: current,
+      changed: [],
+      durable: health.durable,
+      conflictResolved: staleVersion && !options.force ? true : undefined,
+    };
   }
 
   const next: Settings = {
@@ -364,7 +410,13 @@ export async function saveSettings(
     after: pick(next, changed as Array<keyof Settings>),
   });
 
-  return { ok: true, settings: next, changed };
+  return {
+    ok: true,
+    settings: next,
+    changed,
+    durable: health.durable,
+    conflictResolved: staleVersion && !options.force ? true : undefined,
+  };
 }
 
 /* ------------------------------- проверка ----------------------------- */

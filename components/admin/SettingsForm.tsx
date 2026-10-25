@@ -14,7 +14,7 @@
  *     а не из локального состояния.
  */
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   STATUS_LABELS,
   type ServerStatus,
@@ -24,7 +24,11 @@ import {
   splitHostPort,
 } from '@/lib/settings';
 
-type Props = { initial: Settings };
+type Props = {
+  initial: Settings;
+  /** false — хранилище не переживёт перезапуск (serverless/временный файл). */
+  durable?: boolean;
+};
 
 type NumericKey = 'serverPort' | 'onlinePlayers' | 'maxPlayers';
 
@@ -37,7 +41,7 @@ type SaveError = {
 
 const toNumeric = (value: number | null): string => (value === null ? '' : String(value));
 
-export function SettingsForm({ initial }: Props) {
+export function SettingsForm({ initial, durable = true }: Props) {
   const router = useRouter();
 
   const [form, setForm] = useState<Settings>(initial);
@@ -52,6 +56,23 @@ export function SettingsForm({ initial }: Props) {
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [toast, setToast] = useState<string | null>(null);
+  const [toastTone, setToastTone] = useState<'ok' | 'warn'>('ok');
+  const [durabilityWarning, setDurabilityWarning] = useState(!durable);
+  const [remoteNewer, setRemoteNewer] = useState<Settings | null>(null);
+
+  // Версия, которую форма считает «своей». Нужна, чтобы отличить
+  // собственную перерисовку от чужой правки и не стирать черновик.
+  const seenVersion = useRef(initial.updatedAt);
+
+  const applySettings = useCallback((next: Settings) => {
+    setForm(next);
+    setNumeric({
+      serverPort: toNumeric(next.serverPort),
+      onlinePlayers: toNumeric(next.onlinePlayers),
+      maxPlayers: toNumeric(next.maxPlayers),
+    });
+    seenVersion.current = next.updatedAt;
+  }, []);
 
   const portNumber = numeric.serverPort.trim() === '' ? null : Number(numeric.serverPort);
   const previewAddress = useMemo(() => {
@@ -71,6 +92,39 @@ export function SettingsForm({ initial }: Props) {
     }
     return changed;
   }, [form, numeric, initial]);
+
+  /**
+   * Сервер прислал новую версию (другая вкладка/администратор или наш же
+   * router.refresh). Если черновика нет — просто подхватываем её. Если есть —
+   * показываем предложение загрузить, чтобы не потерять введённое.
+   */
+  useEffect(() => {
+    if (initial.updatedAt === seenVersion.current) return;
+    if (dirtyFields.length === 0) {
+      applySettings(initial);
+      setRemoteNewer(null);
+    } else {
+      setRemoteNewer(initial);
+    }
+  }, [initial, dirtyFields.length, applySettings]);
+
+  /** Подтянуть актуальные настройки с сервера по кнопке. */
+  const refreshFromServer = useCallback(async () => {
+    try {
+      const res = await fetch('/api/settings', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = (await res.json()) as { settings: Settings };
+      if (data.settings) {
+        applySettings(data.settings);
+        setRemoteNewer(null);
+        setErrors({});
+        setState('idle');
+        setMessage('Загружена версия с сервера');
+      }
+    } catch {
+      setMessage('Не удалось получить настройки с сервера');
+    }
+  }, [applySettings]);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -105,7 +159,7 @@ export function SettingsForm({ initial }: Props) {
     maxPlayers: numeric.maxPlayers.trim() === '' ? null : Number(numeric.maxPlayers),
   });
 
-  const submit = async (options: { force?: boolean; version?: string } = {}) => {
+  const submit = async (options: { force?: boolean; version?: string; retried?: boolean } = {}) => {
     setState('saving');
     setMessage('');
     setErrors({});
@@ -141,9 +195,18 @@ export function SettingsForm({ initial }: Props) {
         hint?: string;
         changed?: string[];
         current?: Settings;
+        warnings?: string[];
+        durable?: boolean;
       };
 
       if (res.status === 409 && data.current) {
+        // Строгий режим: не блокируем пользователя, а сразу применяем его
+        // значения поверх свежей версии — иначе правка «исчезает».
+        if (!options.retried) {
+          setRemoteNewer(data.current);
+          await submit({ force: true, version: data.current.updatedAt, retried: true });
+          return;
+        }
         setConflict({ current: data.current, payload: buildPayload() });
         setState('error');
         setMessage('Обнаружен конфликт версий');
@@ -168,14 +231,13 @@ export function SettingsForm({ initial }: Props) {
         return;
       }
 
-      if (data.settings) {
-        setForm(data.settings);
-        setNumeric({
-          serverPort: toNumeric(data.settings.serverPort),
-          onlinePlayers: toNumeric(data.settings.onlinePlayers),
-          maxPlayers: toNumeric(data.settings.maxPlayers),
-        });
-      }
+      if (data.settings) applySettings(data.settings);
+
+      const warnings = data.warnings ?? [];
+      const notDurable = warnings.includes('NON_DURABLE_STORAGE') || data.durable === false;
+      const conflictResolved = warnings.includes('VERSION_CONFLICT_RESOLVED');
+
+      setDurabilityWarning(notDurable);
       setConflict(null);
       setState('saved');
       setMessage(
@@ -183,7 +245,17 @@ export function SettingsForm({ initial }: Props) {
           ? `Сохранено: ${data.changed.join(', ')}`
           : 'Изменений нет — значения совпадают',
       );
-      setToast('Настройки сохранены — публичные страницы обновлены');
+
+      if (notDurable) {
+        setToastTone('warn');
+        setToast('Сохранено только в этом инстансе: хранилище не постоянное (см. предупреждение)');
+      } else if (conflictResolved) {
+        setToastTone('warn');
+        setToast('Кто-то ещё менял настройки — ваши значения применены поверх');
+      } else {
+        setToastTone('ok');
+        setToast('Настройки сохранены — публичные страницы обновлены');
+      }
 
       if (typeof BroadcastChannel !== 'undefined') {
         new BroadcastChannel('kg-settings').postMessage({ type: 'settings-updated' });
@@ -215,6 +287,7 @@ export function SettingsForm({ initial }: Props) {
     setErrors({});
     setSaveError(null);
     setConflict(null);
+    setRemoteNewer(null);
     setState('idle');
     setMessage('');
   };
@@ -233,6 +306,34 @@ export function SettingsForm({ initial }: Props) {
         Значение читается хранилищем на каждый запрос, поэтому сохраняется и на сайте, и в админке
         одновременно.
       </p>
+
+      {durabilityWarning ? (
+        <div className="alert" style={{ marginBottom: 18 }}>
+          <strong>Сохранение не постоянное.</strong> Настройки записываются в хранилище, которое
+          живёт только внутри одного инстанса (serverless / временный файл). Внешне это выглядит так:
+          сохранили IP — через минуту он «откатился» обратно.
+          <div style={{ marginTop: 6 }}>
+            Решение: задайте <code>SUPABASE_URL</code> и <code>SUPABASE_SERVICE_ROLE_KEY</code> и
+            выполните <code>supabase/schema.sql</code>, либо разместите проект на сервере с
+            постоянным диском. Проверить текущее состояние — блок «Хранилище настроек» ниже.
+          </div>
+        </div>
+      ) : null}
+
+      {remoteNewer ? (
+        <div className="alert alert--warn" style={{ marginBottom: 18 }}>
+          <strong>На сервере более новая версия настроек.</strong> Ваши правки в форме сохранены как
+          черновик и не потеряны.
+          <div className="row" style={{ marginTop: 8 }}>
+            <button type="button" className="btn btn--primary btn--sm" onClick={refreshFromServer}>
+              Загрузить с сервера
+            </button>
+            <span className="muted" style={{ fontSize: 12 }}>
+              в любом случае при сохранении применится то, что введено в форме
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       {saveError ? (
         <div className="alert" style={{ marginBottom: 18 }}>
@@ -531,6 +632,15 @@ export function SettingsForm({ initial }: Props) {
           Отменить правки
         </button>
 
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          onClick={refreshFromServer}
+          disabled={state === 'saving'}
+        >
+          Обновить с сервера
+        </button>
+
         <span
           className="save-state"
           data-tone={state === 'saved' ? 'ok' : state === 'error' ? 'error' : undefined}
@@ -539,7 +649,18 @@ export function SettingsForm({ initial }: Props) {
         </span>
       </div>
 
-      {toast ? <div className="toast">{toast}</div> : null}
+      {toast ? (
+        <div
+          className="toast"
+          style={
+            toastTone === 'warn'
+              ? { borderColor: 'rgba(251,191,36,0.5)', background: 'rgba(35,26,5,0.94)', color: '#fde68a' }
+              : undefined
+          }
+        >
+          {toast}
+        </div>
+      ) : null}
     </form>
   );
 }

@@ -125,15 +125,41 @@ async function main() {
     ? ok('Cache-Control: no-store на /api/settings')
     : fail('нет no-store', apiRes.headers.get('cache-control') || 'пусто');
 
-  /* --- 6. конфликт версий --- */
+  /* --- 6. админка после сохранения показывает сохранённое (не «удаляет» IP) --- */
+  const adminHtml = await (
+    await fetch(`${BASE}/admin/design`, { headers: { cookie }, cache: 'no-store' })
+  ).text();
+  adminHtml.includes(probeHost)
+    ? ok('в форме админки после сохранения стоит новый адрес')
+    : fail('форма админки показывает не сохранённое значение');
+
+  /* --- 7. устаревшая версия: правка применяется, но с предупреждением --- */
   const stale = await fetch(`${BASE}/api/settings`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', cookie },
-    body: JSON.stringify({ serverIp: 'stale.example.net', version: '2000-01-01T00:00:00.000Z' }),
+    body: JSON.stringify({ tagline: 'проверка last-write-wins', version: '2000-01-01T00:00:00.000Z' }),
   });
-  stale.status === 409 ? ok('устаревшая версия не перетирает чужие правки (409)') : fail('конфликт версий', `status ${stale.status}`);
+  const staleBody = await stale.json().catch(() => ({}));
+  stale.status === 200 && (staleBody.warnings ?? []).includes('VERSION_CONFLICT_RESOLVED')
+    ? ok('устаревшая версия не теряется: правка применена + предупреждение')
+    : fail('last-write-wins', `status ${stale.status} ${JSON.stringify(staleBody.warnings ?? [])}`);
+  staleBody.settings?.tagline === 'проверка last-write-wins'
+    ? ok('значение из «устаревшей» формы сохранено')
+    : fail('значение из устаревшей формы не сохранено');
 
-  /* --- 7. самодиагностика хранилища --- */
+  const strict = await fetch(`${BASE}/api/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', cookie },
+    body: JSON.stringify({ tagline: 'strict', version: '2000-01-01T00:00:00.000Z', strict: true }),
+  });
+  strict.status === 409 ? ok('строгий режим возвращает 409') : fail('строгий режим', `status ${strict.status}`);
+
+  /* --- 8. предупреждение о непостоянном хранилище --- */
+  typeof apiBody.durable === 'boolean' || typeof initial.storage?.durable === 'boolean'
+    ? ok(`признак постоянного хранилища передаётся (durable=${initial.storage?.durable})`)
+    : fail('нет признака durable в /api/settings');
+
+  /* --- 9. самодиагностика хранилища --- */
   const verifyUnauth = await fetch(`${BASE}/api/settings/verify`, { method: 'POST' });
   verifyUnauth.status === 401
     ? ok('диагностика хранилища закрыта без сессии (401)')
@@ -148,7 +174,7 @@ async function main() {
     ? ok(`круг «запись → чтение» пройден (${verifyBody.roundTripMs} мс)`)
     : fail('самодиагностика хранилища', verifyBody.error ?? `status ${verify.status}`);
 
-  /* --- 8. восстановление --- */
+  /* --- 10. восстановление --- */
   const restore = await fetch(`${BASE}/api/settings`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', cookie },

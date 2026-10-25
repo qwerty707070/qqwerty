@@ -30,7 +30,12 @@ export async function GET() {
     settings,
     backend: settingsBackend,
     // Диагностика нужна админке, но не раскрывает ничего секретного
-    storage: { writable: health.writable, degraded: health.degraded },
+    storage: {
+      writable: health.writable,
+      degraded: health.degraded,
+      durable: health.durable,
+      serverless: health.serverless,
+    },
   });
 }
 
@@ -58,14 +63,16 @@ export async function PUT(request: Request) {
     return json({ error: 'Некорректный JSON в теле запроса', code: 'BAD_JSON' }, 400);
   }
 
-  const body = payload as { version?: unknown; force?: unknown };
+  const body = payload as { version?: unknown; force?: unknown; strict?: unknown };
   const expectedVersion = typeof body.version === 'string' ? body.version : undefined;
   const force = body.force === true;
+  const strict = body.strict === true;
 
   try {
     const result = await saveSettings(payload, 'admin', clientIp(request.headers), {
       expectedVersion,
       force,
+      strict,
     });
 
     if ('conflict' in result) {
@@ -86,11 +93,22 @@ export async function PUT(request: Request) {
     if (result.changed.length > 0) {
       revalidatePath('/', 'layout');
       revalidatePath('/privileges');
+      revalidatePath('/cases');
+      revalidatePath('/relics');
       revalidatePath('/checkout');
       revalidatePath('/admin/design');
     }
 
-    return json({ settings: result.settings, changed: result.changed });
+    const warnings: string[] = [];
+    if (!result.durable) warnings.push('NON_DURABLE_STORAGE');
+    if (result.conflictResolved) warnings.push('VERSION_CONFLICT_RESOLVED');
+
+    return json({
+      settings: result.settings,
+      changed: result.changed,
+      durable: result.durable,
+      warnings,
+    });
   } catch (error) {
     const storageError =
       error instanceof StorageError

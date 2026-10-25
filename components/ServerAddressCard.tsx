@@ -21,13 +21,15 @@ import { STATUS_LABELS, connectAddress } from '@/lib/settings';
 
 type Props = { initial: Settings };
 
-const POLL_MS = 15_000;
+const POLL_MS = 10_000;
+const STALE_AFTER_MS = 30_000;
 
 export function ServerAddressCard({ initial }: Props) {
   const [settings, setSettings] = useState(initial);
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle');
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(false);
   const versionRef = useRef(initial.updatedAt);
 
   const pull = useCallback(async () => {
@@ -41,8 +43,10 @@ export function ServerAddressCard({ initial }: Props) {
         setSettings(data.settings);
       }
       setLastSync(new Date());
+      setSyncError(false);
     } catch {
-      // сеть недоступна — оставляем последнее известное значение
+      // сеть недоступна — оставляем последнее известное значение, но помечаем это
+      setSyncError(true);
     } finally {
       setSyncing(false);
     }
@@ -59,9 +63,15 @@ export function ServerAddressCard({ initial }: Props) {
     const onVisible = () => {
       if (document.visibilityState === 'visible') void pull();
     };
+    // bfcache: при возврате «Назад» браузер восстанавливает DOM как есть.
+    // Без этого обработчика на странице остаётся старый IP.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) void pull();
+    };
 
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onPageShow);
 
     let channel: BroadcastChannel | null = null;
     if (typeof BroadcastChannel !== 'undefined') {
@@ -73,6 +83,7 @@ export function ServerAddressCard({ initial }: Props) {
       window.clearInterval(interval);
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onPageShow);
       channel?.close();
     };
   }, [pull]);
@@ -119,6 +130,9 @@ export function ServerAddressCard({ initial }: Props) {
         <button type="button" className="btn btn--primary" onClick={copy}>
           {copied === 'ok' ? 'Скопировано ✓' : copied === 'fail' ? 'Не удалось' : 'Копировать IP'}
         </button>
+        <button type="button" className="btn btn--ghost" onClick={() => void pull()} disabled={syncing}>
+          {syncing ? 'Обновляем…' : 'Обновить'}
+        </button>
         <a
           className="btn btn--ghost"
           href={`https://minecraft-server.eu/server/${encodeURIComponent(settings.serverIp)}`}
@@ -151,10 +165,19 @@ export function ServerAddressCard({ initial }: Props) {
       </dl>
 
       <p className="sync-note">
-        <span className={syncing ? 'dot' : 'dot'} style={{ color: syncing ? '#fbbf24' : '#4ade80' }} />
-        {lastSync
-          ? `данные синхронизированы с сервером в ${lastSync.toLocaleTimeString('ru-RU')}`
-          : 'синхронизация с сервером…'}
+        <span
+          className="dot"
+          style={{ color: syncing ? '#fbbf24' : syncError ? '#f87171' : '#4ade80' }}
+        />
+        {syncError
+          ? 'нет связи с сервером — показано последнее полученное значение'
+          : lastSync
+            ? `данные синхронизированы в ${lastSync.toLocaleTimeString('ru-RU')}${
+                Date.now() - lastSync.getTime() > STALE_AFTER_MS
+                  ? ' (устарели, обновляем…)'
+                  : ''
+              }`
+            : 'синхронизация с сервером…'}
       </p>
     </div>
   );
