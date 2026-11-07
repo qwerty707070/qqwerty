@@ -1,0 +1,186 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07152F"/>
+      <stop offset="0.55" stop-color="#155184"/>
+      <stop offset="1" stop-color="#8ED8F2"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#76D9FF" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#76D9FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#B9E7FA"/>
+    </linearGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#A9E9FF"/>
+    </linearGradient>
+    <linearGradient id="diamond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A7FFFF"/>
+      <stop offset="0.5" stop-color="#20CFE5"/>
+      <stop offset="1" stop-color="#08729F"/>
+    </linearGradient>
+    <clipPath id="rounded">
+      <rect width="1280" height="720" rx="32"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#rounded)">
+    <rect width="1280" height="720" fill="url(#sky)"/>
+    <ellipse cx="740" cy="310" rx="560" ry="310" fill="url(#glow)"/>
+
+    <!-- Звёзды и снег -->
+    <g fill="#FFFFFF" opacity="0.9">
+      <circle cx="62" cy="90" r="3"/><circle cx="184" cy="68" r="2"/>
+      <circle cx="335" cy="124" r="3"/><circle cx="494" cy="68" r="2"/>
+      <circle cx="687" cy="108" r="2.5"/><circle cx="832" cy="66" r="2"/>
+      <circle cx="982" cy="130" r="3"/><circle cx="1170" cy="84" r="2.5"/>
+      <circle cx="412" cy="220" r="2"/><circle cx="1084" cy="270" r="2.5"/>
+      <circle cx="552" cy="154" r="2"/><circle cx="915" cy="204" r="2"/>
+      <circle cx="1212" cy="350" r="2.5"/><circle cx="354" cy="310" r="2"/>
+    </g>
+
+    <g stroke="#DDF8FF" stroke-width="3" opacity="0.8">
+      <path d="M105 170v22m-11-11h22"/>
+      <path d="M463 156v18m-9-9h18"/>
+      <path d="M1005 188v22m-11-11h22"/>
+      <path d="M1170 320v18m-9-9h18"/>
+    </g>
+
+    <!-- Луна -->
+    <circle cx="1060" cy="150" r="66" fill="#D9F7FF" opacity="0.2"/>
+    <circle cx="1060" cy="150" r="48" fill="#E9FBFF"/>
+    <circle cx="1044" cy="137" r="7" fill="#C5EAF5"/>
+    <circle cx="1077" cy="164" r="5" fill="#C5EAF5"/>
+
+    <!-- Дальние заснеженные горы -->
+    <path d="M0 455 L130 285 L220 390 L360 230 L492 420 L615 285 L760 430 L910 250 L1050 410 L1165 285 L1280 425 V590 H0Z"
+          fill="#B9E9F8"/>
+    <path d="M0 490 L170 355 L270 435 L440 310 L580 470 L740 345 L900 470 L1070 325 L1280 490 V610 H0Z"
+          fill="#86CBE4" opacity="0.78"/>
+    <path d="M128 288 L130 285 L162 326 L140 317 L130 334 L111 320Z" fill="#FFFFFF"/>
+    <path d="M360 235 L391 278 L369 268 L351 289 L334 264Z" fill="#FFFFFF"/>
+    <path d="M910 255 L943 294 L920 286 L901 307 L884 281Z" fill="#FFFFFF"/>
+    <path d="M1165 290 L1192 326 L1172 319 L1154 339 L1140 316Z" fill="#FFFFFF"/>
+
+    <!-- Сосны -->
+    <g>
+      <rect x="44" y="425" width="22" height="100" fill="#563B35"/>
+      <polygon points="55,270 4,386 106,386" fill="#0B654E"/>
+      <polygon points="55,322 0,438 112,438" fill="#087451"/>
+      <polygon points="55,372 0,485 112,485" fill="#075B45"/>
+      <path d="M4 386h30l-12 14H0zm0 52h35l-12 14H0z" fill="#EAFBFF"/>
+
+      <rect x="1192" y="410" width="24" height="115" fill="#563B35"/>
+      <polygon points="1204,255 1147,383 1260,383" fill="#0B654E"/>
+      <polygon points="1204,312 1138,441 1270,441" fill="#087451"/>
+      <polygon points="1204,368 1136,488 1274,488" fill="#075B45"/>
+      <path d="M1147 383h31l-12 14h-25zm-8 58h39l-13 14h-33z" fill="#EAFBFF"/>
+    </g>
+
+    <!-- Снег на земле -->
+    <path d="M0 535 Q180 505 340 545 T690 535 T1030 545 T1280 520 V720 H0Z" fill="url(#snow)"/>
+    <path d="M0 620 Q220 580 420 628 T820 610 T1280 622 V720 H0Z" fill="#F7FDFF"/>
+
+    <!-- Снежные блоки -->
+    <g>
+      <rect x="0" y="620" width="118" height="100" fill="#D8F3FB"/>
+      <rect x="0" y="620" width="118" height="18" fill="#FFFFFF"/>
+      <rect x="118" y="652" width="95" height="68" fill="#C7EAF6"/>
+      <rect x="118" y="652" width="95" height="14" fill="#FFFFFF"/>
+      <rect x="1110" y="630" width="170" height="90" fill="#D8F3FB"/>
+      <rect x="1110" y="630" width="170" height="18" fill="#FFFFFF"/>
+    </g>
+
+    <!-- Minecraft-персонаж в зимней броне -->
+    <ellipse cx="222" cy="669" rx="142" ry="22" fill="#5D9BB7" opacity="0.35"/>
+
+    <!-- Ноги -->
+    <path d="M139 557h67v112h-67z" fill="#182B49"/>
+    <path d="M206 557h61v112h-61z" fill="#263E64"/>
+    <path d="M139 646h67v23h-67z" fill="#10213C"/>
+    <path d="M206 646h61v23h-61z" fill="#10213C"/>
+
+    <!-- Тело и рука -->
+    <path d="M117 455h142v125H117z" fill="#244C72"/>
+    <path d="M259 470l34 13v97h-34z" fill="#153652"/>
+    <path d="M91 470h36v105H91z" fill="#1C3A5B"/>
+    <path d="M259 480h42v96h-42z" fill="#1C3A5B"/>
+    <path d="M117 470h142v18H117z" fill="#4E91B4"/>
+    <path d="M185 488h9v92h-9z" fill="#B7F2FF"/>
+    <rect x="129" y="514" width="28" height="18" fill="#69C5E2"/>
+    <rect x="218" y="514" width="28" height="18" fill="#69C5E2"/>
+
+    <!-- Голова -->
+    <path d="M129 348h113v112H129z" fill="#C99067"/>
+    <path d="M242 360l29 16v95l-29-11z" fill="#996341"/>
+    <path d="M117 333h132v34H117z" fill="#173653"/>
+    <path d="M117 333h132v12H117z" fill="#79D8F0"/>
+    <path d="M129 348h113v12H129z" fill="#244E70"/>
+    <rect x="147" y="391" width="17" height="12" fill="#43D8F3"/>
+    <rect x="208" y="391" width="17" height="12" fill="#43D8F3"/>
+    <path d="M164 426h44v17h-44z" fill="#6B3C39"/>
+    <path d="M152 445h74v17h-74z" fill="#142A45"/>
+    <path d="M135 453h113v12h-113z" fill="#52B6D5"/>
+
+    <!-- Панель с заголовком -->
+    <rect x="382" y="180" width="800" height="354" rx="24"
+          fill="#07172E" opacity="0.54" stroke="#A7EEFF" stroke-width="3"/>
+    <path d="M425 196h714" stroke="#A7EEFF" stroke-width="2" opacity="0.55"/>
+
+    <text x="782" y="246" text-anchor="middle"
+          font-family="Arial, sans-serif" font-size="34" font-weight="bold"
+          letter-spacing="8" fill="#8FEAFF">KINGGRIEF</text>
+
+    <text x="782" y="344" text-anchor="middle"
+          font-family="Arial Black, Arial, sans-serif" font-size="91" font-weight="900"
+          letter-spacing="2" fill="#07172E" stroke="#07172E" stroke-width="16"
+          stroke-linejoin="round">ЗИМНИЙ</text>
+    <text x="782" y="337" text-anchor="middle"
+          font-family="Arial Black, Arial, sans-serif" font-size="91" font-weight="900"
+          letter-spacing="2" fill="url(#title)" stroke="#174B72" stroke-width="6"
+          stroke-linejoin="round">ЗИМНИЙ</text>
+
+    <text x="782" y="471" text-anchor="middle"
+          font-family="Arial Black, Arial, sans-serif" font-size="132" font-weight="900"
+          letter-spacing="5" fill="#07172E" stroke="#07172E" stroke-width="17"
+          stroke-linejoin="round">ВАЙП</text>
+    <text x="782" y="462" text-anchor="middle"
+          font-family="Arial Black, Arial, sans-serif" font-size="132" font-weight="900"
+          letter-spacing="5" fill="url(#title)" stroke="#174B72" stroke-width="7"
+          stroke-linejoin="round">ВАЙП</text>
+
+    <!-- Алмазный меч -->
+    <g transform="translate(1110,28) rotate(34)">
+      <path d="M25 0 L58 18 L54 158 L41 181 L28 158 Z"
+            fill="url(#diamond)" stroke="#073B5A" stroke-width="7"/>
+      <path d="M41 20 L43 153" stroke="#E5FFFF" stroke-width="7" opacity="0.85"/>
+      <path d="M4 165h76v22H4z" fill="#D9B86B" stroke="#5A3A20" stroke-width="6"/>
+      <path d="M31 187h28v83H31z" fill="#765032" stroke="#3F2A22" stroke-width="6"/>
+      <path d="M29 267h32v23H29z" fill="#D9B86B" stroke="#5A3A20" stroke-width="6"/>
+    </g>
+
+    <!-- IP-адрес -->
+    <rect x="424" y="578" width="732" height="76" rx="20"
+          fill="#07172E" opacity="0.92" stroke="#9CEBFF" stroke-width="3"/>
+    <text x="790" y="628" text-anchor="middle"
+          font-family="Arial, sans-serif" font-size="38" font-weight="bold"
+          letter-spacing="1" fill="#FFFFFF">kinggrief.pickme.cloud</text>
+
+    <!-- Снежинки переднего плана -->
+    <g fill="#FFFFFF" opacity="0.9">
+      <circle cx="342" cy="544" r="4"/>
+      <circle cx="387" cy="600" r="3"/>
+      <circle cx="1104" cy="540" r="4"/>
+      <circle cx="1170" cy="493" r="3"/>
+      <circle cx="1020" cy="670" r="3"/>
+      <circle cx="316" cy="206" r="3"/>
+    </g>
+
+    <!-- Рамка -->
+    <rect x="8" y="8" width="1264" height="704" rx="28"
+          fill="none" stroke="#C7F3FF" stroke-width="8" opacity="0.9"/>
+  </g>
+</svg>

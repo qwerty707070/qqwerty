@@ -1,0 +1,215 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7E1E00"/>
+      <stop offset="0.45" stop-color="#C44006"/>
+      <stop offset="1" stop-color="#EF7E1B"/>
+    </linearGradient>
+    <radialGradient id="glowC">
+      <stop offset="0" stop-color="#FFB25E" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FFB25E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vig" cx="0.5" cy="0.42" r="0.75">
+      <stop offset="0" stop-color="#3A0A00" stop-opacity="0"/>
+      <stop offset="0.62" stop-color="#3A0A00" stop-opacity="0"/>
+      <stop offset="1" stop-color="#3A0A00" stop-opacity="0.5"/>
+    </radialGradient>
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFE3B8"/>
+    </linearGradient>
+    <filter id="fBlur2" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+    <filter id="fBlur1" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1"/>
+    </filter>
+    <g id="leaf">
+      <path d="M0,-11 L3,-5 L9,-7 L6,-1.5 L13,0 L6,3 L9,8 L2.5,6 L0,12 L-2.5,6 L-9,8 L-6,3 L-13,0 L-6,-1.5 L-9,-7 L-3,-5 Z"/>
+      <path d="M0,10 L4,20" stroke-width="2" fill="none"/>
+    </g>
+    <g id="wheat">
+      <path d="M0,0 C3,-16 -3,-32 0,-46" stroke="#B8860B" stroke-width="3" fill="none"/>
+      <ellipse cx="6" cy="-32" rx="3" ry="8" transform="rotate(24 6 -32)" fill="#E8C547" stroke="#B8860B" stroke-width="0.75"/>
+      <ellipse cx="-6" cy="-32" rx="3" ry="8" transform="rotate(-24 -6 -32)" fill="#E8C547" stroke="#B8860B" stroke-width="0.75"/>
+      <ellipse cx="6" cy="-22" rx="3" ry="8" transform="rotate(24 6 -22)" fill="#E8C547" stroke="#B8860B" stroke-width="0.75"/>
+      <ellipse cx="-6" cy="-22" rx="3" ry="8" transform="rotate(-24 -6 -22)" fill="#E8C547" stroke="#B8860B" stroke-width="0.75"/>
+      <ellipse cx="5" cy="-12" rx="3" ry="7" transform="rotate(24 5 -12)" fill="#E8C547" stroke="#B8860B" stroke-width="0.75"/>
+      <ellipse cx="-5" cy="-12" rx="3" ry="7" transform="rotate(-24 -5 -12)" fill="#E8C547" stroke="#B8860B" stroke-width="0.75"/>
+      <ellipse cx="0" cy="-48" rx="3" ry="9" fill="#F0D060" stroke="#B8860B" stroke-width="0.75"/>
+    </g>
+    <g id="ingot">
+      <polygon points="4,12 40,12 48,-4 12,-4" fill="#FFD54F" stroke="#B8860B" stroke-width="2"/>
+      <polygon points="14,-1 34,-1 38,7 10,7" fill="#FFF3C4" opacity="0.85"/>
+    </g>
+  </defs>
+
+  <!-- Небо -->
+  <rect width="1280" height="720" fill="url(#sky)"/>
+  <ellipse cx="640" cy="330" rx="520" ry="320" fill="url(#glowC)"/>
+
+  <!-- Мягкие блики -->
+  <path d="M-20,-20 C160,20 260,10 360,90 C240,60 120,120 -20,80 Z" fill="#FFB768" opacity="0.25" filter="url(#fBlur2)"/>
+  <ellipse cx="640" cy="700" rx="700" ry="120" fill="#FFC47A" opacity="0.2" filter="url(#fBlur2)"/>
+
+  <!-- Силуэты построек (дальний план) -->
+  <path filter="url(#fBlur2)" fill="#8F2703" opacity="0.5"
+        d="M40,250 v-60 h18 v-14 h12 v14 h26 v-80 h30 v80 h34 v-14 h12 v14 h40 v-120 h34 v120 h50 v-16 h14 v16 h60 v-70 h24 v70 h44 v-14 h12 v14 h68 v-140 h36 v140 h58 v-18 h14 v18 h80 v-64 h26 v64 h48 v-14 h12 v14 h72 v-110 h32 v110 h54 v-16 h14 v16 h96 v-52 h20 v52 h154 V250 Z"/>
+  <!-- Силуэты (ближний план) -->
+  <path filter="url(#fBlur1)" fill="#6E1B00" opacity="0.35"
+        d="M0,560 v-70 h24 v-12 h12 v12 h50 v-40 h28 v40 h40 v-12 h12 v12 h60 v-90 h30 v90 h70 v-14 h14 v14 h84 v-50 h22 v50 h56 v-12 h12 v12 h66 v-70 h26 v70 h62 v-14 h14 v14 h104 v-44 h20 v44 h72 v-12 h12 v12 h92 v-60 h24 v60 h274 V560 Z"/>
+
+  <!-- Дюны -->
+  <path d="M-40,720 L-40,640 C120,600 260,660 470,720 Z" fill="#F2A24D" opacity="0.9"/>
+  <path d="M-40,720 L-40,670 C140,640 300,690 420,720 Z" fill="#F6B56B"/>
+  <path d="M1320,720 L1320,610 C1150,565 1010,630 870,720 Z" fill="#ED8A33" opacity="0.95"/>
+  <path d="M1320,720 L1320,660 C1180,630 1080,670 990,720 Z" fill="#F6B56B" opacity="0.9"/>
+
+  <!-- Пунктирные дуги и конфетти -->
+  <path d="M30,28 C150,70 232,150 252,252" stroke="#FFC94D" stroke-width="6" fill="none" stroke-dasharray="16 14" opacity="0.7"/>
+  <path d="M1250,692 C1130,652 1048,572 1028,470" stroke="#FFC94D" stroke-width="6" fill="none" stroke-dasharray="16 14" opacity="0.5"/>
+  <g opacity="0.9">
+    <rect x="110" y="72" width="12" height="12" fill="#FFC94D" transform="rotate(20 116 78)"/>
+    <rect x="205" y="150" width="10" height="10" fill="#FF9E3D" transform="rotate(-15 210 155)"/>
+    <rect x="300" y="110" width="8" height="8" fill="#FFE8B0" transform="rotate(30 304 114)"/>
+    <rect x="470" y="76" width="12" height="12" fill="#FFC94D" transform="rotate(-25 476 82)"/>
+    <rect x="700" y="60" width="10" height="10" fill="#FF9E3D" transform="rotate(10 705 65)"/>
+    <rect x="785" y="150" width="8" height="8" fill="#FFE8B0" transform="rotate(45 789 154)"/>
+    <rect x="975" y="92" width="12" height="12" fill="#FFC94D" transform="rotate(-12 981 98)"/>
+    <rect x="1120" y="205" width="10" height="10" fill="#FF9E3D" transform="rotate(25 1125 210)"/>
+    <rect x="60" y="280" width="9" height="9" fill="#FFC94D" transform="rotate(-30 64 284)"/>
+    <rect x="1235" y="300" width="9" height="9" fill="#FFE8B0" transform="rotate(15 1239 304)"/>
+    <rect x="150" y="105" width="26" height="8" fill="#FFC94D" transform="rotate(25 163 109)"/>
+    <rect x="1040" y="150" width="26" height="8" fill="#FF9E3D" transform="rotate(-20 1053 154)"/>
+    <rect x="430" y="170" width="26" height="8" fill="#FFE8B0" transform="rotate(10 443 174)"/>
+    <rect x="905" y="235" width="26" height="8" fill="#FFC94D" transform="rotate(33 918 239)"/>
+    <circle cx="350" cy="300" r="3" fill="#FFD27A"/>
+    <circle cx="760" cy="120" r="3" fill="#FFD27A"/>
+    <circle cx="980" cy="300" r="3" fill="#FFD27A"/>
+    <circle cx="60" cy="500" r="3" fill="#FFD27A"/>
+    <circle cx="1220" cy="470" r="3" fill="#FFD27A"/>
+  </g>
+
+  <!-- Золото, пшеница, листья -->
+  <use href="#ingot" transform="translate(64,88) rotate(-14) scale(1.2)"/>
+  <use href="#ingot" transform="translate(1185,430) rotate(20) scale(1.1)"/>
+  <use href="#wheat" transform="translate(92,250)"/>
+  <use href="#wheat" transform="translate(335,545) rotate(6) scale(1.1)"/>
+  <use href="#wheat" transform="translate(1198,272) rotate(-8)"/>
+  <use href="#wheat" transform="translate(1242,568) rotate(12) scale(1.05)"/>
+  <use href="#leaf" transform="translate(560,95) rotate(25) scale(1.1)" fill="#E2571E" stroke="#E2571E"/>
+  <use href="#leaf" transform="translate(645,215) rotate(-20) scale(0.9)" fill="#F5A623" stroke="#F5A623"/>
+  <use href="#leaf" transform="translate(1158,335) rotate(45) scale(1.1)" fill="#C0392B" stroke="#C0392B"/>
+  <use href="#leaf" transform="translate(88,318) rotate(10) scale(0.95)" fill="#F5A623" stroke="#F5A623"/>
+  <use href="#leaf" transform="translate(505,630) rotate(-35)" fill="#E86A17" stroke="#E86A17"/>
+  <use href="#leaf" transform="translate(850,72) rotate(15) scale(0.85)" fill="#F5A623" stroke="#F5A623"/>
+  <use href="#leaf" transform="translate(1238,125) rotate(60)" fill="#E2571E" stroke="#E2571E"/>
+  <use href="#leaf" transform="translate(706,600) rotate(70) scale(0.8)" fill="#C0392B" stroke="#C0392B"/>
+
+  <!-- Персонаж -->
+  <g stroke="#20140C" stroke-width="3" stroke-linejoin="round">
+    <ellipse cx="105" cy="706" rx="95" ry="16" fill="#7A1E00" opacity="0.4" stroke="none"/>
+    <!-- Ноги -->
+    <rect x="64" y="618" width="34" height="88" fill="#33261D"/>
+    <rect x="104" y="618" width="34" height="88" fill="#3E2E23"/>
+    <rect x="64" y="686" width="34" height="20" fill="#241A13"/>
+    <rect x="104" y="686" width="34" height="20" fill="#241A13"/>
+    <!-- Тело -->
+    <rect x="56" y="500" width="96" height="120" fill="#4A3524"/>
+    <polygon points="152,500 164,510 164,620 152,620" fill="#3A2A1C" stroke="none"/>
+    <rect x="102" y="500" width="5" height="120" fill="#8A6B48" stroke="none"/>
+    <rect x="68" y="570" width="72" height="34" fill="#3D2C1E"/>
+    <!-- Руки -->
+    <rect x="28" y="506" width="26" height="98" fill="#453222"/>
+    <rect x="154" y="506" width="26" height="98" fill="#3E2E23"/>
+    <rect x="28" y="586" width="26" height="18" fill="#C98A5B"/>
+    <rect x="154" y="586" width="26" height="18" fill="#B57A4A"/>
+    <!-- Голова -->
+    <rect x="58" y="392" width="92" height="100" fill="#C98A5B"/>
+    <polygon points="150,392 166,404 166,492 150,492" fill="#A76B42" stroke="none"/>
+    <rect x="86" y="490" width="36" height="14" fill="#A76B42" stroke="none"/>
+    <rect x="58" y="392" width="92" height="22" fill="#2E1B10"/>
+    <rect x="58" y="414" width="10" height="40" fill="#2E1B10"/>
+    <rect x="68" y="414" width="20" height="12" fill="#2E1B10"/>
+    <!-- Глаза и рот -->
+    <rect x="76" y="448" width="16" height="12" fill="#FFFFFF" stroke="none"/>
+    <rect x="116" y="448" width="16" height="12" fill="#FFFFFF" stroke="none"/>
+    <rect x="80" y="452" width="8" height="8" fill="#3E5BFF" stroke="none"/>
+    <rect x="120" y="452" width="8" height="8" fill="#3E5BFF" stroke="none"/>
+    <rect x="94" y="472" width="20" height="6" fill="#7A4426" stroke="none"/>
+    <!-- Листья на одежде -->
+    <g stroke="none">
+      <rect x="66" y="520" width="10" height="10" fill="#E86A17"/>
+      <rect x="96" y="540" width="10" height="10" fill="#F5A623"/>
+      <rect x="130" y="522" width="10" height="10" fill="#C0392B"/>
+      <rect x="78" y="556" width="8" height="8" fill="#F5A623"/>
+      <rect x="112" y="556" width="10" height="10" fill="#E86A17"/>
+      <rect x="140" y="548" width="8" height="8" fill="#F5A623"/>
+      <rect x="34" y="530" width="9" height="9" fill="#E86A17"/>
+      <rect x="158" y="548" width="9" height="9" fill="#F5A623"/>
+    </g>
+  </g>
+  <!-- Венок из листьев -->
+  <use href="#leaf" transform="translate(74,384) rotate(-20) scale(0.5)" fill="#E86A17" stroke="#E86A17"/>
+  <use href="#leaf" transform="translate(108,378) rotate(10) scale(0.5)" fill="#F5A623" stroke="#F5A623"/>
+  <use href="#leaf" transform="translate(140,386) rotate(35) scale(0.5)" fill="#C0392B" stroke="#C0392B"/>
+
+  <!-- Пиксельный алмазный меч -->
+  <g transform="translate(1160,40) rotate(45)">
+    <rect x="-30" y="0" width="15" height="150" fill="#8CF8F4"/>
+    <rect x="-15" y="0" width="15" height="150" fill="#3FE0DC"/>
+    <rect x="0" y="0" width="15" height="150" fill="#1FBFBB"/>
+    <rect x="15" y="0" width="15" height="150" fill="#0E8F8C"/>
+    <rect x="-15" y="15" width="15" height="15" fill="#D8FFFF" opacity="0.8"/>
+    <rect x="0" y="60" width="15" height="15" fill="#D8FFFF" opacity="0.8"/>
+    <rect x="-15" y="105" width="15" height="15" fill="#D8FFFF" opacity="0.8"/>
+    <rect x="-30" y="150" width="15" height="15" fill="#8CF8F4"/>
+    <rect x="-15" y="150" width="15" height="15" fill="#3FE0DC"/>
+    <rect x="0" y="150" width="15" height="15" fill="#1FBFBB"/>
+    <rect x="15" y="150" width="15" height="15" fill="#0E8F8C"/>
+    <rect x="-15" y="165" width="15" height="15" fill="#8CF8F4"/>
+    <rect x="0" y="165" width="15" height="15" fill="#1FBFBB"/>
+    <rect x="-15" y="180" width="30" height="15" fill="#35CFC9"/>
+    <!-- Гарда -->
+    <rect x="-52" y="-18" width="104" height="16" fill="#E8B93C"/>
+    <rect x="-52" y="-10" width="104" height="8" fill="#9C7014" opacity="0.5"/>
+    <rect x="-56" y="-26" width="16" height="24" fill="#E8B93C"/>
+    <rect x="40" y="-26" width="16" height="24" fill="#E8B93C"/>
+    <!-- Рукоять и навершие -->
+    <rect x="-13" y="-120" width="26" height="102" fill="#7A4A21"/>
+    <rect x="-13" y="-105" width="26" height="8" fill="#5E3716"/>
+    <rect x="-13" y="-75" width="26" height="8" fill="#5E3716"/>
+    <rect x="-13" y="-45" width="26" height="8" fill="#5E3716"/>
+    <rect x="-19" y="-146" width="38" height="26" fill="#E8B93C"/>
+    <rect x="-19" y="-129" width="38" height="9" fill="#9C7014"/>
+  </g>
+
+  <!-- Текст -->
+  <g font-family="'DejaVu Sans', Arial, sans-serif" font-weight="bold" text-anchor="middle">
+    <text x="660" y="140" font-size="30" letter-spacing="10" fill="none" stroke="#7A1E00" stroke-width="6">KINGGRIEF</text>
+    <text x="660" y="140" font-size="30" letter-spacing="10" fill="#FFD54F">KINGGRIEF</text>
+
+    <text x="663" y="314" font-size="98" letter-spacing="4" fill="#8A2300">ОСЕННИЙ</text>
+    <text x="666" y="318" font-size="98" letter-spacing="4" fill="#6E1500">ОСЕННИЙ</text>
+    <text x="669" y="323" font-size="98" letter-spacing="4" fill="#521000">ОСЕННИЙ</text>
+    <text x="660" y="310" font-size="98" letter-spacing="4" fill="none" stroke="#8A2300" stroke-width="12" stroke-linejoin="round">ОСЕННИЙ</text>
+    <text x="660" y="310" font-size="98" letter-spacing="4" fill="url(#titleGrad)">ОСЕННИЙ</text>
+
+    <text x="664" y="467" font-size="158" letter-spacing="10" fill="#8A2300">ВАЙП</text>
+    <text x="668" y="472" font-size="158" letter-spacing="10" fill="#6E1500">ВАЙП</text>
+    <text x="673" y="479" font-size="158" letter-spacing="10" fill="#521000">ВАЙП</text>
+    <text x="660" y="462" font-size="158" letter-spacing="10" fill="none" stroke="#8A2300" stroke-width="14" stroke-linejoin="round">ВАЙП</text>
+    <text x="660" y="462" font-size="158" letter-spacing="10" fill="url(#titleGrad)">ВАЙП</text>
+
+    <text x="662" y="525" font-size="30" letter-spacing="3" fill="#521000" opacity="0.8">8 НОЯБРЯ В 16:00 ПО МСК</text>
+    <text x="660" y="522" font-size="30" letter-spacing="3" fill="#FFF3E0">8 НОЯБРЯ В 16:00 ПО МСК</text>
+
+    <text x="642" y="665" font-size="44" font-style="italic" fill="#8A2300">kinggrief.pickme.cloud</text>
+    <text x="645" y="668" font-size="44" font-style="italic" fill="#521000">kinggrief.pickme.cloud</text>
+    <text x="640" y="662" font-size="44" font-style="italic" fill="none" stroke="#8A2300" stroke-width="8" stroke-linejoin="round">kinggrief.pickme.cloud</text>
+    <text x="640" y="662" font-size="44" font-style="italic" fill="#FFFFFF">kinggrief.pickme.cloud</text>
+  </g>
+
+  <!-- Виньетка -->
+  <rect width="1280" height="720" fill="url(#vig)"/>
+</svg>
